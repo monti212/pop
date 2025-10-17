@@ -1,0 +1,944 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-sand-200 text-navy font-sans transition-colors duration-200;
+    touch-action: manipulation;
+  }
+
+  /* Performance optimizations for smooth animations */
+  button, a, [role="button"] {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Hardware acceleration hints for animated elements */
+  [data-animated], button:hover, a:hover {
+    will-change: transform;
+  }
+
+  /* Reset will-change after transitions complete to free up resources */
+  [data-animated]:not(:hover), button:not(:hover), a:not(:hover) {
+    will-change: auto;
+  }
+
+  /* Ensure proper vertical alignment and no perspective distortion */
+  .flex, [class*="flex"] {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-headline font-bold;
+  }
+  
+  /* For users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after, [data-framer-motion] {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+      transform: none !important;
+    }
+  }
+  
+  /* Focus styles - outline removed */
+  :focus-visible {
+    @apply outline-none;
+  }
+
+  /* Remove focus outline from all form elements */
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus {
+    @apply outline-none;
+    box-shadow: none !important;
+    border-color: inherit !important;
+    transition: none !important;
+  }
+
+  /* Prevent any focus transitions or animations */
+  input,
+  textarea,
+  select,
+  button {
+    transition: none !important;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-teal/30 hover:bg-teal/50 rounded-full transition-colors;
+  }
+  
+  /* Better input handling on iOS */
+  input,
+  textarea,
+  button,
+  select,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Fix for 100vh on mobile browsers */
+  .min-h-screen {
+    min-height: 100vh; /* Fallback */
+    min-height: 100svh;
+  }
+  
+  /* Better font rendering */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+@layer components {
+  .shadow-glow {
+    box-shadow: 0 0 15px rgba(0, 164, 187, 0.3), 0 0 30px rgba(0, 164, 187, 0.1);
+  }
+  
+  .gradient-text {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-teal to-teal-400;
+  }
+  
+  .hero-gradient-text {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-teal to-orange;
+  }
+  
+  .premium-button {
+    @apply rounded-lg font-medium transition-all duration-150 ease-out;
+  }
+
+  .premium-button-primary {
+    @apply premium-button bg-teal text-white hover:bg-teal/90 hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .premium-button-secondary {
+    @apply premium-button bg-white border border-teal text-teal hover:bg-teal/5 hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .premium-card {
+    @apply glass-effect rounded-xl shadow-sm hover:shadow-md transition-all duration-150 ease-out hover:scale-[1.01];
+  }
+
+  /* Smooth scroll containers */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Touch-friendly button styles */
+  button, 
+  [role="button"] {
+    @apply select-none;
+    touch-action: manipulation;
+  }
+
+  /* Region change animation */
+  @keyframes glowingLeftToRight {
+    0% {
+      background-position: -100% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .region-change-animation {
+    background: linear-gradient(90deg, rgba(0,164,187,0.1), rgba(0,164,187,0.4), rgba(0,164,187,0.1));
+    background-size: 200% 100%;
+    animation: glowingLeftToRight 3s ease-in-out;
+  }
+
+  /* Metallic shimmer effect for image generation loader */
+  @keyframes metallicShimmer {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  @keyframes metallicShimmerSlow {
+    0% {
+      background-position: -150% center;
+    }
+    100% {
+      background-position: 150% center;
+    }
+  }
+
+  .metallic-shimmer-text {
+    background: linear-gradient(
+      90deg,
+      #0096B3 0%,
+      #00B4D4 10%,
+      #FF6A00 25%,
+      #FFB84D 35%,
+      #0096B3 50%,
+      #00B4D4 60%,
+      #FF6A00 75%,
+      #FFB84D 85%,
+      #0096B3 100%
+    );
+    background-size: 200% auto;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: metallicShimmer 3s linear infinite;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 20px rgba(0, 150, 179, 0.3);
+  }
+
+  .metallic-shimmer-text-slow {
+    background: linear-gradient(
+      90deg,
+      #0096B3 0%,
+      #0096B3 5%,
+      #00B4D4 15%,
+      #FF6A00 30%,
+      #FFB84D 40%,
+      #FF6A00 50%,
+      #00B4D4 65%,
+      #0096B3 80%,
+      #0096B3 100%
+    );
+    background-size: 300% auto;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: metallicShimmerSlow 6s linear infinite;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  /* Shine animation for crafting text */
+  @keyframes textShine {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  .crafting-shine-text {
+    background: linear-gradient(
+      90deg,
+      #19324A 0%,
+      #19324A 30%,
+      #1EB6B8 45%,
+      #FFB84D 50%,
+      #1EB6B8 55%,
+      #19324A 70%,
+      #19324A 100%
+    );
+    background-size: 200% auto;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: textShine 5s ease-in-out infinite;
+    font-weight: 500;
+    font-size: 16px;
+    letter-spacing: 0.01em;
+  }
+}
+
+/* Region change animation */
+@keyframes glowingLeftToRight {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.region-change-animation {
+  background: linear-gradient(90deg, rgba(0,164,187,0.1), rgba(0,164,187,0.4), rgba(0,164,187,0.1));
+  background-size: 200% 100%;
+  animation: glowingLeftToRight 3s ease-in-out;
+}
+
+/* Modern Chat Message Content Styles */
+.chat-message-content {
+  font-size: 15px;
+  line-height: 1.75;
+  color: #374151;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.chat-message-content > * {
+  margin-bottom: 1rem;
+}
+
+.chat-message-content > *:last-child {
+  margin-bottom: 0;
+}
+
+.chat-message-content p {
+  margin-bottom: 1.25rem;
+  line-height: 1.75;
+}
+
+.chat-message-content h1,
+.chat-message-content h2,
+.chat-message-content h3,
+.chat-message-content h4,
+.chat-message-content h5,
+.chat-message-content h6 {
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  color: #111827;
+}
+
+.chat-message-content h1 {
+  font-size: 1.625rem;
+}
+
+.chat-message-content h2 {
+  font-size: 1.375rem;
+}
+
+.chat-message-content h3 {
+  font-size: 1.125rem;
+}
+
+.chat-message-content h4 {
+  font-size: 1rem;
+}
+
+.chat-message-content ul,
+.chat-message-content ol {
+  margin-bottom: 1.25rem;
+  padding-left: 1.75rem;
+}
+
+.chat-message-content ul {
+  list-style-type: disc;
+}
+
+.chat-message-content ol {
+  list-style-type: decimal;
+}
+
+.chat-message-content li {
+  margin-bottom: 0.5rem;
+  line-height: 1.75;
+}
+
+.chat-message-content li:last-child {
+  margin-bottom: 0;
+}
+
+.chat-message-content li > p {
+  margin-bottom: 0.5rem;
+}
+
+.chat-message-content li > p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-message-content a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.chat-message-content a:hover {
+  color: #1d4ed8;
+}
+
+.chat-message-content blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 1rem;
+  margin: 1.25rem 0;
+  font-style: italic;
+  color: #6b7280;
+  background-color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.375rem;
+}
+
+.chat-message-content pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin: 1.25rem 0;
+  border: 1px solid #374151;
+}
+
+.chat-message-content code {
+  background-color: #f3f4f6;
+  color: #111827;
+  padding: 0.15rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.875em;
+}
+
+.chat-message-content pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
+.chat-message-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  font-size: 0.9375em;
+}
+
+.chat-message-content th,
+.chat-message-content td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.chat-message-content th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #111827;
+}
+
+.chat-message-content tr:last-child td {
+  border-bottom: none;
+}
+
+.chat-message-content hr {
+  border: none;
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 1.5rem 0;
+}
+
+.chat-message-content img {
+  max-width: 512px;
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1.25rem 0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.chat-message-content strong,
+.chat-message-content b {
+  font-weight: 600;
+  color: #111827;
+}
+
+.chat-message-content em,
+.chat-message-content i {
+  font-style: italic;
+}
+
+/* Dark mode support */
+.dark .chat-message-content {
+  color: #e5e7eb;
+}
+
+.dark .chat-message-content h1,
+.dark .chat-message-content h2,
+.dark .chat-message-content h3,
+.dark .chat-message-content h4,
+.dark .chat-message-content h5,
+.dark .chat-message-content h6 {
+  color: #f9fafb;
+}
+
+.dark .chat-message-content blockquote {
+  border-left-color: #4b5563;
+  color: #9ca3af;
+  background-color: #374151;
+}
+
+.dark .chat-message-content code {
+  background-color: #374151;
+  color: #e5e7eb;
+}
+
+.dark .chat-message-content pre {
+  background-color: #111827;
+  border-color: #4b5563;
+}
+
+.dark .chat-message-content table {
+  border-color: #4b5563;
+}
+
+.dark .chat-message-content th,
+.dark .chat-message-content td {
+  border-bottom-color: #4b5563;
+}
+
+.dark .chat-message-content th {
+  background-color: #374151;
+  color: #f9fafb;
+}
+
+.dark .chat-message-content hr {
+  background-color: #4b5563;
+}
+
+.dark .chat-message-content strong,
+.dark .chat-message-content b {
+  color: #f9fafb;
+}
+
+/* Enhanced mobile form styles */
+input, textarea, select {
+  font-size: 16px; /* Prevents iOS zoom on focus */
+}
+
+/* Add momentum scrolling on iOS */
+.overflow-y-auto,
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent pull-to-refresh on mobile */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Adaptive button sizing based on device type */
+@media (pointer: coarse) {
+  button, [role="button"] {
+    min-height: 44px; /* Apple's recommended minimum tap target size */
+  }
+  
+  /* For small buttons, ensure they have enough padding */
+  button.p-1, button.p-2, [role="button"].p-1, [role="button"].p-2 {
+    min-height: auto;
+  }
+}
+
+/* Improve readability on small screens */
+@media (max-width: 480px) {
+  .text-xs {
+    font-size: 0.75rem; /* 12px */
+  }
+  
+  h1, h2, h3 {
+    word-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  /* Adjust spacing for mobile */
+  .p-6 {
+    padding: 1.25rem;
+  }
+  
+  .gap-6 {
+    gap: 1.25rem;
+  }
+  
+  /* Ensure inputs have enough touch area */
+  input, select, textarea {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  /* Prevent text from being too small */
+  .text-micro {
+    font-size: 0.7rem;
+  }
+  
+  /* Fixed position elements should respect safe areas */
+  .fixed {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Safe area inset utility class */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile keyboard adjustments */
+@media (max-height: 600px) {
+  .chat-container {
+    padding-bottom: 5rem;
+  }
+  
+  .fixed.bottom-4 {
+    bottom: 0.5rem;
+  }
+}
+
+/* Safe area insets for notch/dynamic island devices */
+@supports (padding: max(0px)) {
+  .fixed-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+  
+  .fixed-top {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+}
+
+/* Ensure mobile responsiveness for sticky elements */
+@media (max-width: 768px) {
+  .sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  
+  .sticky-input {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background-color: white;
+  }
+}
+
+/* Hide scrollbars but allow scrolling */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide scrollbars on mobile but allow scrolling */
+@media (max-width: 640px) {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Dark mode enhancements */
+.dark {
+  color-scheme: dark;
+}
+
+/* Glass morphism effects */
+.glass-effect {
+  @apply bg-white/80 dark:bg-navy-500/80 backdrop-blur-sm border border-white/20 dark:border-white/10;
+}
+
+.glass-card {
+  @apply glass-effect rounded-xl shadow-sm hover:shadow-md transition-all duration-150 ease-out hover:scale-[1.01];
+}
+
+/* Uhuru Office - ReactQuill Styling */
+.ql-toolbar {
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 8px !important;
+}
+
+.ql-toolbar .ql-formats {
+  margin-right: 15px !important;
+}
+
+.ql-toolbar .ql-formats:last-child {
+  margin-right: 0 !important;
+}
+
+.ql-container {
+  border: none !important;
+  border-radius: 0 !important;
+  font-family: inherit !important;
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+}
+
+.ql-editor {
+  padding: 1.5rem !important;
+  min-height: 300px !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.ql-editor:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.ql-editor h1 {
+  font-size: 1.875rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  margin-bottom: 1rem !important;
+}
+
+.ql-editor h2 {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.ql-editor h3 {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.ql-editor p {
+  margin-bottom: 1rem !important;
+}
+
+.ql-editor ul, .ql-editor ol {
+  margin-bottom: 1rem !important;
+}
+
+.ql-editor blockquote {
+  border-left: 4px solid #0096B3 !important;
+  padding-left: 1rem !important;
+  margin: 1rem 0 !important;
+  font-style: italic !important;
+  color: #6b7280 !important;
+}
+
+/* Uhuru Office content styling in message bubbles */
+.uhuru-office-content {
+  font-family: inherit;
+  line-height: 1.75;
+  color: #374151;
+  font-size: 15px;
+}
+
+.uhuru-office-content h1 {
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  color: #111827;
+}
+
+.uhuru-office-content h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  color: #111827;
+}
+
+.uhuru-office-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #111827;
+}
+
+.uhuru-office-content h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #111827;
+}
+
+.uhuru-office-content h5, .uhuru-office-content h6 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+  color: #111827;
+}
+
+.uhuru-office-content p {
+  margin-bottom: 1.25rem;
+  color: #374151;
+  line-height: 1.75;
+}
+
+.uhuru-office-content ul, .uhuru-office-content ol {
+  margin-bottom: 1.25rem;
+  padding-left: 1.75rem;
+}
+
+.uhuru-office-content li {
+  margin-bottom: 0.25rem;
+  color: #374151;
+}
+
+.uhuru-office-content blockquote {
+  border-left: 4px solid #0096B3;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: #6b7280;
+  background-color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.375rem;
+}
+
+.uhuru-office-content strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+.uhuru-office-content em {
+  font-style: italic;
+}
+
+.uhuru-office-content code {
+  background-color: #f3f4f6;
+  color: #111827;
+  padding: 0.15rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.875em;
+}
+
+.uhuru-office-content pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin: 1.25rem 0;
+}
+
+.uhuru-office-content pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.uhuru-office-content a {
+  color: #0096B3;
+  text-decoration: underline;
+}
+
+.uhuru-office-content a:hover {
+  color: #007A9A;
+}
+
+.uhuru-office-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  border: 1px solid #e5e7eb;
+}
+
+.uhuru-office-content th, .uhuru-office-content td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.uhuru-office-content th {
+  background-color: #f9fafb;
+  font-weight: 600;
+}
+
+.uhuru-office-content hr {
+  border: none;
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 1.5rem 0;
+}
+
+/* A4 Page Styles for Uhuru Office */
+@media screen {
+  .ql-toolbar {
+    border-radius: 0 !important;
+    border: none !important;
+    border-bottom: 1px solid #ccc !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: white !important;
+  }
+  
+  .ql-container {
+    border: none !important;
+    border-radius: 0 !important;
+    font-family: 'Times New Roman', serif !important;
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+  }
+  
+  .ql-editor {
+    padding: 0 !important;
+    min-height: auto !important;
+    border: none !important;
+    outline: none !important;
+  }
+  
+  .ql-editor:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Print styles for A4 */
+@media print {
+  .ql-toolbar {
+    display: none !important;
+  }
+  
+  .ql-container {
+    border: none !important;
+  }
+  
+  .ql-editor {
+    padding: 0 !important;
+  }
+  
+  @page {
+    size: A4;
+    margin: 20mm;
+  }
+}
+

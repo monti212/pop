@@ -1,0 +1,6 @@
+# Sitemap and robots.txt should be served directly
+/sitemap.xml  /sitemap.xml  200
+/robots.txt   /robots.txt   200
+
+# Redirect all other routes to index.html for client-side routing with React Router
+/*    /index.html   200
