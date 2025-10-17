@@ -455,6 +455,16 @@ export default function ChatInterface({
     }
   }, [currentConversation?.messages, scrollToBottom, scrollToBottomInstant]);
 
+  // Auto-scroll when image generation starts
+  useEffect(() => {
+    if (isGeneratingImage) {
+      // Use requestAnimationFrame to ensure DOM has updated before scrolling
+      requestAnimationFrame(() => {
+        scrollToBottom(false);
+      });
+    }
+  }, [isGeneratingImage, scrollToBottom]);
+
   // Load recent files when user changes
   useEffect(() => {
     if (user) {
@@ -1150,7 +1160,7 @@ export default function ChatInterface({
           )}
 
           {/* Empty State - Centered Input */}
-          {(!currentConversation || currentConversation?.messages.length === 0) && (
+          {(!currentConversation || currentConversation?.messages.length === 0) && !isGeneratingImage && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1221,11 +1231,11 @@ export default function ChatInterface({
             </motion.div>
           )}
 
-          {/* Messages Container - Only visible when there are messages */}
+          {/* Messages Container - Only visible when there are messages or image generation is active */}
           <div
             ref={messagesContainerRef}
             className={`flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 pb-48 ${
-              !currentConversation || currentConversation?.messages.length === 0 ? 'invisible' : 'visible'
+              (!currentConversation || currentConversation?.messages.length === 0) && !isGeneratingImage ? 'invisible' : 'visible'
             }`}
           >
             {currentConversation && currentConversation?.messages.length > 0 && (
@@ -1348,8 +1358,8 @@ export default function ChatInterface({
             </motion.div>
           )}
 
-          {/* Bottom Input - Only shown when there are messages */}
-          {currentConversation && currentConversation?.messages.length > 0 && (
+          {/* Bottom Input - Only shown when there are messages or image generation is active */}
+          {currentConversation && (currentConversation?.messages.length > 0 || isGeneratingImage) && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
