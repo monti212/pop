@@ -21,13 +21,60 @@ function getRandomUhuruIntro() {
 // GreyEd line (only shown on follow-up identity questions)
 const GREYED_LINE = "Built by GreyEd to support teachers with a curated knowledge base and privacy-first controls.";
 
+// Function to fetch active knowledge base from database
+async function fetchKnowledgeBase(supabaseClient: any): Promise<string> {
+  try {
+    const { data, error } = await supabaseClient.rpc('get_active_knowledge_base');
+
+    if (error || !data || data.length === 0) {
+      return '';
+    }
+
+    let knowledgeSection = '\n\n# GREYED KNOWLEDGE BASE\n\n';
+    knowledgeSection += 'You have access to the following curated knowledge from GreyEd. This information is critical and must inform your responses when relevant:\n\n';
+
+    for (const doc of data) {
+      knowledgeSection += `## ${doc.document_title}\n`;
+      knowledgeSection += `**Type:** ${doc.document_type}\n`;
+
+      if (doc.grade_level && doc.grade_level !== 'All') {
+        knowledgeSection += `**Grade Level:** ${doc.grade_level}\n`;
+      }
+
+      if (doc.subject && doc.subject !== 'All') {
+        knowledgeSection += `**Subject:** ${doc.subject}\n`;
+      }
+
+      knowledgeSection += '\n' + doc.summary + '\n\n';
+
+      if (doc.key_concepts && Array.isArray(doc.key_concepts) && doc.key_concepts.length > 0) {
+        knowledgeSection += '**Key Concepts:**\n';
+        for (const concept of doc.key_concepts) {
+          knowledgeSection += `- **${concept.concept}**: ${concept.description}\n`;
+        }
+        knowledgeSection += '\n';
+      }
+
+      knowledgeSection += '---\n\n';
+    }
+
+    knowledgeSection += '**IMPORTANT:** Use this knowledge base to inform your responses. When a teacher asks about methodologies, curriculum, or syllabus content covered in these documents, draw from this information naturally without citing sources. This knowledge should be seamlessly integrated into your teaching assistance.\n\n';
+
+    return knowledgeSection;
+  } catch (error) {
+    console.error('Error fetching knowledge base:', error);
+    return '';
+  }
+}
+
 // System prompt builder for Pencils of Promise (only 2.0)
-function buildUhuruSystemPrompt(opts: {
+async function buildUhuruSystemPrompt(opts: {
   language?: string;
   region?: string;
   displayName?: string | null;
+  knowledgeBase?: string;
 }) {
-  const { language = "english", region = "global", displayName } = opts;
+  const { language = "english", region = "global", displayName, knowledgeBase = '' } = opts;
 
   let prompt = `Converse naturally and openly with the user until the user independently states their intent or direction. Do not prompt, suggest, or nudge the user toward any specific intent, direction, or type of task before they have clearly declared their needs or goals. Only once the user sets a direction should you move forward using the rest of your behavioral guidelines below. If the user requests clarification or asks you to take initiative, you may gently clarify or proceed as asked.
 
@@ -138,6 +185,10 @@ Respond naturally at first, in short, conversational sentences, without suggesti
 - If the prompt is ambiguous or the user is silent, do not prompt for direction—only mirror or gently reflect as appropriate until intent is clear.
 
 Reminder: Sustain a neutral conversation until the user sets their direction. Then follow your mission to help bring their ideas to outcomes, as outlined above.`;
+
+  if (knowledgeBase) {
+    prompt += knowledgeBase;
+  }
 
   if (displayName) {
     prompt += `\n\nYou're speaking with ${displayName}.`;
@@ -620,7 +671,18 @@ Deno.serve(async (req) => {
     return j({ error: "Messages array required" }, 400, origin);
   }
 
-  const systemPrompt = buildUhuruSystemPrompt({ language, region, displayName });
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  console.log('📚 [EDGE] Fetching knowledge base...');
+  const knowledgeBase = await fetchKnowledgeBase(supabase);
+  console.log('📚 [EDGE] Knowledge base fetched:', {
+    hasKnowledge: !!knowledgeBase,
+    knowledgeLength: knowledgeBase.length
+  });
+
+  const systemPrompt = await buildUhuruSystemPrompt({ language, region, displayName, knowledgeBase });
   const model = MODEL_20;
 
   if (!model) {
