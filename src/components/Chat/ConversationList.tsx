@@ -166,11 +166,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
   const getTodayConversations = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     return conversations.filter(conv => {
-      // Only show conversations that have messages
-      if (conv.messages.length === 0) return false;
-      
       const convDate = new Date(conv.updatedAt);
       convDate.setHours(0, 0, 0, 0);
       return convDate.getTime() === today.getTime();
@@ -182,11 +179,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
     today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     return conversations.filter(conv => {
-      // Only show conversations that have messages
-      if (conv.messages.length === 0) return false;
-      
       const convDate = new Date(conv.updatedAt);
       convDate.setHours(0, 0, 0, 0);
       return convDate.getTime() === yesterday.getTime();
@@ -198,11 +192,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
     today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     return conversations.filter(conv => {
-      // Only show conversations that have messages
-      if (conv.messages.length === 0) return false;
-      
       const convDate = new Date(conv.updatedAt);
       convDate.setHours(0, 0, 0, 0);
       return convDate.getTime() < yesterday.getTime();

@@ -664,6 +664,12 @@ export default function ChatInterface({
                   console.log('🔍 [PROCESSSTREAM] Temporary conversation persisted with new ID:', result.actualConversationId);
                   updatedConv.id = result.actualConversationId;
                   updatedConv.isTemporary = false;
+
+                  // Ensure the persisted conversation appears in the sidebar
+                  console.log('🔍 [PROCESSSTREAM] Updating sidebar after assistant message persistence');
+                  queueMicrotask(() => {
+                    updateConversation(updatedConv);
+                  });
                 }
 
                 return updatedConv;
@@ -1006,8 +1012,11 @@ export default function ChatInterface({
                   updatedConv.id = result.actualConversationId;
                   updatedConv.isTemporary = false;
 
-                  // Update the conversation in the sidebar
-                  updateConversation(updatedConv);
+                  // Update the conversation in the sidebar - this will add it if it doesn't exist
+                  console.log('🔍 [CHATINTERFACE] Updating sidebar with persisted conversation');
+                  queueMicrotask(() => {
+                    updateConversation(updatedConv);
+                  });
                 }
 
                 return updatedConv;
@@ -1052,8 +1061,11 @@ export default function ChatInterface({
                   updatedConv.id = result.actualConversationId;
                   updatedConv.isTemporary = false;
 
-                  // Update the conversation in the sidebar
-                  updateConversation(updatedConv);
+                  // Update the conversation in the sidebar - this will add it if it doesn't exist
+                  console.log('🔍 [CHATINTERFACE] Updating sidebar with persisted conversation');
+                  queueMicrotask(() => {
+                    updateConversation(updatedConv);
+                  });
                 }
 
                 return updatedConv;

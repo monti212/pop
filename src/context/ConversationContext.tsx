@@ -177,15 +177,22 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
   
   const updateConversation = (updatedConversation: Conversation) => {
-    // Always update existing conversation in the list
-    setConversations(prevConversations => 
-      prevConversations.map(conv => 
-        conv.id === updatedConversation.id 
-          ? { ...updatedConversation, updatedAt: new Date() } 
-          : conv
-      )
-    );
-    
+    // Update or add conversation in the list
+    setConversations(prevConversations => {
+      const existingIndex = prevConversations.findIndex(conv => conv.id === updatedConversation.id);
+
+      if (existingIndex >= 0) {
+        // Update existing conversation
+        const updated = [...prevConversations];
+        updated[existingIndex] = { ...updatedConversation, updatedAt: new Date() };
+        return updated;
+      } else {
+        // Add new conversation at the top of the list
+        console.log('🔍 [CONTEXT] Adding new conversation to list:', updatedConversation.id.substring(0, 8) + '...');
+        return [{ ...updatedConversation, updatedAt: new Date() }, ...prevConversations];
+      }
+    });
+
     // Update current conversation if it's the one being updated
     if (currentConversation?.id === updatedConversation.id) {
       setCurrentConversation({ ...updatedConversation, updatedAt: new Date() });
@@ -202,41 +209,57 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   ): Promise<{ success: boolean; messageId?: string; actualConversationId?: string; error?: string }> => {
     try {
       console.log('🔍 [CONTEXT] Adding message to conversation:', conversationId.substring(0, 8) + '...', 'role:', role);
-      
+
       const result = await addMessage(conversationId, role, content, userId, isTemporaryConversation);
-      
+
       if (result.success && result.actualConversationId && result.actualConversationId !== conversationId) {
         // Temporary conversation was persisted with a new ID, update our state
         console.log('🔍 [CONTEXT] Temporary conversation persisted with new ID:', result.actualConversationId);
-        
-        const tempConversation = conversations.find(c => c.id === conversationId);
-        if (tempConversation) {
-          const updatedConversation = {
+
+        // Get the temporary conversation from state or current conversation
+        const tempConversation = conversations.find(c => c.id === conversationId) || currentConversation;
+
+        if (tempConversation && tempConversation.id === conversationId) {
+          const persistedConversation = {
             ...tempConversation,
             id: result.actualConversationId,
-            isTemporary: false
+            isTemporary: false,
+            updatedAt: new Date()
           };
-          
+
           // Remove the temporary conversation and add the persisted one
-          setConversations(prevConversations => [
-            updatedConversation,
-            ...prevConversations.filter(c => c.id !== conversationId)
-          ]);
-          
+          setConversations(prevConversations => {
+            const filtered = prevConversations.filter(c => c.id !== conversationId);
+            // Check if persisted conversation already exists in list
+            const exists = filtered.some(c => c.id === result.actualConversationId);
+            if (exists) {
+              return filtered.map(c =>
+                c.id === result.actualConversationId ? persistedConversation : c
+              );
+            } else {
+              // Add as new conversation at the top
+              console.log('🔍 [CONTEXT] Adding persisted conversation to list');
+              return [persistedConversation, ...filtered];
+            }
+          });
+
           // Update current conversation if it was the temporary one
           if (currentConversation?.id === conversationId) {
             console.log('🔍 [CONTEXT] Updating current conversation ID from temp to persisted');
-            setCurrentConversation(updatedConversation);
+            setCurrentConversation(persistedConversation);
+            // Also update session storage
+            currentConversationIdRef.current = result.actualConversationId;
+            sessionStorage.setItem('uhuru_current_conversation_id', result.actualConversationId);
           }
         }
       }
-      
+
       return result;
     } catch (error: any) {
       console.error('🔍 [CONTEXT] Error in addMessageToConversation:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Failed to add message to conversation' 
+      return {
+        success: false,
+        error: error.message || 'Failed to add message to conversation'
       };
     }
   };
