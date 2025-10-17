@@ -122,14 +122,20 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Verify user is optimus_prime
+    // Hardcoded admin access
+    const hardcodedAdminEmail = 'monti@orionx.xyz';
+
+    // Verify user is optimus_prime OR hardcoded admin email
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('team_role')
       .eq('id', user.id)
       .single();
 
-    if (!profile || profile.team_role !== 'optimus_prime') {
+    const isAuthorized = user.email === hardcodedAdminEmail ||
+                        (profile && profile.team_role === 'optimus_prime');
+
+    if (!isAuthorized) {
       return new Response(JSON.stringify({ error: 'Unauthorized: optimus_prime role required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

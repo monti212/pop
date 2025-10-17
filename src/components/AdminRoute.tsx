@@ -8,9 +8,15 @@ const AdminRoute: React.FC = () => {
 
   useEffect(() => {
     if (!isLoading) {
+      // Hardcoded admin access for monti@orionx.xyz
+      const hardcodedAdminEmail = 'monti@orionx.xyz';
+
       // Check if user has super admin team role (optimus_prime ONLY)
-      // This is the highest level of access for the comprehensive admin dashboard
-      if (user && profile && profile.team_role === 'optimus_prime') {
+      // OR if user is the hardcoded admin email
+      if (user && (
+        user.email === hardcodedAdminEmail ||
+        (profile && profile.team_role === 'optimus_prime')
+      )) {
         setIsSuperAdmin(true);
       } else {
         setIsSuperAdmin(false);
