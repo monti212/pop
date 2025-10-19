@@ -699,7 +699,7 @@ Deno.serve(async (req) => {
     stream: true
   };
 
-  console.log('🚀 [EDGE] Sending to OpenAI:', {
+  console.log('🚀 [EDGE] Sending to Uhuru:', {
     url: API_URL,
     model,
     inputLength: input?.length,
