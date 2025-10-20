@@ -503,7 +503,7 @@ async function generateImage(prompt: string): Promise<string | null> {
     const payload = {
       model: WHATSAPP_IMAGE_MODEL,
       prompt: prompt,
-      size: '1080x1080',
+      size: '1792x1024',
       response_format: 'b64_json',
       n: 1
     };

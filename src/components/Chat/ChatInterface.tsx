@@ -334,7 +334,7 @@ export default function ChatInterface({
       const result = await generateImage(
         imagePrompt.trim(),
         user.id,
-        '1080x1080',
+        '1792x1024',
         'white',
         backendModelId
       );
