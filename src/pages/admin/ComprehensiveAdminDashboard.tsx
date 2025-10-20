@@ -53,67 +53,47 @@ const ComprehensiveAdminDashboard: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Fetch real-time dashboard data
-  const fetchDashboardData = async () => {
-    if (!user) return;
+  const fetchDashboardData = useCallback(async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       setIsLoading(true);
       setError(null);
 
-      // Get current session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No active session');
-      }
-
-      // Fetch admin data using the existing admin-data edge function
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-data`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch admin data');
-      }
-
-      const adminData = await response.json();
-
-      // Get additional real-time metrics
+      // Get real-time metrics with timeout
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Get active users (last 30 minutes)
-      const { count: activeUsersNow } = await supabase
-        .from('user_profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('last_active_at', thirtyMinutesAgo);
+      // Fetch all counts in parallel with timeout protection
+      const timeout = (ms: number) => new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), ms)
+      );
 
-      // Get new messages in last hour
-      const { count: newFeedback1h } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', oneHourAgo);
+      const fetchWithTimeout = async <T,>(promise: Promise<T>, ms = 10000): Promise<T> => {
+        return Promise.race([promise, timeout(ms)]) as Promise<T>;
+      };
 
-      // Get total messages
-      const { count: totalMessages } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true });
-
-      // Get total conversations
-      const { count: totalConversations } = await supabase
-        .from('conversations')
-        .select('*', { count: 'exact', head: true });
-
+      const [
+        { count: totalUsers },
+        { count: activeUsersNow },
+        { count: newFeedback1h },
+        { count: totalMessages },
+        { count: totalConversations }
+      ] = await Promise.all([
+        fetchWithTimeout(supabase.from('user_profiles').select('*', { count: 'exact', head: true })),
+        fetchWithTimeout(supabase.from('user_profiles').select('*', { count: 'exact', head: true }).gte('last_active_at', thirtyMinutesAgo)),
+        fetchWithTimeout(supabase.from('messages').select('*', { count: 'exact', head: true }).gte('created_at', oneHourAgo)),
+        fetchWithTimeout(supabase.from('messages').select('*', { count: 'exact', head: true })),
+        fetchWithTimeout(supabase.from('conversations').select('*', { count: 'exact', head: true }))
+      ]);
 
       const data: DashboardData = {
         activeUsersNow: activeUsersNow || 0,
         newFeedback1h: newFeedback1h || 0,
-        totalUsers: adminData.totalUsers,
+        totalUsers: totalUsers || 0,
         totalMessages: totalMessages || 0,
         totalConversations: totalConversations || 0,
       };
@@ -122,24 +102,32 @@ const ComprehensiveAdminDashboard: React.FC = () => {
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err);
       setError(err.message || 'Failed to load dashboard data');
+      // Set default data even on error so the page still renders
+      setDashboardData({
+        activeUsersNow: 0,
+        newFeedback1h: 0,
+        totalUsers: 0,
+        totalMessages: 0,
+        totalConversations: 0,
+      });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchDashboardData();
-    
+
     // Set up auto-refresh if live mode is enabled
     let interval: NodeJS.Timeout | null = null;
     if (live) {
       interval = setInterval(fetchDashboardData, 30000); // Refresh every 30 seconds
     }
-    
+
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [user, live]);
+  }, [fetchDashboardData, live]);
 
   return (
     <div className="min-h-screen w-full" style={{ background: Brand.sand }}>
