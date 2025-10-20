@@ -2,7 +2,6 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { captureException } from '../utils/sentry';
 import { logger } from '../utils/logger';
-import { detectDeviceCapabilities } from '../utils/deviceCapabilities';
 
 interface Props {
   children: ReactNode;
@@ -35,18 +34,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    const capabilities = detectDeviceCapabilities();
-
-    logger.error('ErrorBoundary caught an error:', error, errorInfo, {
-      deviceMemory: capabilities.memory,
-      isLowEnd: capabilities.isLowEnd,
-    });
+    logger.error('ErrorBoundary caught an error:', error, errorInfo);
 
     captureException(error, {
       componentStack: errorInfo.componentStack,
       errorBoundary: true,
-      deviceMemory: capabilities.memory,
-      isLowEndDevice: capabilities.isLowEnd,
     });
 
     this.setState({
@@ -85,27 +77,9 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <div className="bg-navy-800 rounded-lg p-4 mb-6">
-              {(() => {
-                const capabilities = detectDeviceCapabilities();
-                if (capabilities.isLowEnd) {
-                  return (
-                    <div>
-                      <p className="text-white/80 text-sm mb-2">
-                        The application encountered an error. This may be due to limited device resources.
-                      </p>
-                      <p className="text-white/60 text-xs">
-                        Tips: Close other apps or browser tabs, then reload the page. Consider using a device with more memory for the best experience.
-                      </p>
-                    </div>
-                  );
-                }
-                return (
-                  <p className="text-white/80 text-sm mb-2">
-                    The application encountered an error and needs to be reloaded. Our team has been notified.
-                  </p>
-                );
-              })()}
-
+              <p className="text-white/80 text-sm mb-2">
+                The application encountered an error and needs to be reloaded. Our team has been notified.
+              </p>
               {import.meta.env.DEV && this.state.error && (
                 <details className="mt-4">
                   <summary className="text-teal cursor-pointer text-sm font-medium mb-2">

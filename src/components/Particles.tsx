@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Renderer, Camera, Geometry, Program, Mesh } from 'ogl';
-import { detectDeviceCapabilities } from '../utils/deviceCapabilities';
 
 import './Particles.css';
 
@@ -118,12 +117,10 @@ const Particles: React.FC<ParticlesProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
   const [shouldRender, setShouldRender] = useState(false);
-  const [renderError, setRenderError] = useState(false);
 
   useEffect(() => {
-    const capabilities = detectDeviceCapabilities();
-
-    if (capabilities.shouldDisableParticles) {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
       return;
     }
 
@@ -135,24 +132,15 @@ const Particles: React.FC<ParticlesProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!shouldRender || renderError) return;
+    if (!shouldRender) return;
 
     const container = containerRef.current;
     if (!container) return;
 
-    let renderer: Renderer | null = null;
-    let gl: WebGLRenderingContext | null = null;
-
-    try {
-      renderer = new Renderer({ depth: false, alpha: true });
-      gl = renderer.gl;
-
-      if (!gl) {
-        throw new Error('WebGL context could not be created');
-      }
-
-      container.appendChild(gl.canvas);
-      gl.clearColor(0, 0, 0, 0);
+    const renderer = new Renderer({ depth: false, alpha: true });
+    const gl = renderer.gl;
+    container.appendChild(gl.canvas);
+    gl.clearColor(0, 0, 0, 0);
 
     const camera = new Camera(gl, { fov: 15 });
     camera.position.set(0, 0, cameraDistance);
@@ -249,42 +237,16 @@ const Particles: React.FC<ParticlesProps> = ({
       renderer.render({ scene: particles, camera });
     };
 
-      animationFrameId = requestAnimationFrame(update);
-
-    } catch (error) {
-      console.error('Failed to initialize Particles:', error);
-      setRenderError(true);
-
-      if (renderer && gl && container.contains(gl.canvas)) {
-        try {
-          container.removeChild(gl.canvas);
-        } catch (e) {
-        }
-      }
-    }
+    animationFrameId = requestAnimationFrame(update);
 
     return () => {
-      try {
-        window.removeEventListener('resize', resize);
-        if (moveParticlesOnHover) {
-          container.removeEventListener('mousemove', handleMouseMove);
-        }
-        if (animationFrameId) {
-          cancelAnimationFrame(animationFrameId);
-        }
-
-        if (gl) {
-          const ext = gl.getExtension('WEBGL_lose_context');
-          if (ext) {
-            ext.loseContext();
-          }
-        }
-
-        if (renderer && gl && gl.canvas && container.contains(gl.canvas)) {
-          container.removeChild(gl.canvas);
-        }
-      } catch (error) {
-        console.error('Error during Particles cleanup:', error);
+      window.removeEventListener('resize', resize);
+      if (moveParticlesOnHover) {
+        container.removeEventListener('mousemove', handleMouseMove);
+      }
+      cancelAnimationFrame(animationFrameId);
+      if (container.contains(gl.canvas)) {
+        container.removeChild(gl.canvas);
       }
     };
   }, [
@@ -301,10 +263,6 @@ const Particles: React.FC<ParticlesProps> = ({
     cameraDistance,
     disableRotation
   ]);
-
-  if (renderError) {
-    return <div className={`particles-container ${className}`} />;
-  }
 
   return <div ref={containerRef} className={`particles-container ${className}`} />;
 };
