@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PenSquare, Search, Trash2, Crown, X, LogOut, LayoutGrid, Layout, Check, FileEdit as Edit3, FileText, Grid2x2 as Grid, Building, ChevronDown, MessageSquare, BookOpen, FolderOpen, Settings, MoreVertical } from 'lucide-react';
+import { PenSquare, Search, Trash2, Crown, X, LogOut, LayoutGrid, Layout, Check, FileEdit as Edit3, FileText, Grid2x2 as Grid, ChevronDown, MessageSquare, BookOpen, FolderOpen, Settings, MoreVertical } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useConversations } from '../../context/ConversationContext';
 import { updateConversationTitle } from '../../services/chatService';
@@ -408,19 +408,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 </button>
               )}
 
-              {/* Super Admin Button - Only show for super admin user (optimus_prime only) */}
-              {profile && profile.team_role === 'optimus_prime' && (
-            <button
-              onClick={() => {
-                navigate('/admin');
-                if (onClose) onClose();
-              }}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-12 border border-[#E5E7EB] hover:bg-[#F3EFEA] hover:shadow-md hover:border-orange/30 hover:text-[#19324A] hover:scale-[1.01] transition-all duration-150 ease-out"
-            >
-              <Building className="w-4 h-4 text-[#f5b233]" />
-              <span className="text-sm font-medium">Super Admin</span>
-            </button>
-              )}
+              {/* Super Admin Button - Hidden from sidebar (access via direct URL /admin) */}
             </>
           )}
           
