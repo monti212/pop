@@ -692,7 +692,7 @@ export const generateResponse = async ({
 export const generateImage = async (
   prompt: string,
   userId: string,
-  size: '1792x1024' | '1024x1792' = '1792x1024',
+  size: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024',
   background: 'transparent' | 'white' = 'transparent',
   modelVersion: '2.1' | '2.0' = '2.0'
 ): Promise<{ success: boolean; images?: string[]; error?: string }> => {

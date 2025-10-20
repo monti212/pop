@@ -371,7 +371,7 @@ Deno.serve(async (req: Request) => {
   if (body?.mode === 'image.generate') {
     console.log(`🎨 [${reqId}] Image generation request`);
 
-    const { prompt, size = '1792x1024', modelVersion = '2.0', n = 1 } = body;
+    const { prompt, size = '1024x1024', modelVersion = '2.0', n = 1 } = body;
 
     if (!prompt || typeof prompt !== 'string') {
       return jsonResponse({ error: 'Missing prompt for image generation' }, 400);
