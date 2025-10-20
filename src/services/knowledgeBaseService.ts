@@ -1,11 +1,4 @@
 import { supabase } from './authService';
-import mammoth from 'mammoth';
-import * as pdfjs from 'pdfjs-dist';
-
-// Configure PDF.js worker
-if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-}
 
 interface ChunkResult {
   content: string;
@@ -125,6 +118,14 @@ export class KnowledgeBaseService {
 
   private static async extractTextFromPDF(file: Blob): Promise<string> {
     try {
+      // Lazy load pdfjs only when needed
+      const pdfjs = await import('pdfjs-dist');
+
+      // Configure worker
+      if (typeof window !== 'undefined') {
+        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+      }
+
       const arrayBuffer = await file.arrayBuffer();
       const loadingTask = pdfjs.getDocument({
         data: arrayBuffer,
@@ -153,8 +154,11 @@ export class KnowledgeBaseService {
 
   private static async extractTextFromWord(file: Blob): Promise<string> {
     try {
+      // Lazy load mammoth only when needed
+      const mammoth = await import('mammoth');
+
       const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer });
+      const result = await mammoth.default.extractRawText({ arrayBuffer });
       return result.value;
     } catch (error) {
       console.error('Error extracting text from Word document:', error);
