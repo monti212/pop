@@ -5,6 +5,7 @@ import AuthButtons from './AuthButtons';
 import Particles from './Particles';
 import AnimatedPlaceholder from './AnimatedPlaceholder';
 import Logo from './Logo';
+import { detectDeviceCapabilities } from '../utils/deviceCapabilities';
 
 interface HeroProps {
   onInitialQuestionSubmit: (question: string) => void;
@@ -22,11 +23,12 @@ const Hero: React.FC<HeroProps> = ({
   const [animateBackground, setAnimateBackground] = useState(true);
   const [question, setQuestion] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-  
-  // Disable animation for reduced motion preference
+  const [showParticles, setShowParticles] = useState(true);
+
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    setAnimateBackground(!prefersReducedMotion);
+    const capabilities = detectDeviceCapabilities();
+    setAnimateBackground(!capabilities.shouldDisableAnimations);
+    setShowParticles(!capabilities.shouldDisableParticles);
   }, []);
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -40,21 +42,23 @@ const Hero: React.FC<HeroProps> = ({
   return (
     <section className="min-h-[100svh] relative overflow-hidden bg-gradient-to-b from-[#E6F2F9] to-[#FEF7E8] dark:from-[#0165A7] dark:to-[#E5A01E] transition-colors duration-300">
       {/* Background decoration */}
-      
-      <div className="absolute inset-0 z-0">
-        <div style={{ width: '100%', height: '100%', position: 'absolute' }}>
-          <Particles
-            particleColors={['#0170b9', '#f5b233']}
-            particleCount={350}
-            particleSpread={10}
-            speed={0.1}
-            particleBaseSize={100}
-            moveParticlesOnHover={true}
-            alphaParticles={false}
-            disableRotation={false}
-          />
+
+      {showParticles && (
+        <div className="absolute inset-0 z-0">
+          <div style={{ width: '100%', height: '100%', position: 'absolute' }}>
+            <Particles
+              particleColors={['#0170b9', '#f5b233']}
+              particleCount={350}
+              particleSpread={10}
+              speed={0.1}
+              particleBaseSize={100}
+              moveParticlesOnHover={true}
+              alphaParticles={false}
+              disableRotation={false}
+            />
+          </div>
         </div>
-      </div>
+      )}
       
       {/* Pencils of Promise Logo in top left */}
       <div className="absolute top-6 left-6 z-30">

@@ -57,24 +57,16 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 if (isDevelopment && performance.memory) {
-  const memoryCheckInterval = setInterval(() => {
+  setInterval(() => {
     const memory = performance.memory;
     const used = (memory.usedJSHeapSize / 1048576).toFixed(2);
     const limit = (memory.jsHeapSizeLimit / 1048576).toFixed(2);
     const percent = ((memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100).toFixed(1);
 
-    if (parseFloat(percent) > 85) {
+    if (parseFloat(percent) > 90) {
       logger.warn(`Memory Warning: Using ${used}MB / ${limit}MB (${percent}%)`);
-
-      if (parseFloat(percent) > 95) {
-        logger.error(`Critical Memory: ${percent}% - Consider reloading the page`);
-      }
     }
-  }, 60000);
-
-  window.addEventListener('beforeunload', () => {
-    clearInterval(memoryCheckInterval);
-  });
+  }, 30000);
 }
 
 const root = document.getElementById('root')!;
