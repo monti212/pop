@@ -1224,7 +1224,7 @@ export default function ChatInterface({
           {/* Messages Container - Only visible when there are messages */}
           <div
             ref={messagesContainerRef}
-            className={`flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 pb-48 ${
+            className={`flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 pb-6 ${
               !currentConversation || currentConversation?.messages.length === 0 ? 'invisible' : 'visible'
             }`}
           >

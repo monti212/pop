@@ -72,6 +72,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [interimTranscript, setInterimTranscript] = useState('');
   const [microphonePermissionError, setMicrophonePermissionError] = useState<string | null>(null);
   const [fileLimitError, setFileLimitError] = useState<string | null>(null);
+  const [showFileDropdown, setShowFileDropdown] = useState(false);
+  const fileDropdownRef = useRef<HTMLDivElement>(null);
 
   // Undo/Redo functionality
   const [undoStack, setUndoStack] = useState<string[]>([]);
@@ -98,8 +100,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   // Handle file upload button click
   const handleFileUploadClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+    if (selectedFiles.length > 0) {
+      // Toggle dropdown if files exist
+      setShowFileDropdown(!showFileDropdown);
+    } else {
+      // Open file picker directly if no files
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
     }
   };
   
@@ -407,8 +415,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
       if (toolsRef.current && !toolsRef.current.contains(event.target as Node) && !toolsCollapsed) {
         // Don't auto-close since tools are now permanent
       }
+      // Close file dropdown when clicking outside
+      if (fileDropdownRef.current && !fileDropdownRef.current.contains(event.target as Node)) {
+        setShowFileDropdown(false);
+      }
     }
-    
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -726,31 +738,104 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   <span>Image</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleFileUploadClick();
-                  }}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors duration-200 ${
-                    selectedFiles.length > 0
-                      ? 'bg-[#0170b9]/10 text-[#0170b9] border border-[#0170b9]/20'
-                      : 'hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-800'
-                  }`}
-                  title="Upload file"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Upload</span>
-                  {selectedFiles.length > 0 && (
-                    <span className="bg-[#0170b9] text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                      {selectedFiles.length}
-                    </span>
-                  )}
-                  {selectedFiles.length >= MAX_DOCUMENTS && (
-                    <span className="bg-[#f5b233] text-white rounded-full text-xs px-1.5 py-0.5 flex items-center justify-center">
-                      MAX
-                    </span>
-                  )}
-                </button>
+                <div ref={fileDropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleFileUploadClick();
+                    }}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors duration-200 ${
+                      selectedFiles.length > 0
+                        ? 'bg-[#0170b9]/10 text-[#0170b9] border border-[#0170b9]/20'
+                        : 'hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-800'
+                    }`}
+                    title="Upload file"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>Upload</span>
+                    {selectedFiles.length > 0 && (
+                      <span className="bg-[#0170b9] text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                        {selectedFiles.length}
+                      </span>
+                    )}
+                    {selectedFiles.length >= MAX_DOCUMENTS && (
+                      <span className="bg-[#f5b233] text-white rounded-full text-xs px-1.5 py-0.5 flex items-center justify-center">
+                        MAX
+                      </span>
+                    )}
+                    {selectedFiles.length > 0 && (
+                      <ChevronUp className={`w-4 h-4 transition-transform ${showFileDropdown ? 'rotate-180' : ''}`} />
+                    )}
+                  </button>
+
+                  {/* File Dropdown Menu */}
+                  <AnimatePresence>
+                    {showFileDropdown && selectedFiles.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute bottom-full mb-2 left-0 w-80 bg-white rounded-lg shadow-xl border border-[#0170b9]/20 z-50 max-h-96 overflow-y-auto"
+                      >
+                        <div className="p-2">
+                          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                            <span className="text-sm font-medium text-gray-700">
+                              Attached Files ({selectedFiles.length}/{MAX_DOCUMENTS})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (fileInputRef.current) {
+                                  fileInputRef.current.click();
+                                }
+                              }}
+                              disabled={selectedFiles.length >= MAX_DOCUMENTS}
+                              className="text-xs text-[#0170b9] hover:text-[#f5b233] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                            >
+                              <Plus className="w-3 h-3" />
+                              Add More
+                            </button>
+                          </div>
+
+                          {selectedFiles.map((file, index) => {
+                            const isImage = file.type.startsWith('image/');
+                            const preview = isImage ? URL.createObjectURL(file) : null;
+
+                            return (
+                              <div
+                                key={index}
+                                className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                              >
+                                <div className="flex-shrink-0 w-10 h-10 rounded border border-gray-200 overflow-hidden">
+                                  {preview ? (
+                                    <img src={preview} alt={file.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="flex items-center justify-center h-full bg-gray-50">
+                                      <FileText className="w-5 h-5 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
+                                  <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveFile(index)}
+                                  className="flex-shrink-0 p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="Remove file"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
                 
                 {/* U Files button removed as requested */}
                 
@@ -1013,40 +1098,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
           </button>
         )}
       </form>
-
-      {/* Uploaded Files Display - Behind chat input */}
-      {selectedFiles.length > 0 && (
-        <div className="absolute left-4 flex gap-2" style={{ bottom: '-32px', zIndex: -1 }}>
-          {selectedFiles.map((file, index) => {
-            const isImage = file.type.startsWith('image/');
-            const preview = isImage ? URL.createObjectURL(file) : null;
-
-            return (
-              <div
-                key={index}
-                className="relative w-24 h-10 rounded-t-lg border border-b-0 border-borders bg-white shadow-sm overflow-hidden"
-                style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }}
-              >
-                {preview ? (
-                  <img src={preview} alt={file.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex items-center justify-center h-full bg-gray-50">
-                    <FileText className="w-5 h-5 text-gray-400" />
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFile(index)}
-                  className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md transition-colors"
-                  title="Remove file"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 };
