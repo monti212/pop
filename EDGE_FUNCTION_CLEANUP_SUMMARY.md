@@ -52,7 +52,7 @@ Cleaned up the `uhuru-llm-api` edge function by removing unnecessary configurati
 ### 3. ✅ Updated to Responses API
 
 **Changed:**
-- `UHURU_API_URL` now points to Responses API endpoint: `https://api.openai.com/v1/chat/response`
+- `UHURU_API_URL` now points to Responses API endpoint: `https://api.uhuru.ai/v1/chat/response`
 - Removed Chat Completions API compatibility code
 - Simplified request payload structure
 
@@ -103,7 +103,7 @@ Cleaned up the `uhuru-llm-api` edge function by removing unnecessary configurati
 **Changes:**
 ```diff
 - UHURU_API_URL=https://api.provider.com/v1/responses
-+ UHURU_API_URL=https://api.openai.com/v1/chat/response
++ UHURU_API_URL=https://api.uhuru.ai/v1/chat/response
 
 - UHURU_20_API_KEY=your-api-key-for-model-20
 - UHURU_MODEL_15=u-1.5
@@ -136,9 +136,9 @@ After this cleanup, configure these secrets in **Supabase Dashboard → Edge Fun
 
 ```bash
 # Core API Configuration
-UHURU_API_URL=https://api.openai.com/v1/chat/response
-UHURU_IMAGES_URL=https://api.openai.com/v1/images/generations
-UHURU_API_KEY=<your-openai-api-key>
+UHURU_API_URL=https://api.uhuru.ai/v1/chat/response
+UHURU_IMAGES_URL=https://api.uhuru.ai/v1/images/generations
+UHURU_API_KEY=<your-uhuru-api-key>
 
 # Model Configuration
 UHURU_MODEL_20=gpt-5-mini

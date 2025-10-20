@@ -167,7 +167,7 @@ const ModelCost: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold" style={{ color: Brand.navy }}>Model Cost Analytics</h2>
           <p className="text-sm mt-1" style={{ color: Brand.navy, opacity: 0.7 }}>
-            Track costs across all Uhuru AI models (OpenAI pricing)
+            Track costs across all Uhuru AI models
           </p>
         </div>
         <div className="flex gap-2">
@@ -259,7 +259,7 @@ const ModelCost: React.FC = () => {
           </div>
         </Card>
 
-        <Card title="Model Cost Details" subtitle="OpenAI equivalent pricing">
+        <Card title="Model Cost Details" subtitle="Uhuru AI model pricing">
           <div className="space-y-4">
             {modelCostStats.map((stat, index) => (
               <div key={index} className="flex items-center justify-between">
@@ -273,7 +273,7 @@ const ModelCost: React.FC = () => {
                       {stat.name}
                     </p>
                     <p className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
-                      Equivalent: {stat.apiModel}
+                      Model: {stat.apiModel}
                     </p>
                   </div>
                 </div>
@@ -377,8 +377,8 @@ const ModelCost: React.FC = () => {
             Pricing Information
           </p>
           <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.7 }}>
-            All costs shown are based on OpenAI's pricing for equivalent models. U 2.0 uses gpt-5-mini pricing,
-            U 2.0 Extended uses gpt-5 pricing, Craft-1 uses dall-e-3 pricing, and Craft-0 uses gpt-image-1 pricing.
+            All costs shown are based on Uhuru AI's proprietary pricing model. U 2.0 uses gpt-5-mini architecture,
+            U 2.0 Extended uses gpt-5 architecture, Craft-1 uses dall-e-3 architecture, and Craft-0 uses gpt-image-1 architecture.
           </p>
         </div>
       </div>

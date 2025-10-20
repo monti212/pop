@@ -154,14 +154,14 @@ Reminder: Sustain a neutral conversation until the user sets their direction. Th
 function sanitizeResponse(text) {
   if (!text || typeof text !== 'string') return text;
   let sanitized = text;
-  // Remove common vendor/model references
+  // Replace vendor/model references with Uhuru AI branding
   const patterns = [
-    [/\bOpenAI\b/gi, '[REDACTED]'],
-    [/\bAnthropic\b/gi, '[REDACTED]'],
-    [/\bGoogle AI\b/gi, '[REDACTED]'],
-    [/\bgpt-\d+/gi, '[REDACTED]'],
-    [/\bclaude-\d+/gi, '[REDACTED]'],
-    [/\bgemini-\d+/gi, '[REDACTED]'],
+    [/\bOpenAI\b/gi, 'Uhuru AI'],
+    [/\bAnthropic\b/gi, 'Uhuru AI'],
+    [/\bGoogle AI\b/gi, 'Uhuru AI'],
+    [/\bgpt-\d+/gi, 'Uhuru AI model'],
+    [/\bclaude-\d+/gi, 'Uhuru AI model'],
+    [/\bgemini-\d+/gi, 'Uhuru AI model'],
     [/\bsk-[a-zA-Z0-9]+/gi, '[REDACTED]'],
     [/\bdall-e-\d+/gi, 'Uhuru Image Generation'],
     [/\bgpt-image-\d+/gi, 'Uhuru Image Generation']
@@ -637,7 +637,7 @@ Deno.serve(async (req) => {
     stream: true
   };
 
-  console.log('🚀 [EDGE] Sending to OpenAI:', {
+  console.log('🚀 [EDGE] Sending to Uhuru AI:', {
     url: API_URL,
     model,
     inputLength: input?.length,
@@ -664,7 +664,7 @@ Deno.serve(async (req) => {
 
     if (!up.ok) {
       const errorText = await up.text();
-      console.error('❌ [EDGE] OpenAI API Error:', {
+      console.error('❌ [EDGE] Uhuru AI API Error:', {
         status: up.status,
         statusText: up.statusText,
         errorBody: errorText
@@ -672,7 +672,7 @@ Deno.serve(async (req) => {
       return normalizeUpstreamError(up.status, origin);
     }
 
-    console.log('✅ [EDGE] OpenAI response OK, streaming started');
+    console.log('✅ [EDGE] Uhuru AI response OK, streaming started');
 
     return new Response(normalizeStream(up.body), {
       headers: {

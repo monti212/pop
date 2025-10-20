@@ -41,14 +41,14 @@ function sanitizeResponse(text: string): string {
 
   let sanitized = text;
 
-  // Block vendor/model references
+  // Block vendor/model references and replace with Uhuru AI branding
   const vendorPatterns = [
-    [/\bOpenAI\b/gi, 'our AI provider'],
-    [/\bAnthropic\b/gi, 'our AI provider'],
-    [/\bGoogle AI\b/gi, 'our AI provider'],
-    [/\bgpt-\d+/gi, 'AI model'],
-    [/\bclaude-\d+/gi, 'AI model'],
-    [/\bgemini-\d+/gi, 'AI model'],
+    [/\bOpenAI\b/gi, 'Uhuru AI'],
+    [/\bAnthropic\b/gi, 'Uhuru AI'],
+    [/\bGoogle AI\b/gi, 'Uhuru AI'],
+    [/\bgpt-\d+/gi, 'Uhuru AI model'],
+    [/\bclaude-\d+/gi, 'Uhuru AI model'],
+    [/\bgemini-\d+/gi, 'Uhuru AI model'],
     [/\bsk-[a-zA-Z0-9]+/gi, '[REDACTED]']
   ];
 
