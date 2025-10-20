@@ -1,4 +1,8 @@
 import { supabase } from './authService';
+import * as mammoth from 'mammoth';
+import * as pdfjs from 'pdfjs-dist';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface ChunkResult {
   content: string;
@@ -66,26 +70,22 @@ export class KnowledgeBaseService {
           continue;
         }
 
-        try {
-          const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-kb-embedding`;
-          const response = await fetch(edgeFunctionUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({
-              chunk_id: chunkData.id,
-              document_id: documentId,
-              content: chunk.content,
-            }),
-          });
+        const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-kb-embedding`;
+        const response = await fetch(edgeFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            chunk_id: chunkData.id,
+            document_id: documentId,
+            content: chunk.content,
+          }),
+        });
 
-          if (!response.ok) {
-            console.error('Failed to generate embedding for chunk:', chunkData.id);
-          }
-        } catch (embeddingError) {
-          console.error('Error calling embedding function:', embeddingError);
+        if (!response.ok) {
+          console.error('Failed to generate embedding for chunk:', chunkData.id);
         }
       }
 
@@ -117,53 +117,26 @@ export class KnowledgeBaseService {
   }
 
   private static async extractTextFromPDF(file: Blob): Promise<string> {
-    try {
-      // Lazy load pdfjs only when needed
-      const pdfjs = await import('pdfjs-dist');
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
 
-      // Configure worker
-      if (typeof window !== 'undefined') {
-        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-      }
-
-      const arrayBuffer = await file.arrayBuffer();
-      const loadingTask = pdfjs.getDocument({
-        data: arrayBuffer,
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        useSystemFonts: true,
-      });
-      const pdf = await loadingTask.promise;
-      let fullText = '';
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        fullText += pageText + '\n\n';
-      }
-
-      return fullText;
-    } catch (error) {
-      console.error('Error extracting text from PDF:', error);
-      throw new Error('Failed to extract text from PDF. The file may be corrupted or unsupported.');
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ');
+      fullText += pageText + '\n\n';
     }
+
+    return fullText;
   }
 
   private static async extractTextFromWord(file: Blob): Promise<string> {
-    try {
-      // Lazy load mammoth only when needed
-      const mammoth = await import('mammoth');
-
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.default.extractRawText({ arrayBuffer });
-      return result.value;
-    } catch (error) {
-      console.error('Error extracting text from Word document:', error);
-      throw new Error('Failed to extract text from Word document. The file may be corrupted or unsupported.');
-    }
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
   }
 
   private static chunkText(text: string, fileName: string): ChunkResult[] {

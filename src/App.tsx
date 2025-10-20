@@ -12,20 +12,27 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { logger } from './utils/logger';
 import { HeroSkeleton, LoadingSpinner } from './components/SkeletonLoader';
+import DemoChatLogin from './components/DemoChatLogin';
+import MeetHilousAI from './components/MeetHilousAI';
+import WhatHilousCanDo from './components/WhatHilousCanDo';
 import HowItWorksSection from './components/HowItWorksSection';
 import GrowingWithContinentSection from './components/GrowingWithContinentSection';
+import CommunityImpactSection from './components/CommunityImpactSection';
 import DigitizingKnowledgeSection from './components/DigitizingKnowledgeSection';
+import MeetPaxSection from './components/MeetPaxSection';
 import FAQSection from './components/FAQSection';
 import WhyUhuruSection from './components/WhyUhuruSection';
 import ProductTiersSection from './components/ProductTiersSection';
 import UhuruLLMSection from './components/UhuruLLMSection';
 import TermsAndConditions from './pages/TermsAndConditions';
+import HowPaxPowersHilous from './pages/HowPaxPowersHilous';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import { User, LogIn } from 'lucide-react';
 import { supabase } from './services/authService';
 import { signIn, signUp, signOut } from './services/authService';
 import ProtectedRoute from './components/ProtectedRoute';
+import FreemiumCheckoutRedirect from './components/FreemiumCheckoutRedirect';
 import PricingSection from './components/PricingSection';
 import ApiDocumentation from './pages/ApiDocumentation';
 import { createCheckoutSession } from './services/stripeService';
@@ -82,6 +89,7 @@ const AppContentInner: React.FC = () => {
 
   // Page detection - must be defined before useEffect hooks that reference them
   const isTermsPage = location.pathname === '/terms';
+  const isHowPaxPowersHilousPage = location.pathname === '/how-pax-powers-hilous';
   const isPrivacyPolicyPage = location.pathname === '/privacy';
   const isResetPasswordPage = location.pathname === '/reset-password';
   const isApiDocsPage = location.pathname === '/api-docs';
