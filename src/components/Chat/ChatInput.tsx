@@ -90,7 +90,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const recognitionRef = useRef<any>(null);
   
   // Document upload limit
-  const MAX_DOCUMENTS = 10;
+  const MAX_DOCUMENTS = 5;
 
   // Sync local showImagePromptInput state with parent's isImageMode prop
   // This ensures the input reverts to text mode after image generation
@@ -115,18 +115,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0 && onFileSelect) {
-      // Check 10-document limit
+      // Check document limit
       const availableSlots = MAX_DOCUMENTS - selectedFiles.length;
-      
+
       if (availableSlots <= 0) {
         setFileLimitError(`You can only attach up to ${MAX_DOCUMENTS} documents at once. Remove some files to add new ones.`);
         e.target.value = ''; // Reset input
         return;
       }
-      
+
       // Take only the number of files that fit within the limit
-      const fileArray = Array.from(files).slice(0, availableSlots);
-      
+      const newFileArray = Array.from(files).slice(0, availableSlots);
+
       // Show warning if some files were excluded
       if (files.length > availableSlots) {
         setFileLimitError(`Only ${availableSlots} of ${files.length} files were added due to the ${MAX_DOCUMENTS}-document limit.`);
@@ -134,7 +134,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
         setFileLimitError(null); // Clear any previous errors
       }
 
-      onFileSelect(fileArray);
+      // Append new files to existing files
+      const updatedFiles = [...selectedFiles, ...newFileArray];
+      onFileSelect(updatedFiles);
     }
     // Reset the input value so the same file can be selected again
     e.target.value = '';
@@ -148,18 +150,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
   
   // Handle UserFile selection (from recent files or search)
   const handleUserFileSelect = async (userFile: UserFile) => {
-    // Check 10-document limit
+    // Check document limit
     if (selectedFiles.length >= MAX_DOCUMENTS) {
       setFileLimitError(`You can only attach up to ${MAX_DOCUMENTS} documents at once. Remove some files to add this one.`);
       return;
     }
-    
+
     try {
       // Convert UserFile to File object
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/user-files/${userFile.storage_path}`);
       const blob = await response.blob();
       const file = new File([blob], userFile.file_name, { type: userFile.file_type });
-      
+
       if (onFileSelect) {
         const newFiles = [...selectedFiles, file];
         onFileSelect(newFiles);
