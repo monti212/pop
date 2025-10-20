@@ -31,6 +31,57 @@ import { Conversation } from '../../types/chat';
 import { supabase } from '../../services/authService';
 import { saveChatStateBackup, clearChatStateBackup } from '../../utils/chatStateRecovery';
 
+// Helper function to resize images to 1080x1080
+const resizeImage = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+
+        // Set canvas dimensions to 1080x1080
+        canvas.width = 1080;
+        canvas.height = 1080;
+
+        // Calculate scaling to cover the canvas while maintaining aspect ratio
+        const scale = Math.max(1080 / img.width, 1080 / img.height);
+        const scaledWidth = img.width * scale;
+        const scaledHeight = img.height * scale;
+
+        // Center the image
+        const x = (1080 - scaledWidth) / 2;
+        const y = (1080 - scaledHeight) / 2;
+
+        // Draw the image
+        ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const resizedFile = new File([blob], file.name, {
+              type: file.type,
+              lastModified: Date.now(),
+            });
+            resolve(resizedFile);
+          } else {
+            reject(new Error('Failed to create blob from canvas'));
+          }
+        }, file.type, 0.92); // 92% quality
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+};
+
 interface TypingState {
   isTyping: boolean;
   message: string;
@@ -334,7 +385,7 @@ export default function ChatInterface({
       const result = await generateImage(
         imagePrompt.trim(),
         user.id,
-        '1024x1024',
+        '1080x1080',
         'white',
         backendModelId
       );
@@ -824,18 +875,28 @@ export default function ChatInterface({
 
     // Create the user message immediately for optimistic UI
     let newUserMessage: any;
-    
+
+    // Track resized files for upload
+    const filesToUpload: File[] = [];
+
     if (files?.length) {
       // First, add all files to multimodal content with temporary representations
       for (const file of files) {
         if (file.type.startsWith('image/')) {
+          // Resize image to 1080x1080 before processing
+          const resizedFile = await resizeImage(file);
+          filesToUpload.push(resizedFile);
+
           // Add image with Data URL for immediate display
           const reader = new FileReader();
           const dataUrl: string = await new Promise((resolve) => {
             reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(resizedFile);
           });
           multimodalContent.push({ type: 'image_url', image_url: { url: dataUrl } });
+        } else {
+          // Non-image files don't need resizing
+          filesToUpload.push(file);
         }
       }
       
@@ -883,16 +944,17 @@ export default function ChatInterface({
     setTimeout(() => scrollToBottom(false), 100);
 
     // Now process files in the background - upload and add to multimodal content
-    if (files?.length) {
+    if (filesToUpload.length > 0) {
       const updatedMultimodalContent = [...multimodalContent];
       let uploadSuccessful = true;
       const uploadErrors: string[] = [];
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
+        const originalFile = files[i];
         try {
           if (file.type.startsWith('image/')) {
-            // Upload image to get persistent URL
+            // Upload resized image to get persistent URL
             const uploadResult = await uploadChatImage(file, user.id);
             if (uploadResult.success && uploadResult.url) {
               // Find the corresponding image_url item (by counting images before this one)
@@ -920,7 +982,7 @@ export default function ChatInterface({
             } else {
               console.error('Failed to upload image:', uploadResult.error);
               uploadSuccessful = false;
-              uploadErrors.push(`${file.name}: ${uploadResult.error}`);
+              uploadErrors.push(`${originalFile.name}: ${uploadResult.error}`);
             }
           } else {
             // Upload document to get persistent URL
@@ -930,19 +992,19 @@ export default function ChatInterface({
               updatedMultimodalContent.push({
                 type: 'input_file',
                 file_url: uploadResult.url,
-                filename: file.name,
+                filename: originalFile.name,
                 mimeType: file.type
               });
             } else {
               console.error('Failed to upload document:', uploadResult.error);
               uploadSuccessful = false;
-              uploadErrors.push(`${file.name}: ${uploadResult.error}`);
+              uploadErrors.push(`${originalFile.name}: ${uploadResult.error}`);
             }
           }
         } catch (err: any) {
-          console.error(`Error processing file ${file.name}:`, err);
+          console.error(`Error processing file ${originalFile.name}:`, err);
           uploadSuccessful = false;
-          uploadErrors.push(`${file.name}: ${err.message || 'Unknown error'}`);
+          uploadErrors.push(`${originalFile.name}: ${err.message || 'Unknown error'}`);
         }
       }
 
