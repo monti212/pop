@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { signIn, resetPassword, signInWithGoogle } from '../services/authService';
+import Particles from './Particles';
+import Logo from './Logo';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -115,15 +117,34 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
   };
   
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+    <div className="fixed inset-0 bg-gradient-to-b from-[#E6F2F9] to-[#FEF7E8] flex items-center justify-center z-50 p-3 sm:p-4 overflow-hidden">
+      {/* Particles Background */}
+      <div className="absolute inset-0 z-0">
+        <Particles
+          particleColors={['#0170b9', '#f5b233']}
+          particleCount={285}
+          particleSpread={10}
+          speed={0.1}
+          particleBaseSize={70}
+          moveParticlesOnHover={true}
+          alphaParticles={false}
+          disableRotation={false}
+        />
+      </div>
+
+      {/* Logo in top left */}
+      <div className="absolute top-6 left-6 z-30">
+        <Logo className="h-8" />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 4 }}
         transition={{ duration: 0.15 }}
-        className="glass-card max-w-md w-full shadow-premium dark:shadow-premium-dark overflow-hidden"
+        className="bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden relative z-10 border border-[#0170b9]/10"
       >
-        <div className="absolute top-0 left-0 right-0 h-1 bg-teal"></div>
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#0170b9] to-[#f5b233]"></div>
         
         <button 
           className="absolute top-3 right-3 p-2 rounded-12 text-gray-500 hover:text-gray-700 hover:bg-sand-200 transition-colors duration-200"
@@ -134,9 +155,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
         </button>
         
         <div className="p-5 sm:p-6">
-          <h2 className="font-display text-xl sm:text-2xl font-bold text-center mb-6 sm:mb-8 text-navy dark:text-white">
+          <h2 className="font-display text-xl sm:text-2xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#0170b9] to-[#f5b233]">
             {showForgotPassword ? 'Reset Password' : 'Welcome Back'}
           </h2>
+          <p className="text-center text-[#002F4B]/70 text-sm mb-6 sm:mb-8">
+            {showForgotPassword ? 'Enter your email to reset your password' : 'Continue your learning journey'}
+          </p>
           
           {showForgotPassword ? (
             /* Forgot Password Form */
@@ -173,7 +197,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                         required
                         value={resetEmail}
                         onChange={(e) => setResetEmail(e.target.value)}
-                        className="w-full pl-10 pr-3 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-navy-500/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal dark:focus:ring-teal-400 focus:border-transparent text-sm transition-all"
+                        className="w-full pl-10 pr-3 py-3 rounded-xl border border-[#0170b9]/20 bg-white text-[#002F4B] focus:ring-2 focus:ring-[#0170b9] focus:border-transparent text-sm transition-all shadow-sm"
                         placeholder="Enter your email address"
                         style={{ fontSize: '16px' }}
                       />
@@ -198,7 +222,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                   <motion.button
                     type="submit"
                     disabled={isResetting}
-                    className="w-full premium-button-primary py-3 rounded-lg flex items-center justify-center min-h-[44px] text-sm"
+                    className="w-full bg-gradient-to-r from-[#0170b9] to-[#0096B3] hover:from-[#015a94] hover:to-[#007a94] text-white py-3 rounded-xl flex items-center justify-center min-h-[44px] text-sm font-medium transition-all shadow-lg hover:shadow-xl"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -241,7 +265,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-3 py-3 rounded-12 border border-borders bg-white text-navy focus:ring-2 focus:ring-teal focus:border-transparent text-sm transition-all"
+                    className="w-full pl-10 pr-3 py-3 rounded-xl border border-[#0170b9]/20 bg-white text-[#002F4B] focus:ring-2 focus:ring-[#0170b9] focus:border-transparent text-sm transition-all shadow-sm"
                     placeholder="your@email.com"
                     style={{ fontSize: '16px' }}
                   />
@@ -270,7 +294,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-10 py-3 rounded-12 border border-borders bg-white text-navy focus:ring-2 focus:ring-teal focus:border-transparent text-sm transition-all"
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-[#0170b9]/20 bg-white text-[#002F4B] focus:ring-2 focus:ring-[#0170b9] focus:border-transparent text-sm transition-all shadow-sm"
                     placeholder="••••••••"
                     style={{ fontSize: '16px' }}
                   />
@@ -299,7 +323,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
               <motion.button
                 type="submit"
                 disabled={isLoading || isGoogleLoading}
-                className="w-full bg-teal hover:bg-teal/90 text-white py-3 rounded-12 flex items-center justify-center min-h-[44px] text-sm font-medium transition-colors shadow-card"
+                className="w-full bg-gradient-to-r from-[#0170b9] to-[#0096B3] hover:from-[#015a94] hover:to-[#007a94] text-white py-3 rounded-xl flex items-center justify-center min-h-[44px] text-sm font-medium transition-all shadow-lg hover:shadow-xl"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -316,13 +340,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
             </form>
           )}
           
-          <div className="mt-5 pt-5 border-t border-gray-200 dark:border-gray-700 text-center">
+          <div className="mt-5 pt-5 border-t border-[#0170b9]/10 text-center">
             {!showForgotPassword && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-[#002F4B]/70">
                 Don't have an account?{' '}
-                <button 
+                <button
                   onClick={onSignUp}
-                  className="text-teal dark:text-teal-400 hover:text-teal-600 dark:hover:text-teal-300 font-medium transition-colors"
+                  className="text-transparent bg-clip-text bg-gradient-to-r from-[#0170b9] to-[#f5b233] font-semibold hover:opacity-80 transition-opacity"
                 >
                   Sign up for free
                 </button>
