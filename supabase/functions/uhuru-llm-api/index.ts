@@ -539,7 +539,7 @@ Deno.serve(async (req) => {
 
   // --- Image Generation Path ---
   if (body?.mode === 'image.generate') {
-    const { prompt, size = '1024x1024', background, modelVersion = '2.0', n } = body;
+    const { prompt, size = '1080x1080', background, modelVersion = '2.0', n } = body;
 
     if (!prompt || typeof prompt !== 'string') {
       return j({ error: 'Uhuru Image Generation requires a prompt' }, 400, origin);
