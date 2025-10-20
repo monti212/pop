@@ -99,7 +99,7 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
       <div className="absolute inset-0 z-0">
         <Particles
           particleColors={['#0170b9', '#f5b233']}
-          particleCount={285}
+          particleCount={100}
           particleSpread={10}
           speed={0.1}
           particleBaseSize={70}
