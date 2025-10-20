@@ -7,7 +7,6 @@ import { supabase } from '../../services/authService';
 import SecurityMonitoring from './SecurityMonitoring';
 import ModelUsage from './ModelUsage';
 import ModelCost from './ModelCost';
-import KnowledgeBase from './KnowledgeBase';
 
 // OrionX / Uhuru brand tokens
 const Brand = {
@@ -25,7 +24,6 @@ const pages = [
   'Security Monitoring',
   'Model Usage',
   'Model Cost',
-  'Knowledge Base',
   'Feedback & Triage',
   'Chat Analytics',
   'Docs Analytics',
@@ -174,7 +172,6 @@ const ComprehensiveAdminDashboard: React.FC = () => {
                 {active === 'Security Monitoring' && <SecurityMonitoring />}
                 {active === 'Model Usage' && <ModelUsage />}
                 {active === 'Model Cost' && <ModelCost />}
-                {active === 'Knowledge Base' && <KnowledgeBase />}
                 {active === 'Feedback & Triage' && <Triage />}
                 {active === 'Chat Analytics' && <Surface name="Chat" data={dashboardData} />}
                 {active === 'Docs Analytics' && <Surface name="Docs" data={dashboardData} />}
