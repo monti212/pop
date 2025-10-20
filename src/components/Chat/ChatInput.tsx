@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, X, Image, Search, PenTool as Tool, FileText, RefreshCw, FolderOpen, ChevronUp, ChevronDown, Mic, MicOff } from 'lucide-react';
+import { Send, X, Image, Search, PenTool as Tool, FileText, RefreshCw, FolderOpen, ChevronUp, ChevronDown, Mic, MicOff, Plus } from 'lucide-react';
 import { UserFile } from '../../services/fileService';
 import AnimatedPlaceholder from '../AnimatedPlaceholder';
 
