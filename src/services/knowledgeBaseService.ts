@@ -1,8 +1,11 @@
 import { supabase } from './authService';
-import * as mammoth from 'mammoth';
+import mammoth from 'mammoth';
 import * as pdfjs from 'pdfjs-dist';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Configure PDF.js worker
+if (typeof window !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+}
 
 interface ChunkResult {
   content: string;
@@ -70,22 +73,26 @@ export class KnowledgeBaseService {
           continue;
         }
 
-        const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-kb-embedding`;
-        const response = await fetch(edgeFunctionUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            chunk_id: chunkData.id,
-            document_id: documentId,
-            content: chunk.content,
-          }),
-        });
+        try {
+          const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-kb-embedding`;
+          const response = await fetch(edgeFunctionUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              chunk_id: chunkData.id,
+              document_id: documentId,
+              content: chunk.content,
+            }),
+          });
 
-        if (!response.ok) {
-          console.error('Failed to generate embedding for chunk:', chunkData.id);
+          if (!response.ok) {
+            console.error('Failed to generate embedding for chunk:', chunkData.id);
+          }
+        } catch (embeddingError) {
+          console.error('Error calling embedding function:', embeddingError);
         }
       }
 
@@ -117,26 +124,42 @@ export class KnowledgeBaseService {
   }
 
   private static async extractTextFromPDF(file: Blob): Promise<string> {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-    let fullText = '';
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjs.getDocument({
+        data: arrayBuffer,
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        useSystemFonts: true,
+      });
+      const pdf = await loadingTask.promise;
+      let fullText = '';
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-      fullText += pageText + '\n\n';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += pageText + '\n\n';
+      }
+
+      return fullText;
+    } catch (error) {
+      console.error('Error extracting text from PDF:', error);
+      throw new Error('Failed to extract text from PDF. The file may be corrupted or unsupported.');
     }
-
-    return fullText;
   }
 
   private static async extractTextFromWord(file: Blob): Promise<string> {
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      return result.value;
+    } catch (error) {
+      console.error('Error extracting text from Word document:', error);
+      throw new Error('Failed to extract text from Word document. The file may be corrupted or unsupported.');
+    }
   }
 
   private static chunkText(text: string, fileName: string): ChunkResult[] {
