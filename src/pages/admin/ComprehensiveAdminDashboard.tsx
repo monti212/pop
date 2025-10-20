@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/authService';
 import SecurityMonitoring from './SecurityMonitoring';
-import WhatsAppSettings from './WhatsAppSettings';
-import CostCalculator from './CostCalculator';
+import ModelUsage from './ModelUsage';
+import ModelCost from './ModelCost';
 
 // OrionX / Uhuru brand tokens
 const Brand = {
@@ -22,16 +22,13 @@ const pages = [
   'Dashboard',
   'Cohorts & Users',
   'Security Monitoring',
-  'WhatsApp Messages',
-  'WhatsApp Settings',
-  'Cost Calculator',
-  'Cost Breakdown Maker',
+  'Model Usage',
+  'Model Cost',
   'Feedback & Triage',
   'Chat Analytics',
   'Docs Analytics',
   'Sheets Analytics',
   'Files Analytics',
-  'Search & Command',
   'Performance & Reliability',
   'Experiments & Flags',
   'Exports',
@@ -185,34 +182,13 @@ const ComprehensiveAdminDashboard: React.FC = () => {
                 {active === 'Dashboard' && <Dashboard data={dashboardData} />}
                 {active === 'Cohorts & Users' && <Cohorts data={dashboardData} />}
                 {active === 'Security Monitoring' && <SecurityMonitoring />}
-                {active === 'WhatsApp Messages' && (
-                  <div className="p-6">
-                    <Link
-                      to="/admin/whatsapp"
-                      className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      View WhatsApp Dashboard
-                    </Link>
-                  </div>
-                )}
-                {active === 'WhatsApp Settings' && <WhatsAppSettings />}
-                {active === 'Cost Calculator' && <CostCalculator />}
-                {active === 'Cost Breakdown Maker' && (
-                  <div className="p-6">
-                    <Link
-                      to="/admin/cost-breakdown"
-                      className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Open Cost Breakdown Maker
-                    </Link>
-                  </div>
-                )}
+                {active === 'Model Usage' && <ModelUsage />}
+                {active === 'Model Cost' && <ModelCost />}
                 {active === 'Feedback & Triage' && <Triage />}
                 {active === 'Chat Analytics' && <Surface name="Chat" data={dashboardData} />}
                 {active === 'Docs Analytics' && <Surface name="Docs" data={dashboardData} />}
                 {active === 'Sheets Analytics' && <Surface name="Sheets" data={dashboardData} />}
                 {active === 'Files Analytics' && <Surface name="Files" data={dashboardData} />}
-                {active === 'Search & Command' && <SearchCmd />}
                 {active === 'Performance & Reliability' && <Performance />}
                 {active === 'Experiments & Flags' && <Flags />}
                 {active === 'Exports' && <Exports />}
@@ -417,17 +393,6 @@ function Surface({ name, data }: { name: string; data: DashboardData | null }) {
   );
 }
 
-function SearchCmd() {
-  return (
-    <Card title="Search & Command Analytics">
-      <div className="text-center py-8">
-        <p className="text-sm" style={{ color: Brand.navy }}>
-          Search analytics and command usage tracking are being developed.
-        </p>
-      </div>
-    </Card>
-  );
-}
 
 function Performance() {
   return (
