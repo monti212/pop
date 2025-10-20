@@ -45,7 +45,7 @@ const Hero: React.FC<HeroProps> = ({
         <div style={{ width: '100%', height: '100%', position: 'absolute' }}>
           <Particles
             particleColors={['#0170b9', '#f5b233']}
-            particleCount={250}
+            particleCount={100}
             particleSpread={10}
             speed={0.1}
             particleBaseSize={100}
