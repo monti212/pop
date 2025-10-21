@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, X, Image, Search, PenTool as Tool, FileText, RefreshCw, FolderOpen, ChevronUp, ChevronDown, Mic, MicOff } from 'lucide-react';
 import { UserFile } from '../../services/fileService';
-import AnimatedPlaceholder from '../AnimatedPlaceholder';
 
 interface ChatInputProps {
   onSendMessage: (data: { text: string; files: File[]; isWebSearchActive: boolean }) => void;
@@ -892,10 +891,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
             accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md,.json,image/*"
           />
 
-          {/* Animated Placeholder */}
-          {!message && !editingUserMessage && !showImagePromptInput && selectedFiles.length === 0 && (
-            <div className="absolute left-0 top-0 w-full h-full pointer-events-none flex items-center justify-center">
-              <AnimatedPlaceholder isFocused={isFocused} />
+          {/* Static Placeholder */}
+          {!message && !editingUserMessage && !showImagePromptInput && selectedFiles.length === 0 && !isFocused && (
+            <div className="absolute left-0 top-0 w-full h-full pointer-events-none flex items-center pl-[0.95cm]">
+              <span className="text-sm text-[#19324A]/50">
+                Ask me anything...
+              </span>
             </div>
           )}
 

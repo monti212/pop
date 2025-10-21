@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { ChevronDown, Send } from 'lucide-react';
 import AuthButtons from './AuthButtons';
 import Particles from './Particles';
-import AnimatedPlaceholder from './AnimatedPlaceholder';
 import Logo from './Logo';
 
 interface HeroProps {

@@ -16,9 +16,7 @@ import DemoChatLogin from './components/DemoChatLogin';
 import MeetHilousAI from './components/MeetHilousAI';
 import WhatHilousCanDo from './components/WhatHilousCanDo';
 import HowItWorksSection from './components/HowItWorksSection';
-import GrowingWithContinentSection from './components/GrowingWithContinentSection';
 import CommunityImpactSection from './components/CommunityImpactSection';
-import DigitizingKnowledgeSection from './components/DigitizingKnowledgeSection';
 import MeetPaxSection from './components/MeetPaxSection';
 import FAQSection from './components/FAQSection';
 import WhyUhuruSection from './components/WhyUhuruSection';
@@ -44,7 +42,7 @@ const UhuruDocsPage = lazy(() => import('./pages/UhuruOfficePage'));
 const UhuruSheetsPage = lazy(() => import('./pages/UhuruSheetsPage'));
 const UhuruFilesPage = lazy(() => import('./pages/UhuruFilesPage'));
 const TechnicalDocumentationSystem = lazy(() => import('./pages/TechnicalDocumentationSystem'));
-import DocumentMigrationPrompt from './components/DocumentMigrationPrompt';
+
 function App() {
   return (
     <AuthProvider>
@@ -258,7 +256,6 @@ const AppContentInner: React.FC = () => {
 
   return (
     <ConversationProvider>
-      <DocumentMigrationPrompt />
       <Routes>
         {/* Dedicated Chat Route - Protected */}
         <Route path="/chat" element={
