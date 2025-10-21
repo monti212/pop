@@ -1,8 +1,0 @@
-# robots.txt for OrionX
-
-User-agent: *
-Allow: /
-
-# Sitemap location
-Sitemap: https://uhuru.orionx.xyz/sitemap.xml
-Sitemap: https://www.uhuru.orionx.xyz/sitemap.xml

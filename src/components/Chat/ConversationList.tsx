@@ -5,7 +5,6 @@ import { PenSquare, Search, Trash2, Crown, X, LogOut, LayoutGrid, Layout, Check,
 import { useAuth } from '../../context/AuthContext';
 import { useConversations } from '../../context/ConversationContext';
 import { updateConversationTitle } from '../../services/chatService';
-import { getProductDisplayInfo } from '../../stripe-config';
 import Logo from '../Logo';
 
 interface ConversationListProps {
@@ -35,11 +34,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
-  
-  // Get product display information
-  const freeProduct = getProductDisplayInfo('free');
-  const plusProduct = getProductDisplayInfo('plus');
-  
+
   // Check if current user is authorized for website builder
   const isAuthorizedForWebsiteBuilder = user?.email === 'disabled@example.com';
 

@@ -37,12 +37,7 @@ import PricingSection from './components/PricingSection';
 import ApiDocumentation from './pages/ApiDocumentation';
 import { createCheckoutSession } from './services/stripeService';
 import AdminLogin from './pages/AdminLogin';
-const DashboardOverview = lazy(() => import('./pages/admin/DashboardOverview'));
-const UserAnalytics = lazy(() => import('./pages/admin/UserAnalytics'));
-const MessageAnalytics = lazy(() => import('./pages/admin/MessageAnalytics'));
-const SystemHealth = lazy(() => import('./pages/admin/SystemHealth'));
 import AdminRoute from './components/AdminRoute'; // Keep this import if it's used elsewhere
-const ComprehensiveAdminDashboard = lazy(() => import('./pages/admin/ComprehensiveAdminDashboard'));
 const WhatsAppMessages = lazy(() => import('./pages/admin/WhatsAppMessages'));
 const CostBreakdownMaker = lazy(() => import('./pages/admin/CostBreakdownMaker'));
 const UhuruDocsPage = lazy(() => import('./pages/UhuruOfficePage'));
@@ -94,7 +89,7 @@ const AppContentInner: React.FC = () => {
   const isResetPasswordPage = location.pathname === '/reset-password';
   const isApiDocsPage = location.pathname === '/api-docs';
   const isAdminLoginPage = location.pathname === '/admin/login';
-  const isAdminDashboardPage = location.pathname.startsWith('/admin/dashboard');
+  const isAdminPage = location.pathname.startsWith('/admin');
   const isChatPage = location.pathname === '/chat';
 
   // U Pages detection
@@ -122,7 +117,7 @@ const AppContentInner: React.FC = () => {
       // Only navigate to chat if not already on a U page or other special page
       const isOnSpecialPage = isUPage || isTermsPage || isPrivacyPolicyPage ||
                               isResetPasswordPage || isApiDocsPage ||
-                              isAdminLoginPage || isAdminDashboardPage;
+                              isAdminLoginPage || isAdminPage;
 
       if (!isOnSpecialPage && location.pathname !== '/chat') {
         // Use navigate to go to chat route instead of modal
@@ -130,7 +125,7 @@ const AppContentInner: React.FC = () => {
         sessionStorage.setItem('uhuru_chat_open', 'true');
       }
     }
-  }, [isAuthenticated, isLoading, chatIntentOpen, navigate, location.pathname, isUPage, isTermsPage, isPrivacyPolicyPage, isResetPasswordPage, isApiDocsPage, isAdminLoginPage, isAdminDashboardPage]);
+  }, [isAuthenticated, isLoading, chatIntentOpen, navigate, location.pathname, isUPage, isTermsPage, isPrivacyPolicyPage, isResetPasswordPage, isApiDocsPage, isAdminLoginPage, isAdminPage]);
 
   // Clear chat intent when navigating to U pages
   useEffect(() => {
@@ -305,11 +300,6 @@ const AppContentInner: React.FC = () => {
         
         {/* Protected Admin Routes */}
         <Route element={<AdminRoute />}>
-          <Route path="/admin" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><ComprehensiveAdminDashboard /></Suspense>} />
-          <Route path="/admin/dashboard" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><DashboardOverview /></Suspense>} />
-          <Route path="/admin/users" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><UserAnalytics /></Suspense>} />
-          <Route path="/admin/messages" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><MessageAnalytics /></Suspense>} />
-          <Route path="/admin/health" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><SystemHealth /></Suspense>} />
           <Route path="/admin/whatsapp" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><WhatsAppMessages /></Suspense>} />
           <Route path="/admin/cost-breakdown" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><CostBreakdownMaker /></Suspense>} />
         </Route>
@@ -320,7 +310,7 @@ const AppContentInner: React.FC = () => {
               <HeroSkeleton />
             ) : (
               <div className="min-h-screen bg-sand-200 text-navy">
-                {(isAuthenticated || authState.showChatInterface) && !isTermsPage && !isPrivacyPolicyPage && !isResetPasswordPage && !isApiDocsPage && !isAdminLoginPage && !isAdminDashboardPage && !isChatPage && !isUPage ? (
+                {(isAuthenticated || authState.showChatInterface) && !isTermsPage && !isPrivacyPolicyPage && !isResetPasswordPage && !isApiDocsPage && !isAdminLoginPage && !isAdminPage && !isChatPage && !isUPage ? (
                   <Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}>
                     <ChatInterface
                     onClose={handleSignOut}
