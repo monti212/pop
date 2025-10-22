@@ -100,5 +100,4 @@ export function logEnvironmentStatus(): void {
   logger.info(`  Supabase URL: ${import.meta.env.VITE_SUPABASE_URL ? '✓' : '✗'}`);
   logger.info(`  Supabase Anon Key: ${import.meta.env.VITE_SUPABASE_ANON_KEY ? '✓' : '✗'}`);
   logger.info(`  Functions URL: ${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL ? '✓ (explicit)' : '⚠  (will derive)'}`);
-  logger.info(`  Stripe Key: ${import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ? '✓' : '✗ (optional)'}`);
 }

@@ -30,10 +30,7 @@ import { User, LogIn } from 'lucide-react';
 import { supabase } from './services/authService';
 import { signIn, signUp, signOut } from './services/authService';
 import ProtectedRoute from './components/ProtectedRoute';
-import FreemiumCheckoutRedirect from './components/FreemiumCheckoutRedirect';
-import PricingSection from './components/PricingSection';
 import ApiDocumentation from './pages/ApiDocumentation';
-import { createCheckoutSession } from './services/stripeService';
 import AdminLogin from './pages/AdminLogin';
 import AdminRoute from './components/AdminRoute'; // Keep this import if it's used elsewhere
 const WhatsAppMessages = lazy(() => import('./pages/admin/WhatsAppMessages'));
