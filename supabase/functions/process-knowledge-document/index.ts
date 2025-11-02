@@ -136,6 +136,8 @@ Deno.serve(async (req: Request) => {
 
     console.log(`📄 Processing document: ${documentId}`);
 
+    const processingStartTime = Date.now();
+
     // Get document from database
     const { data: document, error: docError } = await supabase
       .from('admin_knowledge_documents')
@@ -153,7 +155,10 @@ Deno.serve(async (req: Request) => {
     // Update status to processing
     await supabase
       .from('admin_knowledge_documents')
-      .update({ processing_status: 'processing' })
+      .update({
+        processing_status: 'processing',
+        error_message: null
+      })
       .eq('id', documentId);
 
     // Log the action
@@ -261,6 +266,17 @@ Deno.serve(async (req: Request) => {
 
     console.log(`✅ Extracted ${keyConcepts.length} key concepts`);
 
+    // Calculate processing metadata
+    const processingDuration = Date.now() - processingStartTime;
+    const wordCount = document.original_content.split(/\s+/).length;
+    const tokenCount = Math.ceil(document.original_content.length / 4);
+    const estimatedCost = (tokenCount / 1000000) * 2.5; // Rough estimate: $2.50 per 1M tokens
+
+    // Calculate extraction quality score
+    const qualityScore = document.word_count > 0
+      ? Math.min(100, Math.max(0, (wordCount / document.word_count) * 100))
+      : 100;
+
     // Update document with summary and key concepts
     const { error: updateError } = await supabase
       .from('admin_knowledge_documents')
@@ -269,7 +285,13 @@ Deno.serve(async (req: Request) => {
         key_concepts: keyConcepts,
         processing_status: 'completed',
         processed_at: new Date().toISOString(),
-        is_active: true
+        is_active: true,
+        word_count: wordCount,
+        token_count: tokenCount,
+        estimated_cost: estimatedCost,
+        processing_duration_ms: processingDuration,
+        extraction_quality_score: qualityScore,
+        chunk_count: 1
       })
       .eq('id', documentId);
 
@@ -317,7 +339,23 @@ Deno.serve(async (req: Request) => {
 
   } catch (error: any) {
     console.error('❌ Error processing document:', error);
-    
+
+    // Try to update the document with error status
+    try {
+      const { documentId } = await req.json();
+      if (documentId) {
+        await supabase
+          .from('admin_knowledge_documents')
+          .update({
+            processing_status: 'failed',
+            error_message: error.message || 'Unknown error occurred during processing'
+          })
+          .eq('id', documentId);
+      }
+    } catch (updateError) {
+      console.error('Failed to update document with error status:', updateError);
+    }
+
     return new Response(JSON.stringify({
       error: 'Failed to process document',
       details: error.message

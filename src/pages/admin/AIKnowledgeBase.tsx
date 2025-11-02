@@ -25,6 +25,13 @@ interface KnowledgeDocument {
   is_active: boolean;
   file_name: string | null;
   file_size: number | null;
+  file_format: string | null;
+  page_count: number | null;
+  word_count: number | null;
+  extraction_quality_score: number | null;
+  token_count: number | null;
+  estimated_cost: number | null;
+  error_message: string | null;
   created_at: string;
   updated_at: string;
   processed_at: string | null;
@@ -75,6 +82,29 @@ const AIKnowledgeBase: React.FC = () => {
       setUploadingSlot(slotNumber);
       setError(null);
 
+      // Validate file size (300MB limit)
+      const MAX_FILE_SIZE = 300 * 1024 * 1024; // 300MB in bytes
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds the 300MB limit`);
+      }
+
+      // Validate file type
+      const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-word',
+        'text/plain',
+        'text/markdown'
+      ];
+
+      const validExtensions = ['.pdf', '.doc', '.docx', '.txt', '.md'];
+      const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+
+      if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
+        throw new Error('Invalid file type. Please upload PDF, Word (DOC/DOCX), Text, or Markdown files.');
+      }
+
       const reader = new FileReader();
       reader.onload = async (e) => {
         const content = e.target?.result as string;
@@ -88,6 +118,15 @@ const AIKnowledgeBase: React.FC = () => {
 
         let documentId: string;
 
+        // Determine file format from extension and mime type
+        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        let fileFormat = 'other';
+        if (fileExtension === '.pdf') fileFormat = 'pdf';
+        else if (fileExtension === '.doc') fileFormat = 'doc';
+        else if (fileExtension === '.docx') fileFormat = 'docx';
+        else if (fileExtension === '.txt') fileFormat = 'txt';
+        else if (fileExtension === '.md') fileFormat = 'md';
+
         if (existingDoc) {
           const { data, error } = await supabase
             .from('admin_knowledge_documents')
@@ -97,11 +136,16 @@ const AIKnowledgeBase: React.FC = () => {
               file_name: file.name,
               file_size: file.size,
               mime_type: file.type,
+              file_format: fileFormat,
               processing_status: 'pending',
               is_active: false,
               ai_summary: null,
               key_concepts: [],
-              processed_at: null
+              processed_at: null,
+              error_message: null,
+              word_count: 0,
+              page_count: 0,
+              token_count: 0
             })
             .eq('id', existingDoc.id)
             .select()
@@ -119,6 +163,7 @@ const AIKnowledgeBase: React.FC = () => {
               file_name: file.name,
               file_size: file.size,
               mime_type: file.type,
+              file_format: fileFormat,
               processing_status: 'pending',
               uploaded_by: session.user.id
             })
@@ -231,7 +276,7 @@ const AIKnowledgeBase: React.FC = () => {
             AI Knowledge Base
           </h2>
           <p className="text-sm mt-1" style={{ color: Brand.navy, opacity: 0.7 }}>
-            Upload teaching methodologies and Ghana syllabus documents. AI learns automatically.
+            Upload PDF, Word, or text documents (max 300MB). AI processes and learns automatically.
           </p>
         </div>
         <button
@@ -294,7 +339,16 @@ const AIKnowledgeBase: React.FC = () => {
                     </p>
                     {doc.file_size && (
                       <p className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        Size: {(doc.file_size / 1024).toFixed(1)} KB
+                        Size: {doc.file_size < 1024 * 1024
+                          ? `${(doc.file_size / 1024).toFixed(1)} KB`
+                          : `${(doc.file_size / 1024 / 1024).toFixed(2)} MB`}
+                        {doc.file_format && ` • ${doc.file_format.toUpperCase()}`}
+                      </p>
+                    )}
+                    {doc.word_count && doc.word_count > 0 && (
+                      <p className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
+                        {doc.word_count.toLocaleString()} words
+                        {doc.page_count && doc.page_count > 0 && ` • ${doc.page_count} pages`}
                       </p>
                     )}
                   </div>
@@ -328,7 +382,7 @@ const AIKnowledgeBase: React.FC = () => {
                   <label className="block">
                     <input
                       type="file"
-                      accept=".txt,.md,.doc,.docx"
+                      accept=".pdf,.doc,.docx,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
@@ -348,7 +402,7 @@ const AIKnowledgeBase: React.FC = () => {
                 <label className="block">
                   <input
                     type="file"
-                    accept=".txt,.md,.doc,.docx"
+                    accept=".pdf,.doc,.docx,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
@@ -365,8 +419,11 @@ const AIKnowledgeBase: React.FC = () => {
                     ) : (
                       <>
                         <Upload className="w-8 h-8 mb-2" style={{ color: Brand.teal }} />
-                        <span className="text-xs" style={{ color: Brand.navy }}>
+                        <span className="text-xs font-medium" style={{ color: Brand.navy }}>
                           Upload Document
+                        </span>
+                        <span className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.6 }}>
+                          PDF, Word, Text (Max 300MB)
                         </span>
                       </>
                     )}
@@ -393,7 +450,21 @@ const AIKnowledgeBase: React.FC = () => {
               </h3>
               <p className="text-sm mt-1" style={{ color: Brand.navy, opacity: 0.7 }}>
                 Slot {viewingDocument.slot_number} • {viewingDocument.document_type}
+                {viewingDocument.file_format && ` • ${viewingDocument.file_format.toUpperCase()}`}
               </p>
+              {viewingDocument.word_count && viewingDocument.word_count > 0 && (
+                <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.6 }}>
+                  {viewingDocument.word_count.toLocaleString()} words
+                  {viewingDocument.page_count && viewingDocument.page_count > 0 && ` • ${viewingDocument.page_count} pages`}
+                  {viewingDocument.extraction_quality_score && ` • Quality: ${viewingDocument.extraction_quality_score.toFixed(0)}%`}
+                </p>
+              )}
+              {viewingDocument.error_message && (
+                <div className="mt-2 p-2 rounded-lg" style={{ background: '#fef2f2', borderLeft: '3px solid #ef4444' }}>
+                  <p className="text-xs font-medium" style={{ color: '#991b1b' }}>Processing Error:</p>
+                  <p className="text-xs mt-1" style={{ color: '#7f1d1d' }}>{viewingDocument.error_message}</p>
+                </div>
+              )}
             </div>
 
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
