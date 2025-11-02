@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PenSquare, Search, Trash2, Crown, X, LogOut, LayoutGrid, Layout, Check, FileEdit as Edit3, FileText, Grid2x2 as Grid, Building, ChevronDown, MessageSquare, BookOpen, FolderOpen, Settings, MoreVertical } from 'lucide-react';
+import { PenSquare, Search, Trash2, Crown, X, LogOut, LayoutGrid, Layout, Check, FileEdit as Edit3, FileText, Grid2x2 as Grid, Building, ChevronDown, MessageSquare, BookOpen, FolderOpen, Settings, MoreVertical, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useConversations } from '../../context/ConversationContext';
 import { updateConversationTitle } from '../../services/chatService';
@@ -37,6 +37,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
   // Check if current user is authorized for website builder
   const isAuthorizedForWebsiteBuilder = user?.email === 'disabled@example.com';
+
+  // Check if current user is admin
+  const isAdmin = profile?.team_role === 'optimus_prime' || profile?.team_role === 'prime';
 
   const {
     conversations,
@@ -359,6 +362,23 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 <FileText className="w-4 h-4 text-[#0096B3]" />
                 <span className="text-sm font-medium">Uhuru Office</span>
               </motion.button>
+
+              {/* Admin Dashboard Button - Only show for admin users */}
+              {isAdmin && (
+                <motion.button
+                  onClick={() => {
+                    navigate('/admin');
+                    if (onClose) onClose();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-12 border border-[#E5E7EB] hover:bg-[#EFEFED] hover:shadow-md hover:text-[#19324A] hover:scale-[1.01] transition-all duration-150 ease-out"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.15 }}
+                >
+                  <Shield className="w-4 h-4 text-[#FF6A00]" />
+                  <span className="text-sm font-medium">Admin Dashboard</span>
+                </motion.button>
+              )}
             </motion.div>
           )}
           

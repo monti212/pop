@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, RefreshCw, Download, CheckCircle, XCircle, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ArrowLeft, RefreshCw, Users, MessageSquare, Activity, TrendingUp,
+  Clock, Calendar, Zap, Database, ChevronLeft, ChevronRight, AlertTriangle,
+  CheckCircle, XCircle, Loader, Eye, Search, Filter
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/authService';
-import SecurityMonitoring from './SecurityMonitoring';
-import WhatsAppSettings from './WhatsAppSettings';
-import CostCalculator from './CostCalculator';
-import AIKnowledgeBase from './AIKnowledgeBase';
 
-// OrionX / Uhuru brand tokens
+// Brand tokens
 const Brand = {
   sand: '#F7F5F2',
   navy: '#19324A',
@@ -19,90 +19,70 @@ const Brand = {
   line: '#EAE7E3',
 };
 
-const pages = [
-  'Dashboard',
-  'AI Knowledge Base',
-  'Cohorts & Users',
-  'Security Monitoring',
-  'WhatsApp Messages',
-  'WhatsApp Settings',
-  'Cost Calculator',
-  'Cost Breakdown Maker',
-  'Feedback & Triage',
-  'Chat Analytics',
-  'Docs Analytics',
-  'Sheets Analytics',
-  'Files Analytics',
-  'Search & Command',
-  'Performance & Reliability',
-  'Experiments & Flags',
-  'Exports',
-  'Admin Settings',
-];
+interface ConversationSummary {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  ai_summary: string;
+  message_count: number;
+  created_at: string;
+  user_email?: string;
+}
 
-interface DashboardData {
-  activeUsersNow: number;
-  newFeedback1h: number;
+interface UserUsageMetrics {
+  user_id: string;
+  user_email: string;
+  total_messages: number;
+  total_tokens: number;
+  total_conversations: number;
+  last_active: string;
+}
+
+interface PlatformMetrics {
   totalUsers: number;
+  activeUsersToday: number;
   totalMessages: number;
+  totalTokens: number;
   totalConversations: number;
+  messagesLast24h: number;
+  tokensLast24h: number;
 }
 
 const ComprehensiveAdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [active, setActive] = useState('Dashboard');
-  const [live, setLive] = useState(true);
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'per-account' | 'topics'>('overview');
+  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics | null>(null);
+  const [userMetrics, setUserMetrics] = useState<UserUsageMetrics[]>([]);
+  const [conversationTopics, setConversationTopics] = useState<ConversationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Fetch real-time dashboard data
-  const fetchDashboardData = async () => {
-    if (!user) return;
-
+  // Fetch platform-wide metrics
+  const fetchPlatformMetrics = useCallback(async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-
-      // Get current session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No active session');
-      }
-
-      // Fetch admin data using the existing admin-data edge function
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-data`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch admin data');
-      }
-
-      const adminData = await response.json();
-
-      // Get additional real-time metrics
-      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
-      // Get active users (last 30 minutes)
-      const { count: activeUsersNow } = await supabase
+      // Get total users
+      const { count: totalUsers } = await supabase
         .from('user_profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('last_active_at', thirtyMinutesAgo);
+        .select('*', { count: 'exact', head: true });
 
-      // Get new messages in last hour
-      const { count: newFeedback1h } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', oneHourAgo);
+      // Get active users today
+      const today = new Date().toISOString().split('T')[0];
+      const { count: activeUsersToday } = await supabase
+        .from('usage_events')
+        .select('user_id', { count: 'exact', head: true })
+        .gte('created_at', today);
+
+      // Get unique active users
+      const { data: activeUsersData } = await supabase
+        .from('usage_events')
+        .select('user_id')
+        .gte('created_at', today);
+
+      const uniqueActiveUsers = new Set(activeUsersData?.map(e => e.user_id) || []).size;
 
       // Get total messages
       const { count: totalMessages } = await supabase
@@ -114,461 +94,526 @@ const ComprehensiveAdminDashboard: React.FC = () => {
         .from('conversations')
         .select('*', { count: 'exact', head: true });
 
+      // Get messages in last 24h
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count: messagesLast24h } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', yesterday);
 
-      const data: DashboardData = {
-        activeUsersNow: activeUsersNow || 0,
-        newFeedback1h: newFeedback1h || 0,
-        totalUsers: adminData.totalUsers,
+      // Get total tokens (sum from usage_metrics)
+      const { data: tokenData } = await supabase
+        .from('usage_metrics')
+        .select('token_count');
+
+      const totalTokens = tokenData?.reduce((sum, row) => sum + (row.token_count || 0), 0) || 0;
+
+      // Get tokens in last 24h
+      const { data: tokens24hData } = await supabase
+        .from('usage_events')
+        .select('token_count')
+        .gte('created_at', yesterday);
+
+      const tokensLast24h = tokens24hData?.reduce((sum, row) => sum + (row.token_count || 0), 0) || 0;
+
+      setPlatformMetrics({
+        totalUsers: totalUsers || 0,
+        activeUsersToday: uniqueActiveUsers,
         totalMessages: totalMessages || 0,
+        totalTokens,
         totalConversations: totalConversations || 0,
-      };
-
-      setDashboardData(data);
+        messagesLast24h: messagesLast24h || 0,
+        tokensLast24h,
+      });
     } catch (err: any) {
-      console.error('Error fetching dashboard data:', err);
+      console.error('Error fetching platform metrics:', err);
+      throw err;
+    }
+  }, []);
+
+  // Fetch per-user metrics
+  const fetchUserMetrics = useCallback(async () => {
+    try {
+      const { data: usageData, error: usageError } = await supabase
+        .from('usage_metrics')
+        .select(`
+          user_id,
+          message_count,
+          token_count,
+          conversation_count
+        `)
+        .order('message_count', { ascending: false })
+        .limit(50);
+
+      if (usageError) throw usageError;
+
+      // Get user details
+      const userIds = [...new Set(usageData?.map(u => u.user_id) || [])];
+      const { data: userData, error: userError } = await supabase
+        .from('user_profiles')
+        .select('id, email')
+        .in('id', userIds);
+
+      if (userError) throw userError;
+
+      // Aggregate metrics per user
+      const userMap = new Map<string, UserUsageMetrics>();
+
+      usageData?.forEach((metric) => {
+        const existing = userMap.get(metric.user_id);
+        const userInfo = userData?.find(u => u.id === metric.user_id);
+
+        if (existing) {
+          existing.total_messages += metric.message_count || 0;
+          existing.total_tokens += metric.token_count || 0;
+          existing.total_conversations += metric.conversation_count || 0;
+        } else {
+          userMap.set(metric.user_id, {
+            user_id: metric.user_id,
+            user_email: userInfo?.email || 'Unknown',
+            total_messages: metric.message_count || 0,
+            total_tokens: metric.token_count || 0,
+            total_conversations: metric.conversation_count || 0,
+            last_active: new Date().toISOString(),
+          });
+        }
+      });
+
+      setUserMetrics(Array.from(userMap.values()));
+    } catch (err: any) {
+      console.error('Error fetching user metrics:', err);
+      throw err;
+    }
+  }, []);
+
+  // Fetch conversation topics
+  const fetchConversationTopics = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('conversation_summaries')
+        .select(`
+          id,
+          conversation_id,
+          user_id,
+          ai_summary,
+          message_count,
+          created_at
+        `)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      // Get user emails
+      const userIds = [...new Set(data?.map(s => s.user_id) || [])];
+      const { data: userData } = await supabase
+        .from('user_profiles')
+        .select('id, email')
+        .in('id', userIds);
+
+      const summariesWithEmails = data?.map(summary => ({
+        ...summary,
+        user_email: userData?.find(u => u.id === summary.user_id)?.email || 'Unknown',
+      })) || [];
+
+      setConversationTopics(summariesWithEmails);
+    } catch (err: any) {
+      console.error('Error fetching conversation topics:', err);
+      throw err;
+    }
+  }, []);
+
+  // Main data fetch function
+  const fetchAllData = useCallback(async () => {
+    setIsRefreshing(true);
+    setError(null);
+
+    try {
+      await Promise.all([
+        fetchPlatformMetrics(),
+        fetchUserMetrics(),
+        fetchConversationTopics(),
+      ]);
+    } catch (err: any) {
       setError(err.message || 'Failed to load dashboard data');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, [fetchPlatformMetrics, fetchUserMetrics, fetchConversationTopics]);
 
+  // Initial load
   useEffect(() => {
-    fetchDashboardData();
-    
-    // Set up auto-refresh if live mode is enabled
-    let interval: NodeJS.Timeout | null = null;
-    if (live) {
-      interval = setInterval(fetchDashboardData, 30000); // Refresh every 30 seconds
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [user, live]);
+    fetchAllData();
+  }, [fetchAllData]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      fetchAllData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchAllData]);
+
+  // Filter user metrics by search term
+  const filteredUserMetrics = userMetrics.filter(user =>
+    user.user_email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: Brand.sand }}>
+        <div className="flex items-center gap-3">
+          <Loader className="w-8 h-8 animate-spin" style={{ color: Brand.teal }} />
+          <p className="text-lg" style={{ color: Brand.navy }}>Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: Brand.sand }}>
+        <div className="max-w-md w-full bg-white rounded-xl p-6 shadow-lg border" style={{ borderColor: Brand.line }}>
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-lg font-semibold text-red-800">Error Loading Dashboard</h3>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+              <button
+                onClick={fetchAllData}
+                className="mt-4 px-4 py-2 bg-red-100 text-red-800 rounded-lg text-sm hover:bg-red-200 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen w-full" style={{ background: Brand.sand }}>
-      <Header live={live} setLive={setLive} onRefresh={fetchDashboardData} />
-      <div className="flex">
-        <Sidebar
-          active={active}
-          setActive={setActive}
-          collapsed={sidebarCollapsed}
-          setCollapsed={setSidebarCollapsed}
-        />
-        <main className="flex-1 p-6 md:p-8">
-          <FiltersBar />
-          <div className="mt-6">
-            {isLoading ? (
-              <div className="flex justify-center items-center min-h-[400px]">
-                <div className="flex items-center gap-3">
-                  <RefreshCw className="w-6 h-6 animate-spin" style={{ color: Brand.teal }} />
-                  <p className="text-lg" style={{ color: Brand.navy }}>Loading dashboard data...</p>
-                </div>
+    <div className="min-h-screen" style={{ background: Brand.sand }}>
+      {/* Header */}
+      <header
+        className="sticky top-0 z-40 border-b"
+        style={{ borderColor: Brand.line, background: 'rgba(247,245,242,0.95)', backdropFilter: 'blur(10px)' }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/chat"
+              className="p-2 rounded-lg hover:bg-white/80 transition-colors"
+              style={{ color: Brand.navy }}
+              title="Back to Chat"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: Brand.teal }}>
+              <Activity className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <div className="font-semibold" style={{ color: Brand.navy }}>Admin Dashboard</div>
+              <div className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>Real-time analytics</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchAllData}
+              disabled={isRefreshing}
+              className="p-2 rounded-lg hover:bg-white/80 transition-colors disabled:opacity-50"
+              style={{ color: Brand.navy }}
+              title="Refresh data"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+            <label className="flex items-center gap-2 text-xs" style={{ color: Brand.navy }}>
+              <span>Auto-refresh</span>
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded"
+                style={{ accentColor: Brand.teal }}
+              />
+            </label>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-6 overflow-x-auto">
+          {[
+            { key: 'overview', label: 'Platform Overview', icon: Activity },
+            { key: 'per-account', label: 'Per Account Usage', icon: Users },
+            { key: 'topics', label: 'Conversation Topics', icon: MessageSquare },
+          ].map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key as any)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeTab === key
+                  ? 'shadow-md'
+                  : 'hover:bg-white/50'
+              }`}
+              style={{
+                background: activeTab === key ? Brand.teal : 'white',
+                color: activeTab === key ? 'white' : Brand.navy,
+                borderColor: Brand.line,
+                border: activeTab === key ? 'none' : `1px solid ${Brand.line}`,
+              }}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Platform Overview Tab */}
+        {activeTab === 'overview' && platformMetrics && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            {/* Key Metrics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <MetricCard
+                title="Total Users"
+                value={platformMetrics.totalUsers.toLocaleString()}
+                icon={Users}
+                color={Brand.teal}
+                subtitle={`${platformMetrics.activeUsersToday} active today`}
+              />
+              <MetricCard
+                title="Total Messages"
+                value={platformMetrics.totalMessages.toLocaleString()}
+                icon={MessageSquare}
+                color={Brand.teal}
+                subtitle={`${platformMetrics.messagesLast24h} in last 24h`}
+              />
+              <MetricCard
+                title="Total Conversations"
+                value={platformMetrics.totalConversations.toLocaleString()}
+                icon={Activity}
+                color={Brand.teal}
+              />
+              <MetricCard
+                title="Total Tokens"
+                value={platformMetrics.totalTokens.toLocaleString()}
+                icon={Zap}
+                color={Brand.orange}
+                subtitle={`${platformMetrics.tokensLast24h.toLocaleString()} in last 24h`}
+              />
+            </div>
+
+            {/* Platform Statistics */}
+            <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
+              <h3 className="text-lg font-semibold mb-4" style={{ color: Brand.navy }}>
+                Platform Statistics
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatRow
+                  label="Average Messages per User"
+                  value={platformMetrics.totalUsers > 0
+                    ? Math.round(platformMetrics.totalMessages / platformMetrics.totalUsers)
+                    : 0}
+                />
+                <StatRow
+                  label="Average Tokens per User"
+                  value={platformMetrics.totalUsers > 0
+                    ? Math.round(platformMetrics.totalTokens / platformMetrics.totalUsers)
+                    : 0}
+                />
+                <StatRow
+                  label="Average Messages per Conversation"
+                  value={platformMetrics.totalConversations > 0
+                    ? Math.round(platformMetrics.totalMessages / platformMetrics.totalConversations)
+                    : 0}
+                />
               </div>
-            ) : error ? (
-              <div className="bg-red-50 border border-red-100 rounded-lg p-6 max-w-2xl mx-auto">
-                <div className="flex items-start">
-                  <AlertTriangle className="w-6 h-6 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
-                  <div>
-                    <h3 className="text-red-800 font-medium text-lg">Dashboard Loading Error</h3>
-                    <p className="text-red-700 text-sm mt-1">{error}</p>
-                    <button
-                      onClick={fetchDashboardData}
-                      className="mt-4 px-4 py-2 bg-red-100 text-red-800 rounded-lg text-sm hover:bg-red-200 transition-colors"
-                    >
-                      Try Again
-                    </button>
-                  </div>
-                </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Per Account Usage Tab */}
+        {activeTab === 'per-account' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            {/* Search */}
+            <div className="bg-white rounded-xl p-4 border" style={{ borderColor: Brand.line }}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: Brand.navy, opacity: 0.5 }} />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by email..."
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-offset-0 transition-all"
+                  style={{ borderColor: Brand.line, outline: 'none' }}
+                />
+              </div>
+            </div>
+
+            {/* User Metrics Table */}
+            <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: Brand.line }}>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y" style={{ borderColor: Brand.line }}>
+                  <thead style={{ background: 'rgba(25,50,74,0.03)' }}>
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: Brand.navy }}>
+                        User Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: Brand.navy }}>
+                        Messages
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: Brand.navy }}>
+                        Conversations
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: Brand.navy }}>
+                        Tokens Used
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y" style={{ borderColor: Brand.line }}>
+                    {filteredUserMetrics.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-8 text-center text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>
+                          {searchTerm ? 'No users found matching your search' : 'No usage data available'}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUserMetrics.map((user) => (
+                        <tr key={user.user_id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: Brand.navy }}>
+                            {user.user_email}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" style={{ color: Brand.teal }}>
+                            {user.total_messages.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: Brand.navy }}>
+                            {user.total_conversations.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: Brand.orange }}>
+                            {user.total_tokens.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Conversation Topics Tab */}
+        {activeTab === 'topics' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            {conversationTopics.length === 0 ? (
+              <div className="bg-white rounded-xl p-8 border text-center" style={{ borderColor: Brand.line }}>
+                <MessageSquare className="w-12 h-12 mx-auto mb-3" style={{ color: Brand.navy, opacity: 0.3 }} />
+                <p className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>
+                  No conversation summaries available yet. Summaries will appear as conversations are analyzed.
+                </p>
               </div>
             ) : (
-              <>
-                {active === 'Dashboard' && <Dashboard data={dashboardData} />}
-                {active === 'AI Knowledge Base' && <AIKnowledgeBase />}
-                {active === 'Cohorts & Users' && <Cohorts data={dashboardData} />}
-                {active === 'Security Monitoring' && <SecurityMonitoring />}
-                {active === 'WhatsApp Messages' && (
-                  <div className="p-6">
-                    <Link
-                      to="/admin/whatsapp"
-                      className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      View WhatsApp Dashboard
-                    </Link>
+              conversationTopics.map((topic) => (
+                <div
+                  key={topic.id}
+                  className="bg-white rounded-xl p-5 border hover:shadow-md transition-all"
+                  style={{ borderColor: Brand.line }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MessageSquare className="w-4 h-4" style={{ color: Brand.teal }} />
+                        <span className="text-xs font-medium" style={{ color: Brand.navy, opacity: 0.6 }}>
+                          {topic.user_email}
+                        </span>
+                        <span className="text-xs" style={{ color: Brand.navy, opacity: 0.4 }}>•</span>
+                        <span className="text-xs" style={{ color: Brand.navy, opacity: 0.4 }}>
+                          {topic.message_count} messages
+                        </span>
+                      </div>
+                      <p className="text-sm leading-relaxed" style={{ color: Brand.navy }}>
+                        {topic.ai_summary}
+                      </p>
+                    </div>
+                    <div className="text-xs text-right whitespace-nowrap" style={{ color: Brand.navy, opacity: 0.5 }}>
+                      {new Date(topic.created_at).toLocaleDateString()}
+                    </div>
                   </div>
-                )}
-                {active === 'WhatsApp Settings' && <WhatsAppSettings />}
-                {active === 'Cost Calculator' && <CostCalculator />}
-                {active === 'Cost Breakdown Maker' && (
-                  <div className="p-6">
-                    <Link
-                      to="/admin/cost-breakdown"
-                      className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Open Cost Breakdown Maker
-                    </Link>
-                  </div>
-                )}
-                {active === 'Feedback & Triage' && <Triage />}
-                {active === 'Chat Analytics' && <Surface name="Chat" data={dashboardData} />}
-                {active === 'Docs Analytics' && <Surface name="Docs" data={dashboardData} />}
-                {active === 'Sheets Analytics' && <Surface name="Sheets" data={dashboardData} />}
-                {active === 'Files Analytics' && <Surface name="Files" data={dashboardData} />}
-                {active === 'Search & Command' && <SearchCmd />}
-                {active === 'Performance & Reliability' && <Performance />}
-                {active === 'Experiments & Flags' && <Flags />}
-                {active === 'Exports' && <Exports />}
-                {active === 'Admin Settings' && <Settings />}
-              </>
+                </div>
+              ))
             )}
-          </div>
-        </main>
+          </motion.div>
+        )}
       </div>
     </div>
   );
 };
 
-function Header({ live, setLive, onRefresh }: { live: boolean; setLive: (b: boolean) => void; onRefresh: () => void }) {
-  const tealStyle: any = { ['--teal']: Brand.teal };
-
-  return (
-    <header
-      className="sticky top-0 z-40 border-b"
-      style={{ borderColor: Brand.line, background: 'rgba(247,245,242,0.8)', backdropFilter: 'saturate(120%) blur(8px)' }}
-    >
-      <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link 
-            to="/"
-            className="p-2 rounded-lg hover:bg-white/80 transition-colors"
-            style={{ color: Brand.navy }}
-            title="Back to Chat"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div className="h-8 w-8 rounded-full" style={{ background: Brand.teal }} />
-          <div className="font-semibold" style={{ color: Brand.navy }}>Uhuru Admin</div>
-          <div className="hidden md:flex items-center gap-2 ml-4 text-xs">
-            <span className="opacity-70" style={{ color: Brand.navy }}>Build</span>
-            <Badge>v1.0.0</Badge>
-            <span className="opacity-70" style={{ color: Brand.navy }}>Env</span>
-            <Badge tone="navy">Production</Badge>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onRefresh}
-            className="p-2 rounded-lg hover:bg-white/80 transition-colors"
-            style={{ color: Brand.navy }}
-            title="Refresh data"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <label className="flex items-center gap-2 text-xs" style={{ color: Brand.navy }}>
-            <span className="inline-flex items-center gap-1"><Dot live={live} /> Live</span>
-            <input
-              type="checkbox"
-              checked={live}
-              onChange={(e) => setLive(e.target.checked)}
-              className="accent-[var(--teal)]"
-              style={tealStyle}
-            />
-          </label>
-          <button className="rounded-xl px-3 py-1.5 text-xs font-medium" style={{ color: Brand.navy, background: '#fff', border: `1px solid ${Brand.line}` }}>
-            Save view
-          </button>
-        </div>
-      </div>
-    </header>
-  );
+// Helper Components
+interface MetricCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ComponentType<any>;
+  color: string;
+  subtitle?: string;
 }
 
-function Sidebar({ active, setActive, collapsed, setCollapsed }: {
-  active: string;
-  setActive: (s: string) => void;
-  collapsed: boolean;
-  setCollapsed: (b: boolean) => void;
-}) {
-  return (
-    <aside
-      className={`hidden md:block border-r min-h-[calc(100vh-56px)] transition-all duration-300 relative`}
-      style={{
-        borderColor: Brand.line,
-        background: '#fff',
-        width: collapsed ? '60px' : '260px'
-      }}
-    >
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-4 z-10 p-1.5 rounded-full border shadow-sm hover:shadow-md transition-all"
-        style={{
-          background: '#fff',
-          borderColor: Brand.line,
-          color: Brand.navy
-        }}
-        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-      </button>
-      <nav className="py-4">
-        {pages.map((p) => (
-          <button
-            key={p}
-            onClick={() => setActive(p)}
-            className={`w-full text-left px-5 py-2.5 text-sm transition rounded-r-2xl ${active === p ? 'font-semibold' : ''} ${collapsed ? 'flex items-center justify-center' : ''}`}
-            style={{
-              color: Brand.navy,
-              background: active === p ? 'linear-gradient(90deg, rgba(0,150,179,0.08), rgba(0,150,179,0.0))' : 'transparent',
-              borderLeft: active === p ? `3px solid ${Brand.teal}` : '3px solid transparent',
-            }}
-            title={collapsed ? p : ''}
-          >
-            {collapsed ? p.split(' ').map(word => word[0]).join('').substring(0, 2) : p}
-          </button>
-        ))}
-      </nav>
-    </aside>
-  );
-}
-
-function FiltersBar() {
-  return (
-    <section className="rounded-2xl border p-3 md:p-4 grid grid-cols-2 md:grid-cols-6 gap-2" style={{ borderColor: Brand.line, background: '#fff' }}>
-      {['Last 24h','Country','Device','Network','Cohort','Build'].map((l,i)=> (
-        <div key={i} className="flex flex-col">
-          <label className="text-[11px] uppercase tracking-wide" style={{ color: Brand.navy, opacity: 0.6 }}>{l}</label>
-          <div className="mt-1 rounded-xl border px-3 py-2 text-sm" style={{ borderColor: Brand.line, color: Brand.navy }}>Select</div>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-function Dashboard({ data }: { data: DashboardData | null }) {
-  if (!data) return null;
-
-  return (
-    <div className="space-y-6">
-      <CardGrid>
-        <KPI title="Active users (now)" value={data.activeUsersNow.toString()} delta="▲12%" />
-        <KPI title="New feedback (1h)" value={data.newFeedback1h.toString()} delta="+6" tone="teal" />
-        <KPI title="Total Users" value={data.totalUsers.toString()} />
-        <KPI title="Total Messages" value={data.totalMessages.toString()} />
-        <KPI title="Total Conversations" value={data.totalConversations.toString()} />
-      </CardGrid>
-
-      <Card title="Platform Overview">
-        <div className="text-center py-8">
-          <p className="text-sm" style={{ color: Brand.navy }}>
-            Real-time platform metrics are displayed above. Additional analytics and detailed breakdowns 
-            are available in the specialized pages using the sidebar navigation.
-          </p>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function Cohorts({ data }: { data: DashboardData | null }) {
-  if (!data) return null;
-
-  return (
-    <div className="space-y-6">
-      <Card title="User Analytics">
-        <div className="text-center py-8">
-          <p className="text-sm" style={{ color: Brand.navy }}>
-            Detailed user cohort analysis and segmentation tools are being developed. 
-            Basic user metrics are available in the main Dashboard.
-          </p>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function Triage() {
-  return (
-    <div className="space-y-6">
-      <Card title="Feedback & Triage">
-        <div className="text-center py-8">
-          <p className="text-sm" style={{ color: Brand.navy }}>
-            User feedback collection and triage system is being developed. 
-            Current feedback can be viewed through support channels.
-          </p>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function Surface({ name, data }: { name: string; data: DashboardData | null }) {
-  if (!data) return null;
-
-
-  return (
-    <div className="space-y-6">
-      <Card title={`${name} Analytics`}>
-        <div className="text-center py-8">
-          <p className="text-sm" style={{ color: Brand.navy }}>
-            {name} analytics and detailed metrics are being developed. 
-            Basic usage data is available in the main Dashboard.
-          </p>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function SearchCmd() {
-  return (
-    <Card title="Search & Command Analytics">
-      <div className="text-center py-8">
-        <p className="text-sm" style={{ color: Brand.navy }}>
-          Search analytics and command usage tracking are being developed.
-        </p>
-      </div>
-    </Card>
-  );
-}
-
-function Performance() {
-  return (
-    <div className="space-y-6">
-      <Card title="Performance & Reliability">
-        <div className="text-center py-8">
-          <p className="text-sm" style={{ color: Brand.navy }}>
-            Performance monitoring and reliability metrics are being developed.
-          </p>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function Flags() {
-  return (
-    <Card title="Feature Flags & Experiments">
-      <div className="text-center py-8">
-        <p className="text-sm" style={{ color: Brand.navy }}>
-          Feature flag management and A/B testing framework are being developed.
-        </p>
-      </div>
-    </Card>
-  );
-}
-
-function Exports() {
-  return (
-    <Card title="Data Exports">
-      <div className="text-center py-8">
-        <p className="text-sm" style={{ color: Brand.navy }}>
-          Data export functionality is being developed. Contact support for custom data exports.
-        </p>
-      </div>
-    </Card>
-  );
-}
-
-function Settings() {
-  return (
-    <Card title="Admin Settings">
-      <div className="text-center py-8">
-        <p className="text-sm" style={{ color: Brand.navy }}>
-          Administrative settings and user management tools are being developed.
-        </p>
-      </div>
-    </Card>
-  );
-}
-
-/* ——— UI bits ——— */
-function KPI({ title, value, delta, tone = 'teal' }: { title: string; value: string; delta?: string; tone?: 'teal'|'navy'|'orange' }) {
-  const toneMap = { teal: Brand.teal, navy: Brand.navy, orange: Brand.orange };
-  return (
-    <div className="rounded-2xl p-4 border" style={{ borderColor: Brand.line, background: '#fff' }}>
-      <div className="text-xs uppercase tracking-wide" style={{ color: Brand.navy, opacity: 0.6 }}>{title}</div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <div className="text-2xl font-semibold" style={{ color: Brand.navy }}>{value}</div>
-        {delta && <span className="text-xs" style={{ color: toneMap[tone] }}>{delta}</span>}
+const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon: Icon, color, subtitle }) => (
+  <div className="bg-white rounded-xl p-5 border" style={{ borderColor: Brand.line }}>
+    <div className="flex items-center justify-between mb-3">
+      <span className="text-xs font-medium uppercase tracking-wide" style={{ color: Brand.navy, opacity: 0.6 }}>
+        {title}
+      </span>
+      <div className="p-2 rounded-lg" style={{ background: `${color}15` }}>
+        <Icon className="w-4 h-4" style={{ color }} />
       </div>
     </div>
-  );
-}
-
-function CardGrid({ children }: { children: any }) {
-  return <div className="grid md:grid-cols-3 gap-4">{children}</div>;
-}
-
-function CardRow({ children }: { children: any }) {
-  return <div className="grid md:grid-cols-3 gap-4">{children}</div>;
-}
-
-function Card({ title, children, subtitle }: { title: string; children: any; subtitle?: string }) {
-  return (
-    <div className="rounded-2xl border p-4" style={{ borderColor: Brand.line, background: '#fff' }}>
-      <div className="mb-3">
-        <div className="text-sm font-semibold" style={{ color: Brand.navy }}>{title}</div>
-        {subtitle && <div className="text-xs opacity-60" style={{ color: Brand.navy }}>{subtitle}</div>}
+    <div className="text-2xl font-bold mb-1" style={{ color: Brand.navy }}>
+      {value}
+    </div>
+    {subtitle && (
+      <div className="text-xs" style={{ color }}>
+        {subtitle}
       </div>
-      {children}
+    )}
+  </div>
+);
+
+interface StatRowProps {
+  label: string;
+  value: string | number;
+}
+
+const StatRow: React.FC<StatRowProps> = ({ label, value }) => (
+  <div>
+    <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>
+      {label}
     </div>
-  );
-}
-
-function ChartCard({ title, subtitle }: { title: string; subtitle?: string }) {
-  return (
-    <Card title={title} subtitle={subtitle}>
-      <div className="h-40 w-full rounded-xl" style={{ background: `linear-gradient(180deg, rgba(0,150,179,0.12), rgba(0,150,179,0.04))` }} />
-    </Card>
-  );
-}
-
-function Table({ headers, rows }: { headers: string[]; rows: (string[])[] }) {
-  return (
-    <div className="overflow-auto rounded-xl border" style={{ borderColor: Brand.line }}>
-      <table className="min-w-full text-sm" style={{ color: Brand.navy }}>
-        <thead className="text-left" style={{ background: 'rgba(25,50,74,0.04)' }}>
-          <tr>
-            {headers.map((h, i) => (
-              <th key={i} className="px-3 py-2 font-medium whitespace-nowrap border-r last:border-r-0" style={{ borderColor: Brand.line }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, ri) => (
-            <tr key={ri} className="border-t" style={{ borderColor: Brand.line }}>
-              {r.map((c, ci) => (
-                <td key={ci} className="px-3 py-2 whitespace-nowrap border-r last:border-r-0" style={{ borderColor: Brand.line }}>{c}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="text-xl font-semibold" style={{ color: Brand.navy }}>
+      {value}
     </div>
-  );
-}
-
-function Badge({ children, tone = 'teal' }: { children: any; tone?: 'teal'|'navy'|'orange' }) {
-  const bg = tone === 'teal' ? 'rgba(0,150,179,0.12)' : tone === 'orange' ? 'rgba(255,106,0,0.12)' : 'rgba(25,50,74,0.10)';
-  const color = tone === 'teal' ? Brand.teal : tone === 'orange' ? Brand.orange : Brand.navy;
-  return (
-    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-medium" style={{ background: bg, color }}>{children}</span>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between border-b last:border-b-0 py-2" style={{ borderColor: Brand.line }}>
-      <div className="opacity-70" style={{ color: Brand.navy }}>{label}</div>
-      <div className="font-medium" style={{ color: Brand.navy }}>{value}</div>
-    </div>
-  );
-}
-
-
-function Dot({ live }: { live: boolean }) {
-  return <span className={`inline-block h-2 w-2 rounded-full ${live ? '' : 'opacity-40'}`} style={{ background: Brand.orange }} />;
-}
+  </div>
+);
 
 export default ComprehensiveAdminDashboard;

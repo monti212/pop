@@ -3,19 +3,22 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const AdminRoute: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!isLoading) {
-      // Allow any authenticated user to access admin area
-      if (user) {
-        setHasAccess(true);
+      // Only allow admin users with is_admin flag or specific team roles
+      if (user && profile) {
+        const isAdmin = profile.is_admin === true ||
+                       profile.team_role === 'optimus_prime' ||
+                       profile.team_role === 'prime';
+        setHasAccess(isAdmin);
       } else {
         setHasAccess(false);
       }
     }
-  }, [user, isLoading]);
+  }, [user, profile, isLoading]);
 
   if (isLoading || hasAccess === null) {
     return (
