@@ -235,11 +235,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
         {/* Pencils of Promise Logo - at the top */}
         {!isCollapsed && (
           <div className="px-5 pt-3 pb-1">
-            <img
-              src="/PoPLogo_color-01-01 copy.png"
-              alt="Pencils of Promise"
-              className="h-10 w-auto object-contain"
-            />
+            <Logo className="h-10 w-auto" />
           </div>
         )}
 
