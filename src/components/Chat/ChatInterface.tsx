@@ -845,13 +845,76 @@ export default function ChatInterface({
       // First, add all files to multimodal content with temporary representations
       for (const file of files) {
         if (file.type.startsWith('image/')) {
-          // Add image with Data URL for immediate display
-          const reader = new FileReader();
-          const dataUrl: string = await new Promise((resolve) => {
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
-          multimodalContent.push({ type: 'image_url', image_url: { url: dataUrl } });
+          try {
+            // Add image with Data URL for immediate display
+            const reader = new FileReader();
+            const dataUrl: string = await new Promise((resolve, reject) => {
+              // Set up error handler
+              reader.onerror = () => {
+                const error = reader.error;
+                console.error('[ChatInterface] FileReader error:', {
+                  fileName: file.name,
+                  fileSize: file.size,
+                  fileType: file.type,
+                  error
+                });
+                reject(new Error(`Failed to read file "${file.name}". The file may be corrupted or inaccessible.`));
+              };
+
+              // Set up success handler
+              reader.onload = () => {
+                const result = reader.result;
+                if (!result || typeof result !== 'string') {
+                  reject(new Error(`Failed to process file "${file.name}". Invalid file data.`));
+                  return;
+                }
+                console.log('[ChatInterface] FileReader success:', {
+                  fileName: file.name,
+                  dataUrlLength: result.length,
+                  dataUrlPrefix: result.substring(0, 50)
+                });
+                resolve(result);
+              };
+
+              // Set up abort handler
+              reader.onabort = () => {
+                reject(new Error(`File reading was cancelled for "${file.name}".`));
+              };
+
+              // Start reading with timeout protection
+              try {
+                reader.readAsDataURL(file);
+
+                // Timeout after 30 seconds
+                setTimeout(() => {
+                  if (reader.readyState === 1) { // LOADING state
+                    reader.abort();
+                    reject(new Error(`File reading timed out for "${file.name}". The file may be too large or corrupted.`));
+                  }
+                }, 30000);
+              } catch (readError: any) {
+                console.error('[ChatInterface] FileReader.readAsDataURL error:', readError);
+                reject(new Error(`Cannot read file "${file.name}": ${readError.message}`));
+              }
+            });
+
+            multimodalContent.push({ type: 'image_url', image_url: { url: dataUrl } });
+          } catch (fileError: any) {
+            console.error('[ChatInterface] Error processing image file:', {
+              fileName: file.name,
+              error: fileError.message,
+              stack: fileError.stack
+            });
+
+            // Show error to user but continue processing other files
+            setNotification({
+              message: `Failed to load image "${file.name}": ${fileError.message}`,
+              type: 'error'
+            });
+
+            // Skip this file and continue with others
+            continue;
+          }
         }
       }
       
@@ -934,9 +997,21 @@ export default function ChatInterface({
                 };
               }
             } else {
-              console.error('Failed to upload image:', uploadResult.error);
+              console.error('[ChatInterface] Failed to upload image:', {
+                fileName: file.name,
+                error: uploadResult.error
+              });
               uploadSuccessful = false;
-              uploadErrors.push(`${file.name}: ${uploadResult.error}`);
+
+              // Provide helpful guidance based on error
+              let errorMessage = uploadResult.error || 'Unknown error';
+              if (errorMessage.includes('Unicode') || errorMessage.includes('escape sequence')) {
+                errorMessage += ' Try renaming the file to use only English letters and numbers.';
+              } else if (errorMessage.includes('too large')) {
+                errorMessage += ' Please compress the image or use a smaller file.';
+              }
+
+              uploadErrors.push(`${file.name}: ${errorMessage}`);
             }
           } else {
             // Upload document to get persistent URL
@@ -950,15 +1025,40 @@ export default function ChatInterface({
                 mimeType: file.type
               });
             } else {
-              console.error('Failed to upload document:', uploadResult.error);
+              console.error('[ChatInterface] Failed to upload document:', {
+                fileName: file.name,
+                error: uploadResult.error
+              });
               uploadSuccessful = false;
-              uploadErrors.push(`${file.name}: ${uploadResult.error}`);
+
+              // Provide helpful guidance based on error
+              let errorMessage = uploadResult.error || 'Unknown error';
+              if (errorMessage.includes('Unicode') || errorMessage.includes('escape sequence')) {
+                errorMessage += ' Try renaming the file to use only English letters and numbers.';
+              } else if (errorMessage.includes('too large')) {
+                errorMessage += ' Please use a smaller file or compress it.';
+              } else if (errorMessage.includes('unsupported')) {
+                errorMessage += ' Please use PDF, Word, Excel, or text files.';
+              }
+
+              uploadErrors.push(`${file.name}: ${errorMessage}`);
             }
           }
         } catch (err: any) {
-          console.error(`Error processing file ${file.name}:`, err);
+          console.error('[ChatInterface] Error processing file:', {
+            fileName: file.name,
+            error: err.message,
+            stack: err.stack
+          });
           uploadSuccessful = false;
-          uploadErrors.push(`${file.name}: ${err.message || 'Unknown error'}`);
+
+          // Provide user-friendly error message with guidance
+          let errorMessage = err.message || 'Unknown error occurred';
+          if (errorMessage.includes('Unicode') || errorMessage.includes('escape')) {
+            errorMessage = 'File contains special characters. Try renaming it to use only English letters and numbers.';
+          }
+
+          uploadErrors.push(`${file.name}: ${errorMessage}`);
         }
       }
 

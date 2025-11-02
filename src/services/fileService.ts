@@ -48,6 +48,75 @@ const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024 * 1024; // 2GB in bytes
 const MAX_USER_STORAGE_BYTES = 1 * 1024 * 1024 * 1024; // 1GB in bytes
 
 /**
+ * Sanitize filename to remove problematic Unicode characters and ensure safe storage
+ * Keeps alphanumeric characters, dots, hyphens, and underscores
+ * Replaces all other characters with underscores
+ */
+const sanitizeFilename = (filename: string): string => {
+  try {
+    // Extract extension
+    const lastDotIndex = filename.lastIndexOf('.');
+    const name = lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename;
+    const extension = lastDotIndex > 0 ? filename.substring(lastDotIndex) : '';
+
+    // Replace problematic characters with underscores
+    // Keep only: alphanumeric, hyphen, underscore, and dot
+    const sanitizedName = name
+      .replace(/[^a-zA-Z0-9-_]/g, '_')
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+      .replace(/^_+|_+$/g, ''); // Remove leading/trailing underscores
+
+    // Sanitize extension (keep dot and alphanumeric only)
+    const sanitizedExt = extension.replace(/[^a-zA-Z0-9.]/g, '');
+
+    // Ensure we have a valid filename
+    const result = sanitizedName || 'file';
+    return result + sanitizedExt;
+  } catch (error) {
+    console.error('Error sanitizing filename:', error);
+    return 'file.bin'; // Fallback to generic name
+  }
+};
+
+/**
+ * Robust base64 to Blob converter that handles Unicode strings properly
+ * Uses modern Blob API instead of atob to avoid Unicode escape sequence errors
+ */
+const base64ToBlob = (base64Data: string, contentType: string = 'image/png'): Blob => {
+  try {
+    // Remove data URL prefix if present
+    const base64String = base64Data.replace(/^data:[^;]+;base64,/, '');
+
+    // Validate base64 format
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(base64String)) {
+      throw new Error('Invalid base64 format');
+    }
+
+    // Use fetch API to decode base64 (more robust than atob)
+    const dataUrl = `data:${contentType};base64,${base64String}`;
+    return fetch(dataUrl)
+      .then(res => res.blob())
+      .then(blob => blob)
+      .catch(err => {
+        // Fallback to atob method with proper error handling
+        try {
+          const binaryString = atob(base64String);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          return new Blob([bytes], { type: contentType });
+        } catch (atobError) {
+          throw new Error(`Failed to decode base64 data: ${atobError}`);
+        }
+      });
+  } catch (error: any) {
+    console.error('Error converting base64 to blob:', error);
+    throw new Error(`Base64 conversion failed: ${error.message}`);
+  }
+};
+
+/**
  * Validate and refresh the user session before file operations
  * This ensures we have a valid authentication token for storage operations
  */
@@ -168,33 +237,61 @@ export const uploadBase64Image = async (
       };
     }
 
-    // Remove data URL prefix if present
-    const base64String = base64Data.replace(/^data:image\/[a-z]+;base64,/, '');
+    console.log('[uploadBase64Image] Starting upload:', {
+      hasData: !!base64Data,
+      dataLength: base64Data?.length,
+      userId,
+      filename
+    });
 
-    // Convert base64 to binary
-    const binaryString = atob(base64String);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    // Convert base64 to blob using robust method
+    let blob: Blob;
+    try {
+      const base64String = base64Data.replace(/^data:image\/[a-z]+;base64,/, '');
+
+      // Use fetch API for more robust base64 decoding
+      const dataUrl = `data:image/png;base64,${base64String}`;
+      const response = await fetch(dataUrl);
+      blob = await response.blob();
+
+      console.log('[uploadBase64Image] Base64 converted to blob:', {
+        blobSize: blob.size,
+        blobType: blob.type
+      });
+    } catch (conversionError: any) {
+      console.error('[uploadBase64Image] Base64 conversion failed:', conversionError);
+      throw new Error(`Failed to process image data. The image may be corrupted or in an unsupported format.`);
     }
 
-    // Create blob
-    const blob = new Blob([bytes], { type: 'image/png' });
+    // Validate blob
+    if (!blob || blob.size === 0) {
+      throw new Error('Invalid image data - the image appears to be empty or corrupted.');
+    }
 
-    // Generate unique filename
+    // Generate unique filename with sanitization
     const timestamp = Date.now();
-    const imageFilename = filename || `generated-image-${timestamp}.png`;
-    const filePath = `${userId}/generated-images/${imageFilename}`;
+    const rawFilename = filename || `generated-image-${timestamp}.png`;
+    const sanitizedFilename = sanitizeFilename(rawFilename);
+    const filePath = `${userId}/generated-images/${sanitizedFilename}`;
+
+    console.log('[uploadBase64Image] Uploading to storage:', {
+      originalFilename: rawFilename,
+      sanitizedFilename,
+      filePath,
+      blobSize: blob.size
+    });
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(filePath, blob, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
+        contentType: 'image/png'
       });
 
     if (uploadError) {
+      console.error('[uploadBase64Image] Upload error:', uploadError);
       throw new Error(`I couldn't get that image uploaded. ${uploadError.message}`);
     }
 
@@ -203,12 +300,14 @@ export const uploadBase64Image = async (
       .from(STORAGE_BUCKET)
       .getPublicUrl(filePath);
 
+    console.log('[uploadBase64Image] Upload successful:', { publicUrl });
+
     return {
       success: true,
       url: publicUrl
     };
   } catch (error: any) {
-    console.error('Error uploading base64 image:', error);
+    console.error('[uploadBase64Image] Error uploading base64 image:', error);
     return {
       success: false,
       error: error.message || 'Something went wrong uploading that image. Want to try again?'
@@ -272,11 +371,18 @@ export const uploadChatImage = async (
       };
     }
 
-    // Generate unique filename preserving original extension
+    // Generate unique filename with sanitization
     const timestamp = Date.now();
-    const extension = file.name.split('.').pop() || 'png';
+    const sanitizedName = sanitizeFilename(file.name);
+    const extension = sanitizedName.split('.').pop() || 'png';
     const imageFilename = `chat-image-${timestamp}.${extension}`;
     const filePath = `${validatedUserId}/chat-images/${imageFilename}`;
+
+    console.log('[uploadChatImage] Filename processing:', {
+      originalName: file.name,
+      sanitizedName,
+      finalFilename: imageFilename
+    });
 
     console.log('[uploadChatImage] Uploading to storage:', { filePath, bucket: STORAGE_BUCKET, fileSize: file.size });
 
@@ -383,12 +489,18 @@ export const uploadChatDocument = async (
       console.warn('[uploadChatDocument] Uploading file with unverified type:', file.type);
     }
 
-    // Generate unique filename preserving original extension
+    // Generate unique filename with robust sanitization
     const timestamp = Date.now();
-    const extension = file.name.split('.').pop() || 'bin';
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const sanitizedName = sanitizeFilename(file.name);
+    const extension = sanitizedName.split('.').pop() || 'bin';
     const documentFilename = `chat-document-${timestamp}-${sanitizedName}`;
     const filePath = `${validatedUserId}/chat-documents/${documentFilename}`;
+
+    console.log('[uploadChatDocument] Filename processing:', {
+      originalName: file.name,
+      sanitizedName,
+      finalFilename: documentFilename
+    });
 
     console.log('[uploadChatDocument] Uploading to storage:', { filePath, bucket: STORAGE_BUCKET, fileSize: file.size, fileType: file.type });
 
