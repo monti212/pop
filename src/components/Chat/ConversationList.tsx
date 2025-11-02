@@ -125,6 +125,25 @@ const ConversationList: React.FC<ConversationListProps> = ({
     }
   };
 
+  // Helper function to extract text from message content (handles both string and multimodal array)
+  const extractTextFromContent = (content: any): string => {
+    // If content is a string, return it directly
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    // If content is an array (multimodal content), extract text parts
+    if (Array.isArray(content)) {
+      return content
+        .filter(part => part.type === 'text' && part.text)
+        .map(part => part.text)
+        .join(' ');
+    }
+
+    // Fallback to empty string if content is neither string nor array
+    return '';
+  };
+
   // Get conversation title
   const getConversationTitle = (conversation: typeof conversations[0]) => {
     // If conversation has a title, use it
@@ -137,9 +156,31 @@ const ConversationList: React.FC<ConversationListProps> = ({
     const firstUserMessage = conversation.messages.find(msg => msg.role === 'user');
 
     if (firstUserMessage) {
+      // Extract text from content (handles both string and array)
+      const messageText = extractTextFromContent(firstUserMessage.content);
+
+      // If no text could be extracted, check for attachments
+      if (!messageText || messageText.trim() === '') {
+        // Check if it's a multimodal message with images/files
+        if (Array.isArray(firstUserMessage.content)) {
+          const hasImages = firstUserMessage.content.some(part => part.type === 'image_url');
+          const hasFiles = firstUserMessage.content.some(part => part.type === 'input_file');
+
+          if (hasImages && hasFiles) {
+            return 'Images and files';
+          } else if (hasImages) {
+            return 'Image message';
+          } else if (hasFiles) {
+            return 'File message';
+          }
+        }
+        // Fallback if no text or attachments
+        return 'New conversation';
+      }
+
       // Truncate message to first 30 chars for title
-      const title = firstUserMessage.content.substring(0, 30);
-      const finalTitle = title.length < firstUserMessage.content.length ? `${title}...` : title;
+      const title = messageText.substring(0, 30);
+      const finalTitle = title.length < messageText.length ? `${title}...` : title;
       // Capitalize first letter
       return finalTitle.charAt(0).toUpperCase() + finalTitle.slice(1);
     }
@@ -213,9 +254,10 @@ const ConversationList: React.FC<ConversationListProps> = ({
   const filteredConversations = isSearching && searchTerm
     ? conversations.filter(conv => {
         const title = getConversationTitle(conv).toLowerCase();
+        // Extract text from all user messages (handles multimodal content)
         const content = conv.messages
           .filter(msg => msg.role === 'user')
-          .map(msg => msg.content.toLowerCase())
+          .map(msg => extractTextFromContent(msg.content).toLowerCase())
           .join(' ');
         const term = searchTerm.toLowerCase();
         return title.includes(term) || content.includes(term);
