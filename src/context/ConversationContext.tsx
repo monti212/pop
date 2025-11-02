@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Conversation } from '../types/chat';
 import { useAuth } from './AuthContext';
-import { createConversation, getConversations, deleteConversation as deleteConversationService, addMessage } from '../services/chatService';
+import { createConversation, getConversations, getConversationMessages, deleteConversation as deleteConversationService, addMessage } from '../services/chatService';
 import { filterSystemMessages, sanitizeMessages } from '../components/MessageFilter';
 import { MessageContent } from '../types/chat';
 
@@ -12,6 +12,7 @@ interface ConversationContextType {
   createNewConversation: () => Promise<Conversation>;
   updateConversation: (updatedConversation: Conversation) => void;
   deleteConversation: (id: string) => void;
+  loadConversationMessages: (conversation: Conversation) => Promise<void>;
   addMessageToConversation: (
     conversationId: string,
     role: 'user' | 'assistant',
@@ -57,48 +58,75 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [user, isAuthenticated]);
 
-  // Load user's conversations
+  // Load messages for a specific conversation (called on-demand)
+  const loadConversationMessages = async (conversation: Conversation) => {
+    if (!user) return;
+
+    try {
+      // Load messages for this conversation
+      const messages = await getConversationMessages(conversation.id, user.id, 100);
+
+      // Filter out system messages
+      const filteredMessages = messages.filter(msg => msg.role !== 'system');
+
+      // Update conversation with loaded messages
+      const updatedConversation = {
+        ...conversation,
+        messages: filteredMessages
+      };
+
+      setCurrentConversation(updatedConversation);
+
+      // Also update in conversations list
+      setConversations(prev =>
+        prev.map(c => c.id === conversation.id ? updatedConversation : c)
+      );
+    } catch (error) {
+      console.error('Error loading conversation messages:', error);
+      // Set conversation anyway with empty messages
+      setCurrentConversation(conversation);
+    }
+  };
+
+  // Load user's conversations (optimized - metadata only)
   const loadUserConversations = async () => {
     // Set loading flag to prevent concurrent calls
     setLoadingConversations(true);
-    
+
     try {
       if (isAuthenticated && user) {
         try {
-          const userConversations = await getConversations(user.id);
-          
-          // Filter out system messages from each conversation's messages array
-          const filteredConversations = userConversations.map(conv => ({
-            ...conv,
-            messages: conv.messages.filter(msg => msg.role !== 'system')
-          }));
-          
-          setConversations(filteredConversations);
-          
+          // Load only conversation metadata (no messages) for performance
+          const userConversations = await getConversations(user.id, 50);
+
+          // Conversations come with empty messages array from optimized query
+          setConversations(userConversations);
+
           // If no conversations exist for this user, create one
           // Restore saved conversation if available
-          if (currentConversationIdRef.current && filteredConversations.length > 0) {
-            const savedConversation = filteredConversations.find(
+          if (currentConversationIdRef.current && userConversations.length > 0) {
+            const savedConversation = userConversations.find(
               c => c.id === currentConversationIdRef.current
             );
             if (savedConversation) {
-              setCurrentConversation(savedConversation);
+              // Load messages for the saved conversation
+              await loadConversationMessages(savedConversation);
             } else {
               // If saved conversation not found, use the most recent one
-              setCurrentConversation(filteredConversations[0]);
+              await loadConversationMessages(userConversations[0]);
             }
-          } else if (filteredConversations.length === 0) {
+          } else if (userConversations.length === 0) {
             try {
               const newConversation = await createConversation(user.id);
               if (newConversation) {
-                // Filter system messages out of the new conversation
-                const filteredNewConversation = {
+                  // New conversation starts with empty messages
+                const emptyConversation = {
                   ...newConversation,
-                  messages: newConversation.messages.filter(msg => msg.role !== 'system')
+                  messages: []
                 };
-                
-                setConversations([filteredNewConversation]);
-                setCurrentConversation(filteredNewConversation);
+
+                setConversations([emptyConversation]);
+                setCurrentConversation(emptyConversation);
               } else {
                 // If we couldn't create a conversation in the database, use a local one
                 const localConversation = createLocalConversation();
@@ -112,10 +140,10 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               setCurrentConversation(localConversation);
             }
           } else {
-            // Load existing conversations and set the most recent as current
-            setConversations(filteredConversations);
-            // Always show the most recent conversation to avoid empty state
-            setCurrentConversation(filteredConversations[0]);
+            // Set conversations and load messages for the most recent one
+            setConversations(userConversations);
+            // Load messages for the most recent conversation
+            await loadConversationMessages(userConversations[0]);
           }
           
           setIsInitialized(true);
@@ -321,6 +349,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         createNewConversation,
         updateConversation,
         deleteConversation,
+        loadConversationMessages,
         addMessageToConversation
       }}
     >

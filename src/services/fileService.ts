@@ -561,7 +561,7 @@ export const uploadFile = async (
 };
 
 /**
- * Search user files with filters and text search
+ * Search user files with filters and text search (optimized - excludes content_preview)
  */
 export const searchFiles = async (
   userId: string,
@@ -581,15 +581,15 @@ export const searchFiles = async (
 
     let queryBuilder = supabase
       .from('user_files')
-      .select('id, user_id, title, file_name, file_type, file_size, storage_path, tags, metadata, created_at, updated_at, content_preview', { count: 'exact' })
+      .select('id, user_id, title, file_name, file_type, file_size, storage_path, tags, metadata, created_at, updated_at', { count: 'exact' })
       .eq('user_id', userId)
       .is('deleted_at', null);
 
-    // Add text search if query provided
+    // Add text search if query provided (excluding content_preview for performance)
     if (query && query.trim()) {
-      // Use ilike for simple text search across title, file_name, and content_preview
+      // Use ilike for simple text search across title and file_name only
       const searchPattern = `%${query}%`;
-      queryBuilder = queryBuilder.or(`title.ilike.${searchPattern},file_name.ilike.${searchPattern},content_preview.ilike.${searchPattern}`);
+      queryBuilder = queryBuilder.or(`title.ilike.${searchPattern},file_name.ilike.${searchPattern}`);
     }
 
     // Add file type filter
@@ -619,9 +619,13 @@ export const searchFiles = async (
       console.log('Sample file data:', data[0]);
     }
 
+    // Cast without content_preview for performance
     return {
       success: true,
-      files: data as UserFile[],
+      files: (data as UserFile[]).map(file => ({
+        ...file,
+        content_preview: undefined // Excluded for performance
+      })),
       totalCount: count || 0
     };
   } catch (error: any) {
@@ -629,6 +633,46 @@ export const searchFiles = async (
     return {
       success: false,
       error: error.message || 'File search isn\'t working right now. Want to try again?'
+    };
+  }
+};
+
+/**
+ * Get file metadata with content preview (when needed for search/indexing)
+ */
+export const getFileWithPreview = async (
+  fileId: string,
+  userId: string
+): Promise<{ success: boolean; file?: UserFile; error?: string }> => {
+  try {
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'I\'m having issues right now. Try again in a moment?'
+      };
+    }
+
+    const { data, error } = await supabase
+      .from('user_files')
+      .select('id, user_id, title, file_name, file_type, file_size, storage_path, tags, metadata, created_at, updated_at, content_preview')
+      .eq('id', fileId)
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .single();
+
+    if (error) {
+      throw new Error(`I couldn't find that file. ${error.message}`);
+    }
+
+    return {
+      success: true,
+      file: data as UserFile
+    };
+  } catch (error: any) {
+    console.error('Error getting file with preview:', error);
+    return {
+      success: false,
+      error: error.message || 'I couldn\'t get that file. Try again?'
     };
   }
 };
@@ -977,7 +1021,7 @@ export const getFilesInFocusSet = async (
 
     const { data, error } = await supabase
       .from('focus_set_files')
-      .select('file_id, user_files(id, user_id, title, file_name, file_type, file_size, storage_path, tags, metadata, created_at, updated_at, content_preview)')
+      .select('file_id, user_files(id, user_id, title, file_name, file_type, file_size, storage_path, tags, metadata, created_at, updated_at)')
       .eq('focus_set_id', focusSetId);
 
     if (error) throw error;

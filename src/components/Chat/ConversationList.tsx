@@ -38,13 +38,14 @@ const ConversationList: React.FC<ConversationListProps> = ({
   // Check if current user is authorized for website builder
   const isAuthorizedForWebsiteBuilder = user?.email === 'disabled@example.com';
 
-  const { 
-    conversations, 
-    currentConversation, 
-    setCurrentConversation, 
+  const {
+    conversations,
+    currentConversation,
+    setCurrentConversation,
     createNewConversation,
     deleteConversation,
-    updateConversation
+    updateConversation,
+    loadConversationMessages
   } = useConversations();
 
   const handleNewConversation = () => {
@@ -56,10 +57,15 @@ const ConversationList: React.FC<ConversationListProps> = ({
     });
   };
 
-  const handleSelectConversation = (id: string) => {
+  const handleSelectConversation = async (id: string) => {
     const selected = conversations.find(conv => conv.id === id);
     if (selected) {
-      setCurrentConversation(selected);
+      // Load messages for this conversation if not already loaded
+      if (!selected.messages || selected.messages.length === 0) {
+        await loadConversationMessages(selected);
+      } else {
+        setCurrentConversation(selected);
+      }
       if (onClose) onClose();
     }
   };

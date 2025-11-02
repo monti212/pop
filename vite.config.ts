@@ -6,11 +6,30 @@ export default defineConfig({
   plugins: [react()],
   build: {
     rollupOptions: {
-      // Removed explicit input configuration - Vite auto-detects index.html
-    }
+      output: {
+        manualChunks: {
+          // React core libraries
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // UI and animation libraries
+          'ui-vendor': ['framer-motion', 'lucide-react'],
+          // Document parsers - lazy loaded
+          'doc-parsers-pdf': ['pdfjs-dist'],
+          'doc-parsers-office': ['mammoth', 'xlsx'],
+          // Editor libraries
+          'editor': ['react-quill', 'quill'],
+          // Charts and visualization
+          'charts': ['recharts'],
+          // Supabase client
+          'supabase': ['@supabase/supabase-js']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000,
+    target: 'es2020',
+    minify: 'esbuild'
   },
   optimizeDeps: {
     exclude: [],
-    include: ['pdfjs-dist', 'mammoth', 'xlsx']
+    include: ['react', 'react-dom', 'react-router-dom']
   },
 });

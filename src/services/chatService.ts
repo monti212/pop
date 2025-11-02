@@ -52,51 +52,80 @@ export const createConversation = async (userId: string, title: string = 'New Co
   }
 };
 
-// Get conversations for a user
-export const getConversations = async (userId: string) => {
+// Get conversations metadata only (optimized for performance)
+export const getConversations = async (userId: string, limit: number = 50) => {
   try {
     if (!supabase) {
       logger.warn('Supabase not configured - returning empty conversations');
-    logger.warn('I\'m in offline mode - no saved conversations to show right now');
       return [];
     }
 
     const { data, error } = await supabase
       .from('conversations')
-      .select(`
-        id,
-        title,
-        created_at,
-        updated_at,
-        messages (
-          id,
-          role,
-          content,
-          created_at,
-          is_long_response
-        )
-      `)
+      .select('id, title, created_at, updated_at')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
-      .order('created_at', { foreignTable: 'messages', ascending: true });
+      .limit(limit);
 
     if (error) throw error;
 
     return data.map((conversation: any) => ({
       id: conversation.id,
       title: conversation.title,
-      messages: conversation.messages.map((msg: any) => ({
-        id: msg.id,
-        role: msg.role,
-        content: msg.content,
-        timestamp: new Date(msg.created_at),
-        isLongResponse: msg.is_long_response
-      })),
+      messages: [], // Messages loaded separately when needed
       createdAt: new Date(conversation.created_at),
       updatedAt: new Date(conversation.updated_at)
     }));
   } catch (error) {
     logger.error('Error fetching conversations:', error);
+    return [];
+  }
+};
+
+// Get messages for a specific conversation (optimized)
+export const getConversationMessages = async (
+  conversationId: string,
+  userId: string,
+  limit: number = 100
+) => {
+  try {
+    if (!supabase) {
+      logger.warn('Supabase not configured');
+      return [];
+    }
+
+    // Verify user has access to this conversation
+    const { data: conversation, error: convError } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('id', conversationId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (convError || !conversation) {
+      logger.error('Conversation not found or access denied');
+      return [];
+    }
+
+    // Fetch messages
+    const { data, error } = await supabase
+      .from('messages')
+      .select('id, role, content, created_at, is_long_response')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+      .limit(limit);
+
+    if (error) throw error;
+
+    return data.map((msg: any) => ({
+      id: msg.id,
+      role: msg.role,
+      content: msg.content,
+      timestamp: new Date(msg.created_at),
+      isLongResponse: msg.is_long_response
+    }));
+  } catch (error) {
+    logger.error('Error fetching conversation messages:', error);
     return [];
   }
 };

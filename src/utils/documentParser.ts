@@ -1,11 +1,35 @@
-import * as mammoth from 'mammoth';
-import * as XLSX from 'xlsx';
-import * as pdfjsLib from 'pdfjs-dist';
-// Import the PDF worker as a URL resource using Vite's URL import feature
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+// Lazy load heavy document parsing libraries for better performance
+// This reduces initial bundle size significantly (35MB pdfjs + 7MB xlsx + 2MB mammoth)
 
-// Set up pdf.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Dynamic imports for document parsers
+let mammothModule: any = null;
+let xlsxModule: any = null;
+let pdfjsModule: any = null;
+let pdfWorkerUrl: string | null = null;
+
+const loadMammoth = async () => {
+  if (!mammothModule) {
+    mammothModule = await import('mammoth');
+  }
+  return mammothModule;
+};
+
+const loadXLSX = async () => {
+  if (!xlsxModule) {
+    xlsxModule = await import('xlsx');
+  }
+  return xlsxModule;
+};
+
+const loadPDFJS = async () => {
+  if (!pdfjsModule) {
+    pdfjsModule = await import('pdfjs-dist');
+    const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+    pdfWorkerUrl = workerModule.default;
+    pdfjsModule.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  }
+  return pdfjsModule;
+};
 
 // Maximum characters for extracted document content to prevent token limit issues
 const MAX_DOCUMENT_CHARS = 15000;
@@ -92,10 +116,11 @@ export const parseDocumentContent = async (file: File): Promise<string> => {
  */
 const parseWordDocument = async (file: File): Promise<string> => {
   try {
+    const mammoth = await loadMammoth();
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
     return result.value || `[No text content found in ${file.name}]`;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error parsing Word document:', error);
     throw new Error(`Failed to parse Word document: ${error.message}`);
   }
@@ -108,6 +133,7 @@ const parseWordDocument = async (file: File): Promise<string> => {
  */
 const parsePdfDocument = async (file: File): Promise<string> => {
   try {
+    const pdfjsLib = await loadPDFJS();
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     
@@ -129,7 +155,7 @@ const parsePdfDocument = async (file: File): Promise<string> => {
     }
     
     return fullText || `[No text content found in ${file.name}]`;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error parsing PDF document:', error);
     throw new Error(`Failed to parse PDF document: ${error.message}`);
   }
@@ -142,6 +168,7 @@ const parsePdfDocument = async (file: File): Promise<string> => {
  */
 const parseExcelDocument = async (file: File): Promise<string> => {
   try {
+    const XLSX = await loadXLSX();
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
     
@@ -184,7 +211,7 @@ const parseExcelDocument = async (file: File): Promise<string> => {
     }
     
     return result || `[No content found in ${file.name}]`;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error parsing Excel document:', error);
     throw new Error(`Failed to parse Excel document: ${error.message}`);
   }
@@ -198,7 +225,7 @@ const parseExcelDocument = async (file: File): Promise<string> => {
 const parseTextFile = async (file: File): Promise<string> => {
   try {
     return await file.text();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error parsing text file:', error);
     throw new Error(`Failed to parse text file: ${error.message}`);
   }
