@@ -54,7 +54,7 @@ const Hero: React.FC<HeroProps> = ({
           />
         </div>
       </div>
-      
+
       {/* Pencils of Promise Logo in top left */}
       <div className="absolute top-6 left-6 z-30">
         <Logo className="h-8" />
