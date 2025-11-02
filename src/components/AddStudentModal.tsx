@@ -32,12 +32,11 @@ const ACCOMMODATION_TEMPLATES = [
 
 const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSuccess, classId }) => {
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    student_name: '',
     student_id: '',
     neurodivergence_type: '',
     accommodations: '',
-    neurodivergence_notes: ''
+    learning_notes: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,16 +48,10 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.first_name.trim()) {
-      newErrors.first_name = 'First name is required';
-    } else if (formData.first_name.length > 50) {
-      newErrors.first_name = 'First name must be 50 characters or less';
-    }
-
-    if (!formData.last_name.trim()) {
-      newErrors.last_name = 'Last name is required';
-    } else if (formData.last_name.length > 50) {
-      newErrors.last_name = 'Last name must be 50 characters or less';
+    if (!formData.student_name.trim()) {
+      newErrors.student_name = 'Student name is required';
+    } else if (formData.student_name.length > 100) {
+      newErrors.student_name = 'Student name must be 100 characters or less';
     }
 
     if (formData.student_id && formData.student_id.length > 50) {
@@ -69,8 +62,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
       newErrors.accommodations = 'Accommodations must be 1000 characters or less';
     }
 
-    if (formData.neurodivergence_notes && formData.neurodivergence_notes.length > 500) {
-      newErrors.neurodivergence_notes = 'Notes must be 500 characters or less';
+    if (formData.learning_notes && formData.learning_notes.length > 500) {
+      newErrors.learning_notes = 'Notes must be 500 characters or less';
     }
 
     setErrors(newErrors);
@@ -89,13 +82,12 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
 
     try {
       const result = await createStudent(classId, {
-        first_name: formData.first_name.trim(),
-        last_name: formData.last_name.trim(),
+        student_name: formData.student_name.trim(),
         student_identifier: formData.student_id.trim() || null,
         has_neurodivergence: !!formData.neurodivergence_type,
         neurodivergence_type: formData.neurodivergence_type || null,
         accommodations: formData.accommodations.trim() || null,
-        neurodivergence_notes: formData.neurodivergence_notes.trim() || null
+        learning_notes: formData.learning_notes.trim() || null
       });
 
       if (!result.success) {
@@ -103,12 +95,11 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
       }
 
       setFormData({
-        first_name: '',
-        last_name: '',
+        student_name: '',
         student_id: '',
         neurodivergence_type: '',
         accommodations: '',
-        neurodivergence_notes: ''
+        learning_notes: ''
       });
       onSuccess();
       onClose();
@@ -165,50 +156,26 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
           <div className="space-y-4">
             <h3 className="text-sm font-medium text-gray-900">Basic Information</h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
-                  First Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="first_name"
-                  name="first_name"
-                  value={formData.first_name}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                    errors.first_name ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="John"
-                  disabled={isSubmitting}
-                  maxLength={50}
-                />
-                {errors.first_name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="last_name"
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                    errors.last_name ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Doe"
-                  disabled={isSubmitting}
-                  maxLength={50}
-                />
-                {errors.last_name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>
-                )}
-              </div>
+            <div>
+              <label htmlFor="student_name" className="block text-sm font-medium text-gray-700 mb-1">
+                Student Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="student_name"
+                name="student_name"
+                value={formData.student_name}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
+                  errors.student_name ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="John Doe"
+                disabled={isSubmitting}
+                maxLength={100}
+              />
+              {errors.student_name && (
+                <p className="mt-1 text-sm text-red-600">{errors.student_name}</p>
+              )}
             </div>
 
             <div>
@@ -319,27 +286,27 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                 </div>
 
                 <div>
-                  <label htmlFor="neurodivergence_notes" className="block text-sm font-medium text-gray-700 mb-1">
-                    Additional Notes
+                  <label htmlFor="learning_notes" className="block text-sm font-medium text-gray-700 mb-1">
+                    Learning Notes
                   </label>
                   <textarea
-                    id="neurodivergence_notes"
-                    name="neurodivergence_notes"
-                    value={formData.neurodivergence_notes}
+                    id="learning_notes"
+                    name="learning_notes"
+                    value={formData.learning_notes}
                     onChange={handleChange}
                     rows={3}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none ${
-                      errors.neurodivergence_notes ? 'border-red-300' : 'border-gray-300'
+                      errors.learning_notes ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="Any additional information about how to best support this student..."
                     disabled={isSubmitting}
                     maxLength={500}
                   />
-                  {errors.neurodivergence_notes && (
-                    <p className="mt-1 text-sm text-red-600">{errors.neurodivergence_notes}</p>
+                  {errors.learning_notes && (
+                    <p className="mt-1 text-sm text-red-600">{errors.learning_notes}</p>
                   )}
                   <p className="mt-1 text-xs text-gray-500">
-                    {formData.neurodivergence_notes.length}/500 characters
+                    {formData.learning_notes.length}/500 characters
                   </p>
                 </div>
               </>

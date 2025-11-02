@@ -470,13 +470,12 @@ const UhuruFilesPage: React.FC = () => {
           studentData={{
             id: selectedStudent.id,
             class_id: selectedStudent.class_id || selectedClass?.id || '',
-            first_name: selectedStudent.student_name.split(' ')[0],
-            last_name: selectedStudent.student_name.split(' ').slice(1).join(' '),
-            student_id: selectedStudent.student_identifier,
+            student_name: selectedStudent.student_name,
+            student_identifier: selectedStudent.student_identifier,
             neurodivergence_type: selectedStudent.neurodivergence_type,
             accommodations: null,
-            neurodivergence_notes: null,
-            is_active: selectedStudent.active_status
+            learning_notes: null,
+            active_status: selectedStudent.active_status
           }}
         />
       )}

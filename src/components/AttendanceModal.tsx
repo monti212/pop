@@ -6,8 +6,7 @@ import { format } from 'date-fns';
 
 interface Student {
   id: string;
-  first_name: string;
-  last_name: string;
+  student_name: string;
   student_id: string | null;
   neurodivergence_type: string | null;
 }
@@ -56,8 +55,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onSu
 
       const studentList = result.data.map(s => ({
         id: s.id,
-        first_name: s.student_name.split(' ')[0],
-        last_name: s.student_name.split(' ').slice(1).join(' '),
+        student_name: s.student_name,
         student_id: s.student_identifier,
         neurodivergence_type: s.neurodivergence_type
       }));
@@ -299,7 +297,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onSu
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
                         <h3 className="font-medium text-gray-900">
-                          {student.first_name} {student.last_name}
+                          {student.student_name}
                         </h3>
                         {student.neurodivergence_type && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
