@@ -9,6 +9,12 @@ import { useAuth } from '../context/AuthContext';
 import { Class, Student } from '../types/attendance';
 import { getTeacherClasses, getActiveClassCount } from '../services/classService';
 import { getClassStudents } from '../services/studentService';
+import AddClassModal from '../components/AddClassModal';
+import EditClassModal from '../components/EditClassModal';
+import AddStudentModal from '../components/AddStudentModal';
+import EditStudentModal from '../components/EditStudentModal';
+import AttendanceModal from '../components/AttendanceModal';
+import AnalyticsModal from '../components/AnalyticsModal';
 
 type ViewMode = 'classes' | 'students' | 'attendance' | 'analytics';
 
@@ -27,6 +33,10 @@ const UhuruFilesPage: React.FC = () => {
   const [showCreateClassModal, setShowCreateClassModal] = useState(false);
   const [showEditClassModal, setShowEditClassModal] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [showEditStudentModal, setShowEditStudentModal] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -104,12 +114,20 @@ const UhuruFilesPage: React.FC = () => {
 
   const handleTakeAttendance = (classItem: Class) => {
     setSelectedClass(classItem);
-    setViewMode('attendance');
+    setShowAttendanceModal(true);
   };
 
   const handleViewAnalytics = (classItem: Class) => {
     setSelectedClass(classItem);
-    setViewMode('analytics');
+    setShowAnalyticsModal(true);
+  };
+
+  const handleModalSuccess = () => {
+    loadClasses();
+    loadClassCount();
+    if (selectedClass) {
+      loadStudents(selectedClass.id);
+    }
   };
 
   return (
@@ -372,6 +390,10 @@ const UhuruFilesPage: React.FC = () => {
                         </td>
                         <td className="px-6 py-4">
                           <button
+                            onClick={() => {
+                              setSelectedStudent(student);
+                              setShowEditStudentModal(true);
+                            }}
                             className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-teal transition-colors"
                           >
                             <Edit className="w-4 h-4" />
@@ -384,71 +406,80 @@ const UhuruFilesPage: React.FC = () => {
               </div>
             </div>
           )
-        ) : viewMode === 'attendance' ? (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="text-center py-12">
-              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Attendance Interface</h3>
-              <p className="text-gray-600">Coming in next implementation phase</p>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="text-center py-12">
-              <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Analytics Dashboard</h3>
-              <p className="text-gray-600">Coming in next implementation phase</p>
-            </div>
-          </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Modals - Placeholders for next phase */}
-      <AnimatePresence>
-        {showCreateClassModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
-            >
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Create Class Modal</h3>
-                <p className="text-gray-600 mb-6">Coming in next implementation phase</p>
-                <button
-                  onClick={() => setShowCreateClassModal(false)}
-                  className="px-6 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+      {/* Modals */}
+      <AddClassModal
+        isOpen={showCreateClassModal}
+        onClose={() => setShowCreateClassModal(false)}
+        onSuccess={handleModalSuccess}
+      />
 
-        {showAddStudentModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
-            >
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Add Student Modal</h3>
-                <p className="text-gray-600 mb-6">Coming in next implementation phase</p>
-                <button
-                  onClick={() => setShowAddStudentModal(false)}
-                  className="px-6 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {selectedClass && (
+        <>
+          <EditClassModal
+            isOpen={showEditClassModal}
+            onClose={() => {
+              setShowEditClassModal(false);
+              setSelectedClass(null);
+            }}
+            onSuccess={handleModalSuccess}
+            classData={{
+              id: selectedClass.id,
+              name: selectedClass.class_name,
+              grade_level: selectedClass.grade_level || '',
+              description: selectedClass.subject || null,
+              school_year: new Date().getFullYear().toString(),
+              is_active: selectedClass.active_status
+            }}
+          />
+
+          <AddStudentModal
+            isOpen={showAddStudentModal}
+            onClose={() => setShowAddStudentModal(false)}
+            onSuccess={handleModalSuccess}
+            classId={selectedClass.id}
+          />
+
+          <AttendanceModal
+            isOpen={showAttendanceModal}
+            onClose={() => setShowAttendanceModal(false)}
+            onSuccess={handleModalSuccess}
+            classId={selectedClass.id}
+            className={selectedClass.class_name}
+          />
+
+          <AnalyticsModal
+            isOpen={showAnalyticsModal}
+            onClose={() => setShowAnalyticsModal(false)}
+            classId={selectedClass.id}
+            className={selectedClass.class_name}
+          />
+        </>
+      )}
+
+      {selectedStudent && (
+        <EditStudentModal
+          isOpen={showEditStudentModal}
+          onClose={() => {
+            setShowEditStudentModal(false);
+            setSelectedStudent(null);
+          }}
+          onSuccess={handleModalSuccess}
+          studentData={{
+            id: selectedStudent.id,
+            class_id: selectedStudent.class_id || selectedClass?.id || '',
+            first_name: selectedStudent.student_name.split(' ')[0],
+            last_name: selectedStudent.student_name.split(' ').slice(1).join(' '),
+            student_id: selectedStudent.student_identifier,
+            neurodivergence_type: selectedStudent.neurodivergence_type,
+            accommodations: null,
+            neurodivergence_notes: null,
+            is_active: selectedStudent.active_status
+          }}
+        />
+      )}
     </div>
   );
 };
