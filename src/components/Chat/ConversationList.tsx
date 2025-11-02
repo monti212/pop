@@ -326,23 +326,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             >
-              {/* U Pages - DISABLED per user request */}
-              {/* <motion.button
-                onClick={() => {
-                  navigate('/technical-docs');
-                  if (onClose) onClose();
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-12 border border-[#E5E7EB] hover:bg-[#EFEFED] hover:shadow-md hover:text-[#19324A] hover:scale-[1.01] transition-all duration-150 ease-out"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.05 }}
-              >
-                <FileText className="w-4 h-4 text-[#0096B3]" />
-                <span className="text-sm font-medium">U Pages</span>
-              </motion.button> */}
-
-              {/* U Files - DISABLED per user request */}
-              {/* <motion.button
+              <motion.button
                 onClick={() => {
                   navigate('/uhuru-files');
                   if (onClose) onClose();
@@ -350,26 +334,25 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-12 border border-[#E5E7EB] hover:bg-[#EFEFED] hover:shadow-md hover:text-[#19324A] hover:scale-[1.01] transition-all duration-150 ease-out"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.1 }}
+                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.05 }}
               >
                 <FolderOpen className="w-4 h-4 text-[#0096B3]" />
-                <span className="text-sm font-medium">U Files</span>
-              </motion.button> */}
+                <span className="text-sm font-medium">Uhuru Files</span>
+              </motion.button>
 
-              {/* U Sheets - DISABLED per user request */}
-              {/* <motion.button
+              <motion.button
                 onClick={() => {
-                  navigate('/uhuru-sheets');
+                  navigate('/uhuru-office');
                   if (onClose) onClose();
                 }}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-12 border border-[#E5E7EB] hover:bg-[#EFEFED] hover:shadow-md hover:text-[#19324A] hover:scale-[1.01] transition-all duration-150 ease-out"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.15 }}
+                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.1 }}
               >
-                <Grid className="w-4 h-4 text-[#0096B3]" />
-                <span className="text-sm font-medium">U Sheets</span>
-              </motion.button> */}
+                <FileText className="w-4 h-4 text-[#0096B3]" />
+                <span className="text-sm font-medium">Uhuru Office</span>
+              </motion.button>
             </motion.div>
           )}
           
