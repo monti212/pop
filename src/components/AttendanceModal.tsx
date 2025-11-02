@@ -121,6 +121,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onSu
     try {
       const records = Object.values(attendance).map(record => ({
         student_id: record.student_id,
+        class_id: classId,
         attendance_date: selectedDate,
         status: record.status,
         notes: record.notes || null

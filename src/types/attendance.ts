@@ -31,12 +31,16 @@ export interface Student {
   updated_at: string;
 }
 
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
 export interface AttendanceRecord {
   id: string;
   student_id: string;
   class_id: string;
   attendance_date: string;
   is_present: boolean;
+  status: AttendanceStatus;
+  notes: string | null;
   recorded_at: string;
   recorded_by: string | null;
   last_modified_at: string;
@@ -114,7 +118,8 @@ export interface RecordAttendanceData {
   student_id: string;
   class_id: string;
   attendance_date: string;
-  is_present: boolean;
+  status: AttendanceStatus;
+  notes?: string | null;
 }
 
 export interface BulkAttendanceData {
@@ -122,7 +127,8 @@ export interface BulkAttendanceData {
   attendance_date: string;
   records: Array<{
     student_id: string;
-    is_present: boolean;
+    status: AttendanceStatus;
+    notes?: string | null;
   }>;
 }
 

@@ -153,7 +153,8 @@ export const recordAttendance = async (
           student_id: attendanceData.student_id,
           class_id: attendanceData.class_id,
           attendance_date: attendanceData.attendance_date,
-          is_present: attendanceData.is_present
+          status: attendanceData.status,
+          notes: attendanceData.notes || null
         },
         {
           onConflict: 'student_id,attendance_date'
@@ -194,7 +195,8 @@ export const bulkRecordAttendance = async (
       student_id: record.student_id,
       class_id: bulkData.class_id,
       attendance_date: bulkData.attendance_date,
-      is_present: record.is_present
+      status: record.status,
+      notes: record.notes || null
     }));
 
     const { data, error } = await supabase
