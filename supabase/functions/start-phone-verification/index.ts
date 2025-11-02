@@ -19,53 +19,29 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 // Helper function to validate phone number format
 function validatePhoneNumber(phoneNumber: string): { valid: boolean; normalized?: string; error?: string } {
   try {
-    // Remove ALL non-digit characters except the leading plus sign
-    let normalized = phoneNumber.trim();
-
-    // First, check if it has a plus at the start
-    const hasPlus = normalized.startsWith('+');
-
-    // Remove everything except digits
-    const digitsOnly = normalized.replace(/\D/g, '');
-
-    // Reconstruct with plus sign
-    normalized = '+' + digitsOnly;
-
-    console.log(`[Validation] Original: "${phoneNumber}" -> Normalized: "${normalized}"`);
-    console.log(`[Validation] Character breakdown:`, normalized.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(' '));
-
-    // Validation: should be + followed by 7-15 digits
+    // Remove any whitespace, dashes, parentheses
+    let normalized = phoneNumber.replace(/[\s\-\(\)]/g, '');
+    
+    // Ensure it starts with +
+    if (!normalized.startsWith('+')) {
+      normalized = '+' + normalized;
+    }
+    
+    // Basic validation: should be + followed by 7-15 digits
     const phoneRegex = /^\+\d{7,15}$/;
-
+    
     if (!phoneRegex.test(normalized)) {
-      console.error(`[Validation] Failed regex test. Length: ${normalized.length}, Digits: ${digitsOnly.length}`);
       return {
         valid: false,
-        error: 'That phone number format doesn\'t look right. Try international format like +267 72123456'
+        error: 'That phone number format doesn\'t look right. Try international format like +267 1234567?'
       };
     }
-
-    // Country-specific validation for common issues
-    // Botswana: +267 followed by 7-8 digits
-    if (normalized.startsWith('+267')) {
-      const localPart = normalized.substring(4);
-      if (localPart.length < 7 || localPart.length > 8) {
-        console.error(`[Validation] Botswana number has invalid length: ${localPart.length} digits`);
-        return {
-          valid: false,
-          error: 'Botswana phone numbers should have 7-8 digits after the country code (+267)'
-        };
-      }
-    }
-
-    console.log(`[Validation] Phone number validated successfully: ${normalized}`);
-
+    
     return {
       valid: true,
       normalized
     };
   } catch (error) {
-    console.error('[Validation] Exception during validation:', error);
     return {
       valid: false,
       error: 'Invalid phone number format'
@@ -84,6 +60,7 @@ async function startTwilioVerification(phoneNumber: string): Promise<{
   console.log(`[Twilio-${funcId}] Phone number:`, phoneNumber);
 
   try {
+    // Check environment variables
     console.log(`[Twilio-${funcId}] Checking environment variables...`);
     console.log(`[Twilio-${funcId}] TWILIO_ACCOUNT_SID present:`, !!TWILIO_ACCOUNT_SID);
     console.log(`[Twilio-${funcId}] TWILIO_AUTH_TOKEN present:`, !!TWILIO_AUTH_TOKEN);
@@ -102,25 +79,26 @@ async function startTwilioVerification(phoneNumber: string): Promise<{
     console.log(`[Twilio-${funcId}] Using Twilio Account SID: ${TWILIO_ACCOUNT_SID?.substring(0, 10)}...`);
     console.log(`[Twilio-${funcId}] Using Verify Service SID: ${TWILIO_VERIFY_SERVICE_SID?.substring(0, 10)}...`);
 
+    // Ensure credentials are properly trimmed (remove any whitespace)
     console.log(`[Twilio-${funcId}] Preparing credentials...`);
     const accountSid = TWILIO_ACCOUNT_SID.trim();
     const authToken = TWILIO_AUTH_TOKEN.trim();
     const verifySid = TWILIO_VERIFY_SERVICE_SID.trim();
 
     const auth = btoa(`${accountSid}:${authToken}`);
-    const twilioUrl = `https://verify.twilio.com/v2/Services/${verifySid}/Verifications`;
 
+    const twilioUrl = `https://verify.twilio.com/v2/Services/${verifySid}/Verifications`;
     console.log(`[Twilio-${funcId}] Twilio API URL:`, twilioUrl);
 
     const requestBody = new URLSearchParams({
       'To': phoneNumber,
       'Channel': 'sms'
     });
-
     console.log(`[Twilio-${funcId}] Request body:`, requestBody.toString());
-    console.log(`[Twilio-${funcId}] Sending request to Twilio...`);
 
+    console.log(`[Twilio-${funcId}] Sending request to Twilio...`);
     const startTime = Date.now();
+
     const response = await fetch(twilioUrl, {
       method: 'POST',
       headers: {
@@ -155,20 +133,17 @@ async function startTwilioVerification(phoneNumber: string): Promise<{
 
         // Add specific guidance for common errors
         if (response.status === 401) {
-          console.error(`[Twilio-${funcId}] Twilio 401 Authentication Error - Check your credentials:`);
-          console.error(`[Twilio-${funcId}] - TWILIO_ACCOUNT_SID should start with "AC"`);
-          console.error(`[Twilio-${funcId}] - TWILIO_AUTH_TOKEN should be 32 characters`);
-          console.error(`[Twilio-${funcId}] - TWILIO_VERIFY_SERVICE_SID should start with "VA"`);
-          console.error(`[Twilio-${funcId}] Account SID format:`, accountSid.substring(0, 2), '(should be AC)');
-          console.error(`[Twilio-${funcId}] Verify Service format:`, verifySid.substring(0, 2), '(should be VA)');
+          console.error('Twilio 401 Authentication Error - Check your credentials:');
+          console.error('- TWILIO_ACCOUNT_SID should start with "AC"');
+          console.error('- TWILIO_AUTH_TOKEN should be 32 characters');
+          console.error('- TWILIO_VERIFY_SERVICE_SID should start with "VA"');
+          console.error('Account SID format:', accountSid.substring(0, 2), '(should be AC)');
+          console.error('Verify Service format:', verifySid.substring(0, 2), '(should be VA)');
           errorMessage = 'Phone service authentication failed. Please verify your Twilio credentials are correct.';
         } else if (response.status === 404) {
-          console.error(`[Twilio-${funcId}] Twilio 404 Error - Service not found. Verify Service SID:`, verifySid);
+          console.error('Twilio 404 Error - Service not found. Verify Service SID:', verifySid);
           errorMessage = 'Phone verification service not found. Check your Twilio Verify Service SID.';
         } else if (response.status === 400 && errorData.code === 60200) {
-          console.error(`[Twilio-${funcId}] Twilio rejected phone number. Exact phone sent:`, phoneNumber);
-          console.error(`[Twilio-${funcId}] Phone length:`, phoneNumber.length);
-          console.error(`[Twilio-${funcId}] Phone characters:`, phoneNumber.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(' '));
           errorMessage = 'That phone number format doesn\'t look right. Try international format like +267 1234567?';
         } else if (response.status === 400 && errorData.code === 60203) {
           errorMessage = 'That phone number has had too many verification attempts. Give it a rest and try later?';
@@ -176,9 +151,10 @@ async function startTwilioVerification(phoneNumber: string): Promise<{
           errorMessage = 'I\'ve got too many verification requests right now. Wait a bit and try again?';
         }
       } catch (parseError) {
+        // If we can't parse the JSON response, use the text response
         const errorText = await response.text();
-        console.error(`[Twilio-${funcId}] Failed to parse Twilio error response as JSON:`, parseError);
-        console.error(`[Twilio-${funcId}] Raw Twilio error response:`, errorText);
+        console.error('Failed to parse Twilio error response as JSON:', parseError);
+        console.error('Raw Twilio error response:', errorText);
         errorMessage = `Phone verification service error (${response.status}). Please try again later.`;
       }
 
@@ -214,6 +190,7 @@ Deno.serve(async (req) => {
   console.log(`[${requestId}] URL:`, req.url);
   console.log(`[${requestId}] Headers:`, Object.fromEntries(req.headers.entries()));
 
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log(`[${requestId}] Handling CORS preflight`);
     return new Response(null, {
@@ -231,17 +208,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Parse request body
     const requestText = await req.text();
     console.log(`[${requestId}] Raw request body:`, requestText);
 
     const requestBody = JSON.parse(requestText);
     console.log(`[${requestId}] Parsed request body:`, requestBody);
 
-    // Accept both snake_case (phone_number) and camelCase (phoneNumber) for backward compatibility
-    const phoneNumberInput = requestBody.phone_number || requestBody.phoneNumber;
+    const { phone_number } = requestBody;
 
-    if (!phoneNumberInput) {
-      console.error(`[${requestId}] Missing phone number in request. Keys provided:`, Object.keys(requestBody));
+    if (!phone_number) {
+      console.error(`[${requestId}] Missing phone_number in request`);
       return new Response(JSON.stringify({
         error: 'I need your phone number to send you a verification code.'
       }), {
@@ -250,14 +227,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[${requestId}] Raw phone number input:`, phoneNumberInput);
-    console.log(`[${requestId}] Phone input type:`, typeof phoneNumberInput);
-    console.log(`[${requestId}] Phone input length:`, phoneNumberInput.length);
+    console.log(`[${requestId}] Processing phone number:`, phone_number);
 
-    console.log(`[${requestId}] Processing phone number:`, phoneNumberInput);
+    // Validate and normalize phone number
     console.log(`[${requestId}] Validating phone number...`);
-
-    const phoneValidation = validatePhoneNumber(phoneNumberInput);
+    const phoneValidation = validatePhoneNumber(phone_number);
     console.log(`[${requestId}] Validation result:`, phoneValidation);
 
     if (!phoneValidation.valid) {
@@ -273,35 +247,65 @@ Deno.serve(async (req) => {
     const normalizedPhone = phoneValidation.normalized!;
     console.log(`[${requestId}] Normalized phone:`, normalizedPhone);
 
-    console.log(`[${requestId}] Checking for recent verification attempts...`);
-    const fiveMinutesAgo = new Date();
-    fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
-
-    const { data: recentAttempt, error: recentError } = await supabase
+    // Step 1: Expire old pending verifications
+    console.log(`[${requestId}] Expiring old pending verifications...`);
+    const { error: expireError } = await supabase
       .from('phone_verifications')
-      .select('created_at, status')
+      .update({ status: 'expired' })
       .eq('phone_number', normalizedPhone)
-      .gte('created_at', fiveMinutesAgo.toISOString())
+      .eq('status', 'pending')
+      .lte('expires_at', new Date().toISOString());
+
+    if (expireError) {
+      console.error('Error expiring old verifications:', expireError);
+      // Continue anyway - this is just cleanup
+    }
+
+    // Step 2: Check for active pending verification (not expired)
+    console.log(`[${requestId}] Checking for active pending verification...`);
+    const { data: activeVerification, error: activeError } = await supabase
+      .from('phone_verifications')
+      .select('created_at, expires_at, attempted_at')
+      .eq('phone_number', normalizedPhone)
+      .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    console.log(`[${requestId}] Recent attempt check result:`, { recentAttempt, recentError });
+    console.log(`[${requestId}] Active verification check:`, { activeVerification, activeError });
 
-    if (recentError) {
-      console.error(`[${requestId}] Error checking recent attempts:`, recentError);
+    if (activeError) {
+      console.error('Error checking active verification:', activeError);
+      // Continue anyway - don't fail just because we can't check
     }
 
-    if (recentAttempt && recentAttempt.status === 'pending') {
-      console.log(`[${requestId}] Recent pending verification found, rejecting request`);
-      return new Response(JSON.stringify({
-        error: 'I just sent you a code! Give it 5 minutes before asking for another one?'
-      }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Step 3: Enforce rate limiting (4 minutes between attempts)
+    if (activeVerification) {
+      const timeSinceAttempt = Date.now() - new Date(activeVerification.attempted_at).getTime();
+      const minutesSinceAttempt = Math.floor(timeSinceAttempt / 60000);
+
+      if (minutesSinceAttempt < 4) {
+        const waitMinutes = 4 - minutesSinceAttempt;
+        console.log(`[${requestId}] Active verification found, ${minutesSinceAttempt} minutes ago, rejecting request`);
+        return new Response(JSON.stringify({
+          error: `I just sent you a code ${minutesSinceAttempt} minute${minutesSinceAttempt !== 1 ? 's' : ''} ago! Please wait ${waitMinutes} more minute${waitMinutes !== 1 ? 's' : ''} before requesting another.`
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // If more than 4 minutes, expire the old verification and allow new one
+      console.log(`[${requestId}] Old verification is ${minutesSinceAttempt} minutes old, expiring it...`);
+      await supabase
+        .from('phone_verifications')
+        .update({ status: 'expired' })
+        .eq('phone_number', normalizedPhone)
+        .eq('status', 'pending');
     }
 
+    // Start Twilio verification
     console.log(`[${requestId}] Starting Twilio verification...`);
     const verificationResult = await startTwilioVerification(normalizedPhone);
     console.log(`[${requestId}] Twilio verification result:`, verificationResult);
@@ -316,20 +320,51 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Store verification attempt in database
     console.log(`[${requestId}] Storing verification attempt in database...`);
+    console.log(`[${requestId}] Phone:`, normalizedPhone, 'Twilio SID:', verificationResult.sid);
+
+    // Calculate expiry time (15 minutes from now)
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
     const { error: insertError } = await supabase
       .from('phone_verifications')
       .insert({
         phone_number: normalizedPhone,
         twilio_sid: verificationResult.sid!,
-        status: 'pending'
+        status: 'pending',
+        expires_at: expiresAt.toISOString(),
+        attempted_at: new Date().toISOString()
       });
 
     if (insertError) {
-      console.error(`[${requestId}] Error storing verification attempt:`, insertError);
-    } else {
-      console.log(`[${requestId}] Verification attempt stored successfully`);
+      console.error(`[${requestId}] Failed to store verification record:`, insertError);
+      console.error(`[${requestId}] Error code:`, insertError.code);
+      console.error(`[${requestId}] Error details:`, insertError.message);
+
+      // If it's a unique constraint violation, it means there's still an active pending verification
+      // This shouldn't happen because we checked above, but handle it gracefully
+      if (insertError.code === '23505') {
+        console.log(`[${requestId}] Unique constraint violation - active verification exists`);
+        return new Response(JSON.stringify({
+          error: 'There\'s already an active verification for this number. Please wait a few minutes and try again.'
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // For other errors, return a generic error
+      return new Response(JSON.stringify({
+        error: 'I had trouble saving your verification request. Please try again.'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
+
+    console.log(`[${requestId}] Verification attempt stored successfully`);
 
     console.log(`[${requestId}] Verification code sent successfully`);
     console.log(`[${requestId}] ===== END PHONE VERIFICATION REQUEST =====`);
