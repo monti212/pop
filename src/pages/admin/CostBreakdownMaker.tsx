@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import AdminSidebar from '../../components/AdminSidebar';
 
 const CostBreakdownMaker: React.FC = () => {
   const [docHtml, setDocHtml] = useState('');
@@ -118,8 +119,9 @@ const CostBreakdownMaker: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'radial-gradient(1200px 600px at 20% -10%, rgba(124,58,237,.20), transparent 60%), radial-gradient(1000px 500px at 90% 10%, rgba(6,182,212,.15), transparent 60%), #0f1220' }}>
-      <div className="max-w-6xl mx-auto p-8">
+    <div className="flex min-h-screen" style={{ background: 'radial-gradient(1200px 600px at 20% -10%, rgba(124,58,237,.20), transparent 60%), radial-gradient(1000px 500px at 90% 10%, rgba(6,182,212,.15), transparent 60%), #0f1220' }}>
+      <AdminSidebar />
+      <div className="flex-1 max-w-6xl mx-auto p-8">
         <div className="mb-6">
           <Link
             to="/admin"
@@ -210,7 +212,6 @@ const CostBreakdownMaker: React.FC = () => {
           </div>
         </div>
       </div>
-
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/authService';
 import { MessageCircle, Phone, Image, FileText, Send, RefreshCw, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
+import AdminSidebar from '../../components/AdminSidebar';
 
 interface WhatsAppMessage {
   id: string;
@@ -134,14 +135,19 @@ const WhatsAppMessages: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-screen bg-gray-50">
+        <AdminSidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="flex min-h-screen bg-gray-50">
+      <AdminSidebar />
+      <div className="flex-1 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -410,6 +416,7 @@ const WhatsAppMessages: React.FC = () => {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

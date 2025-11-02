@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, Loader, Eye, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, Loader, Eye, Trash2, RefreshCw, AlertCircle, X as XIcon } from 'lucide-react';
 import { supabase } from '../../services/authService';
+import AdminSidebar from '../../components/AdminSidebar';
 
 const Brand = {
   sand: '#F7F5F2',
@@ -37,12 +38,24 @@ interface KnowledgeDocument {
   processed_at: string | null;
 }
 
+interface QueuedFile {
+  id: string;
+  file: File;
+  slotNumber: number;
+  status: 'queued' | 'uploading' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  error?: string;
+}
+
 const AIKnowledgeBase: React.FC = () => {
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const [viewingDocument, setViewingDocument] = useState<KnowledgeDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   const slots = [1, 2, 3, 4, 5, 6];
   const slotLabels = {
@@ -207,6 +220,96 @@ const AIKnowledgeBase: React.FC = () => {
     }
   };
 
+  const handleMultipleFilesSelect = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    if (files.length > 10) {
+      setError('You can upload a maximum of 10 files at once');
+      return;
+    }
+
+    const newQueue: QueuedFile[] = [];
+    let availableSlot = 1;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      while (documents.some(d => d.slot_number === availableSlot) && availableSlot <= 6) {
+        availableSlot++;
+      }
+
+      if (availableSlot > 6) {
+        setError(`Only ${i} file(s) can be uploaded. All slots are occupied.`);
+        break;
+      }
+
+      newQueue.push({
+        id: `${Date.now()}-${i}`,
+        file,
+        slotNumber: availableSlot,
+        status: 'queued',
+        progress: 0,
+      });
+
+      availableSlot++;
+    }
+
+    setFileQueue(newQueue);
+    setShowUploadModal(true);
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleMultipleFilesSelect(e.dataTransfer.files);
+    }
+  };
+
+  const removeFromQueue = (fileId: string) => {
+    setFileQueue(prev => prev.filter(f => f.id !== fileId));
+  };
+
+  const uploadQueuedFiles = async () => {
+    for (const queuedFile of fileQueue) {
+      if (queuedFile.status !== 'queued') continue;
+
+      try {
+        setFileQueue(prev =>
+          prev.map(f => f.id === queuedFile.id ? { ...f, status: 'uploading', progress: 10 } : f)
+        );
+
+        await handleFileUpload(queuedFile.slotNumber, queuedFile.file);
+
+        setFileQueue(prev =>
+          prev.map(f => f.id === queuedFile.id ? { ...f, status: 'completed', progress: 100 } : f)
+        );
+      } catch (err: any) {
+        setFileQueue(prev =>
+          prev.map(f =>
+            f.id === queuedFile.id
+              ? { ...f, status: 'failed', progress: 0, error: err.message }
+              : f
+          )
+        );
+      }
+    }
+
+    await fetchDocuments();
+  };
+
   const handleDelete = async (documentId: string) => {
     if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
       return;
@@ -262,14 +365,20 @@ const AIKnowledgeBase: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader className="w-8 h-8 animate-spin" style={{ color: Brand.teal }} />
+      <div className="flex min-h-screen" style={{ background: Brand.sand }}>
+        <AdminSidebar />
+        <div className="flex-1 flex justify-center items-center">
+          <Loader className="w-8 h-8 animate-spin" style={{ color: Brand.teal }} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-screen" style={{ background: Brand.sand }}>
+      <AdminSidebar />
+      <div className="flex-1 p-6">
+        <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold" style={{ color: Brand.navy }}>
@@ -279,13 +388,31 @@ const AIKnowledgeBase: React.FC = () => {
             Upload PDF, Word, or text documents (max 300MB). AI processes and learns automatically.
           </p>
         </div>
-        <button
-          onClick={fetchDocuments}
-          className="px-4 py-2 rounded-lg border transition-colors hover:bg-white"
-          style={{ borderColor: Brand.line, color: Brand.navy }}
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
+        <div className="flex gap-2">
+          <label>
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
+              className="hidden"
+              onChange={(e) => handleMultipleFilesSelect(e.target.files)}
+            />
+            <div
+              className="px-4 py-2 rounded-lg border transition-colors hover:bg-white cursor-pointer flex items-center gap-2"
+              style={{ borderColor: Brand.teal, color: Brand.teal, background: 'white' }}
+            >
+              <Upload className="w-4 h-4" />
+              <span className="font-medium">Bulk Upload</span>
+            </div>
+          </label>
+          <button
+            onClick={fetchDocuments}
+            className="px-4 py-2 rounded-lg border transition-colors hover:bg-white"
+            style={{ borderColor: Brand.line, color: Brand.navy }}
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -529,6 +656,145 @@ const AIKnowledgeBase: React.FC = () => {
           </div>
         </div>
       )}
+
+      {showUploadModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            if (fileQueue.every(f => f.status !== 'uploading')) {
+              setShowUploadModal(false);
+              setFileQueue([]);
+            }
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b" style={{ borderColor: Brand.line }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold" style={{ color: Brand.navy }}>
+                    Upload Queue ({fileQueue.length} files)
+                  </h3>
+                  <p className="text-sm mt-1" style={{ color: Brand.navy, opacity: 0.7 }}>
+                    Review and manage files before uploading
+                  </p>
+                </div>
+                {fileQueue.every(f => f.status !== 'uploading') && (
+                  <button
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      setFileQueue([]);
+                    }}
+                    className="p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <XIcon className="w-5 h-5" style={{ color: Brand.navy }} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+              <div className="space-y-3">
+                {fileQueue.map((queuedFile) => (
+                  <div
+                    key={queuedFile.id}
+                    className="p-4 rounded-lg border"
+                    style={{ borderColor: Brand.line, background: '#fff' }}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <FileText className="w-4 h-4" style={{ color: Brand.teal }} />
+                          <span className="font-medium text-sm" style={{ color: Brand.navy }}>
+                            {queuedFile.file.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
+                          <span>
+                            {queuedFile.file.size < 1024 * 1024
+                              ? `${(queuedFile.file.size / 1024).toFixed(1)} KB`
+                              : `${(queuedFile.file.size / 1024 / 1024).toFixed(2)} MB`}
+                          </span>
+                          <span>•</span>
+                          <span>Slot {queuedFile.slotNumber}</span>
+                          <span>•</span>
+                          <span className="capitalize">{queuedFile.status}</span>
+                        </div>
+                        {queuedFile.status === 'uploading' && (
+                          <div className="mt-2">
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="h-1.5 rounded-full transition-all"
+                                style={{
+                                  width: `${queuedFile.progress}%`,
+                                  background: Brand.teal,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        {queuedFile.error && (
+                          <p className="text-xs text-red-600 mt-1">{queuedFile.error}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {queuedFile.status === 'completed' && (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        )}
+                        {queuedFile.status === 'failed' && (
+                          <XCircle className="w-5 h-5 text-red-600" />
+                        )}
+                        {queuedFile.status === 'uploading' && (
+                          <Loader className="w-5 h-5 animate-spin" style={{ color: Brand.teal }} />
+                        )}
+                        {queuedFile.status === 'queued' && (
+                          <button
+                            onClick={() => removeFromQueue(queuedFile.id)}
+                            className="p-1 rounded hover:bg-red-50"
+                          >
+                            <XIcon className="w-4 h-4 text-red-600" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-6 border-t" style={{ borderColor: Brand.line }}>
+              <div className="flex gap-3">
+                {fileQueue.some(f => f.status === 'queued') && (
+                  <button
+                    onClick={uploadQueuedFiles}
+                    disabled={fileQueue.every(f => f.status !== 'queued')}
+                    className="flex-1 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                    style={{ background: Brand.teal, color: '#fff' }}
+                  >
+                    Upload All ({fileQueue.filter(f => f.status === 'queued').length})
+                  </button>
+                )}
+                {fileQueue.every(f => f.status !== 'uploading' && f.status !== 'queued') && (
+                  <button
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      setFileQueue([]);
+                    }}
+                    className="flex-1 px-4 py-2 rounded-lg font-medium"
+                    style={{ background: Brand.teal, color: '#fff' }}
+                  >
+                    Done
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+        </div>
+      </div>
     </div>
   );
 };

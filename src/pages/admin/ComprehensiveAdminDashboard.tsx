@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/authService';
+import AdminSidebar from '../../components/AdminSidebar';
 
 // Brand tokens
 const Brand = {
@@ -297,13 +298,15 @@ const ComprehensiveAdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: Brand.sand }}>
-      {/* Header */}
-      <header
-        className="sticky top-0 z-40 border-b"
-        style={{ borderColor: Brand.line, background: 'rgba(247,245,242,0.95)', backdropFilter: 'blur(10px)' }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+    <div className="flex min-h-screen" style={{ background: Brand.sand }}>
+      <AdminSidebar />
+      <div className="flex-1 min-h-screen">
+        {/* Header */}
+        <header
+          className="sticky top-0 z-40 border-b"
+          style={{ borderColor: Brand.line, background: 'rgba(247,245,242,0.95)', backdropFilter: 'blur(10px)' }}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               to="/chat"
@@ -565,6 +568,7 @@ const ComprehensiveAdminDashboard: React.FC = () => {
             )}
           </motion.div>
         )}
+      </div>
       </div>
     </div>
   );
