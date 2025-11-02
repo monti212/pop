@@ -1,189 +1,115 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, Upload, Calendar, Users, BookOpen, ClipboardCheck,
-  ArrowLeft, Plus, Filter, X, Loader, AlertTriangle,
-  FileText, Download, Trash2, Edit, MoreVertical, Clock
+  ArrowLeft, Plus, Loader, AlertTriangle, X, Users, ClipboardCheck,
+  Calendar, Edit, Trash2, UserPlus, BarChart3, School, Archive
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import {
-  uploadFile,
-  searchFiles,
-  deleteFile,
-  getFileDownloadUrl,
-  UserFile,
-  getUserStorageUsed
-} from '../services/fileService';
+import { Class, Student } from '../types/attendance';
+import { getTeacherClasses, getActiveClassCount } from '../services/classService';
+import { getClassStudents } from '../services/studentService';
 
-type TabType = 'attendance' | 'lesson-plans';
-type ViewMode = 'grid' | 'list' | 'calendar';
+type ViewMode = 'classes' | 'students' | 'attendance' | 'analytics';
 
 const UhuruFilesPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // State
-  const [activeTab, setActiveTab] = useState<TabType>('attendance');
-  const [files, setFiles] = useState<UserFile[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('classes');
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [storageUsed, setStorageUsed] = useState<number>(0);
-  const [dateFilter, setDateFilter] = useState<string>('all');
-  const [classroomFilter, setClassroomFilter] = useState<string>('all');
+  const [classCount, setClassCount] = useState<number>(0);
+
+  const [showCreateClassModal, setShowCreateClassModal] = useState(false);
+  const [showEditClassModal, setShowEditClassModal] = useState(false);
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
 
   useEffect(() => {
     if (user) {
-      loadFiles();
-      loadStorageUsage();
+      loadClasses();
+      loadClassCount();
     }
-  }, [user, activeTab, dateFilter, classroomFilter]);
+  }, [user]);
 
   useEffect(() => {
-    if (user) {
-      const timeoutId = setTimeout(() => {
-        loadFiles();
-      }, 500);
-      return () => clearTimeout(timeoutId);
+    if (selectedClass && viewMode === 'students') {
+      loadStudents(selectedClass.id);
     }
-  }, [searchQuery]);
+  }, [selectedClass, viewMode]);
 
-  const loadFiles = async () => {
+  const loadClasses = async () => {
     if (!user) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const category = activeTab === 'attendance' ? 'attendance' : 'lesson_plan';
-      const result = await searchFiles(
-        user.id,
-        searchQuery || undefined,
-        undefined,
-        [category],
-        100
-      );
-
-      if (result.success && result.files) {
-        const sortedFiles = [...result.files].sort((a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-        setFiles(sortedFiles);
+      const result = await getTeacherClasses(user.id);
+      if (result.success && result.data) {
+        setClasses(result.data);
       } else {
-        setError(result.error || 'Could not load your files');
+        setError(result.error || 'Failed to load classes');
       }
     } catch (error: any) {
-      setError(error.message || 'Failed to load files');
+      setError(error.message || 'Failed to load classes');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadStorageUsage = async () => {
+  const loadClassCount = async () => {
     if (!user) return;
 
     try {
-      const result = await getUserStorageUsed(user.id);
-      if (result.success) {
-        setStorageUsed(result.bytesUsed || 0);
+      const result = await getActiveClassCount(user.id);
+      if (result.success && result.data !== undefined) {
+        setClassCount(result.data);
       }
     } catch (error: any) {
-      console.error('Error loading storage usage:', error);
+      console.error('Error loading class count:', error);
     }
   };
 
-  const handleFileUpload = async (uploadedFiles: FileList) => {
-    if (!user || uploadedFiles.length === 0) return;
-
-    setIsUploading(true);
-    const category = activeTab === 'attendance' ? 'attendance' : 'lesson_plan';
-
-    const uploadPromises = Array.from(uploadedFiles).map(async (file) => {
-      return uploadFile(file, user.id, file.name, [category]);
-    });
-
-    try {
-      const results = await Promise.all(uploadPromises);
-      const failedUploads = results.filter(r => !r.success);
-
-      if (failedUploads.length > 0) {
-        setError(`${failedUploads.length} file(s) failed to upload`);
-      }
-
-      await loadFiles();
-      await loadStorageUsage();
-      setShowUploadModal(false);
-    } catch (error: any) {
-      setError(error.message || 'File upload failed');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleDeleteFiles = async () => {
-    if (!user || selectedFiles.size === 0) return;
-
-    if (!confirm(`Delete ${selectedFiles.size} file(s)?`)) return;
-
+  const loadStudents = async (classId: string) => {
     setIsLoading(true);
-    const deletePromises = Array.from(selectedFiles).map(fileId =>
-      deleteFile(fileId, user.id)
-    );
+    setError(null);
 
     try {
-      await Promise.all(deletePromises);
-      setSelectedFiles(new Set());
-      await loadFiles();
-      await loadStorageUsage();
+      const result = await getClassStudents(classId);
+      if (result.success && result.data) {
+        setStudents(result.data);
+      } else {
+        setError(result.error || 'Failed to load students');
+      }
     } catch (error: any) {
-      setError(error.message || 'Failed to delete files');
+      setError(error.message || 'Failed to load students');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDownloadFile = async (file: UserFile) => {
-    try {
-      const result = await getFileDownloadUrl(file.storage_path);
-      if (result.success && result.url) {
-        const a = document.createElement('a');
-        a.href = result.url;
-        a.download = file.file_name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-    } catch (error: any) {
-      setError('Could not download file');
-    }
+  const handleClassSelect = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setViewMode('students');
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  const handleBackToClasses = () => {
+    setSelectedClass(null);
+    setViewMode('classes');
   };
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const handleTakeAttendance = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setViewMode('attendance');
   };
 
-  const getStoragePercentage = (): number => {
-    const maxStorageBytes = 1 * 1024 * 1024 * 1024;
-    return Math.min((storageUsed / maxStorageBytes) * 100, 100);
+  const handleViewAnalytics = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setViewMode('analytics');
   };
 
   return (
@@ -192,153 +118,80 @@ const UhuruFilesPage: React.FC = () => {
       <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/')}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-teal transition-colors flex items-center gap-2"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to Chat</span>
-            </button>
+            {viewMode !== 'classes' ? (
+              <button
+                onClick={handleBackToClasses}
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-teal transition-colors flex items-center gap-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium">Back to Classes</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/')}
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-teal transition-colors flex items-center gap-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium">Back to Chat</span>
+              </button>
+            )}
 
             <div className="h-6 w-px bg-gray-300"></div>
 
             <div className="flex items-center gap-3">
-              <BookOpen className="w-7 h-7 text-teal" />
+              <School className="w-7 h-7 text-teal" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Teacher Files</h1>
-                <p className="text-sm text-gray-600">Attendance Records & Lesson Plans</p>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {viewMode === 'classes' && 'Class Attendance'}
+                  {viewMode === 'students' && `${selectedClass?.class_name} - Students`}
+                  {viewMode === 'attendance' && `${selectedClass?.class_name} - Take Attendance`}
+                  {viewMode === 'analytics' && `${selectedClass?.class_name} - Analytics`}
+                </h1>
+                <p className="text-sm text-gray-600">
+                  {viewMode === 'classes' && `${classCount} of 5 classes created`}
+                  {viewMode === 'students' && `${students.length} of 35 students`}
+                  {viewMode === 'attendance' && 'Record daily attendance'}
+                  {viewMode === 'analytics' && 'View attendance statistics'}
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Storage Indicator */}
-            <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-300 ${
-                    getStoragePercentage() > 90 ? 'bg-red-500' :
-                    getStoragePercentage() > 75 ? 'bg-orange-500' :
-                    'bg-teal'
-                  }`}
-                  style={{ width: `${getStoragePercentage()}%` }}
-                />
-              </div>
-              <span className="text-xs text-gray-600 font-medium">
-                {formatFileSize(storageUsed)} / 1 GB
-              </span>
-            </div>
-
+          {viewMode === 'classes' && (
             <motion.button
-              onClick={() => setShowUploadModal(true)}
-              className="px-6 py-3 bg-teal text-white rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowCreateClassModal(true)}
+              disabled={classCount >= 5}
+              className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 ${
+                classCount >= 5
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-teal text-white hover:bg-teal/90'
+              }`}
+              whileHover={classCount < 5 ? { scale: 1.02 } : {}}
+              whileTap={classCount < 5 ? { scale: 0.98 } : {}}
             >
-              <Upload className="w-4 h-4" />
-              Upload {activeTab === 'attendance' ? 'Attendance' : 'Lesson Plan'}
+              <Plus className="w-4 h-4" />
+              Create Class
             </motion.button>
-          </div>
+          )}
+
+          {viewMode === 'students' && (
+            <motion.button
+              onClick={() => setShowAddStudentModal(true)}
+              disabled={students.length >= 35}
+              className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 ${
+                students.length >= 35
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-teal text-white hover:bg-teal/90'
+              }`}
+              whileHover={students.length < 35 ? { scale: 1.02 } : {}}
+              whileTap={students.length < 35 ? { scale: 0.98 } : {}}
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Student
+            </motion.button>
+          )}
         </div>
       </header>
-
-      {/* Tab Navigation */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('attendance')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 ${
-              activeTab === 'attendance'
-                ? 'bg-teal text-white shadow-sm'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <ClipboardCheck className="w-5 h-5" />
-            Attendance Records
-            <span className="px-2 py-0.5 rounded-full text-xs bg-white/20">
-              {files.filter(f => f.tags?.includes('attendance')).length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('lesson-plans')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 ${
-              activeTab === 'lesson-plans'
-                ? 'bg-teal text-white shadow-sm'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <BookOpen className="w-5 h-5" />
-            Lesson Plans
-            <span className="px-2 py-0.5 rounded-full text-xs bg-white/20">
-              {files.filter(f => f.tags?.includes('lesson_plan')).length}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 max-w-xl">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder={`Search ${activeTab === 'attendance' ? 'attendance records' : 'lesson plans'}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-teal focus:border-teal focus:bg-white transition-all duration-200"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-teal focus:border-teal text-sm"
-            >
-              <option value="all">All Dates</option>
-              <option value="today">Today</option>
-              <option value="this-week">This Week</option>
-              <option value="this-month">This Month</option>
-              <option value="this-semester">This Semester</option>
-            </select>
-
-            <button
-              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-              className="p-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-colors"
-            >
-              {viewMode === 'grid' ? 'List View' : 'Grid View'}
-            </button>
-          </div>
-        </div>
-
-        {/* Selected Files Actions */}
-        {selectedFiles.size > 0 && (
-          <div className="mt-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <span className="text-sm text-blue-800 font-medium">
-              {selectedFiles.size} file{selectedFiles.size !== 1 ? 's' : ''} selected
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDeleteFiles}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2 text-sm font-medium"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
-              <button
-                onClick={() => setSelectedFiles(new Set())}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-              >
-                Clear Selection
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-6">
@@ -361,247 +214,236 @@ const UhuruFilesPage: React.FC = () => {
           <div className="flex items-center justify-center min-h-[500px]">
             <div className="text-center">
               <Loader className="w-12 h-12 text-teal animate-spin mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading your files</h3>
-              <p className="text-gray-600">Getting everything ready...</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading...</h3>
+              <p className="text-gray-600">Getting everything ready</p>
             </div>
           </div>
-        ) : files.length === 0 ? (
-          <div className="flex items-center justify-center min-h-[500px]">
-            <div className="text-center max-w-md">
-              {activeTab === 'attendance' ? (
-                <ClipboardCheck className="w-24 h-24 text-gray-300 mx-auto mb-6" />
-              ) : (
-                <BookOpen className="w-24 h-24 text-gray-300 mx-auto mb-6" />
-              )}
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                {searchQuery ? 'No files found' : `No ${activeTab === 'attendance' ? 'attendance records' : 'lesson plans'} yet`}
-              </h3>
-              <p className="text-gray-600 text-lg mb-8">
-                {searchQuery
-                  ? 'No files match your search criteria'
-                  : `Upload your first ${activeTab === 'attendance' ? 'attendance record' : 'lesson plan'} to get started`
-                }
-              </p>
-              {!searchQuery && (
+        ) : viewMode === 'classes' ? (
+          classes.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[500px]">
+              <div className="text-center max-w-md">
+                <School className="w-24 h-24 text-gray-300 mx-auto mb-6" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">No Classes Yet</h3>
+                <p className="text-gray-600 text-lg mb-8">
+                  Create your first class to start tracking attendance
+                </p>
                 <motion.button
-                  onClick={() => setShowUploadModal(true)}
+                  onClick={() => setShowCreateClassModal(true)}
                   className="px-8 py-4 bg-teal text-white rounded-lg hover:bg-teal/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <Upload className="w-5 h-5" />
-                  Upload {activeTab === 'attendance' ? 'Attendance' : 'Lesson Plan'}
+                  <Plus className="w-5 h-5" />
+                  Create Your First Class
                 </motion.button>
-              )}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {classes.map((classItem) => (
+                <motion.div
+                  key={classItem.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 mb-1">
+                          {classItem.class_name}
+                        </h3>
+                        {classItem.subject && (
+                          <p className="text-sm text-gray-600 mb-1">{classItem.subject}</p>
+                        )}
+                        {classItem.grade_level && (
+                          <p className="text-xs text-gray-500">Grade {classItem.grade_level}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedClass(classItem);
+                          setShowEditClassModal(true);
+                        }}
+                        className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-teal transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-4 text-sm text-gray-700">
+                      <Users className="w-4 h-4 text-teal" />
+                      <span className="font-medium">{classItem.student_count} students</span>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => handleTakeAttendance(classItem)}
+                        className="w-full px-4 py-3 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors font-semibold flex items-center justify-center gap-2"
+                      >
+                        <ClipboardCheck className="w-4 h-4" />
+                        Take Attendance
+                      </button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleClassSelect(classItem)}
+                          className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                        >
+                          <Users className="w-4 h-4" />
+                          Students
+                        </button>
+                        <button
+                          onClick={() => handleViewAnalytics(classItem)}
+                          className="px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                          Analytics
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )
+        ) : viewMode === 'students' ? (
+          students.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[500px]">
+              <div className="text-center max-w-md">
+                <Users className="w-24 h-24 text-gray-300 mx-auto mb-6" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">No Students Yet</h3>
+                <p className="text-gray-600 text-lg mb-8">
+                  Add students to this class to start tracking attendance
+                </p>
+                <motion.button
+                  onClick={() => setShowAddStudentModal(true)}
+                  className="px-8 py-4 bg-teal text-white rounded-lg hover:bg-teal/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Add Your First Student
+                </motion.button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Student Name</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">ID</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {students.map((student) => (
+                      <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-teal/10 flex items-center justify-center">
+                              <span className="text-teal font-semibold text-sm">
+                                {student.student_name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{student.student_name}</p>
+                              {student.has_neurodivergence && student.neurodivergence_type && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                                  {student.neurodivergence_type}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {student.student_identifier || '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            student.active_status
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {student.active_status ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-teal transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        ) : viewMode === 'attendance' ? (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="text-center py-12">
+              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Attendance Interface</h3>
+              <p className="text-gray-600">Coming in next implementation phase</p>
             </div>
           </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {files.map((file) => (
-              <motion.div
-                key={file.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`bg-white rounded-lg border transition-all duration-200 hover:shadow-lg group ${
-                  selectedFiles.has(file.id)
-                    ? 'border-teal bg-teal/5 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      {activeTab === 'attendance' ? (
-                        <ClipboardCheck className="w-5 h-5 text-teal" />
-                      ) : (
-                        <BookOpen className="w-5 h-5 text-blue-500" />
-                      )}
-                      <input
-                        type="checkbox"
-                        checked={selectedFiles.has(file.id)}
-                        onChange={() => {
-                          const newSelected = new Set(selectedFiles);
-                          if (newSelected.has(file.id)) {
-                            newSelected.delete(file.id);
-                          } else {
-                            newSelected.add(file.id);
-                          }
-                          setSelectedFiles(newSelected);
-                        }}
-                        className="rounded border-gray-300 text-teal focus:ring-teal w-4 h-4"
-                      />
-                    </div>
-                  </div>
-
-                  <h3 className="font-semibold text-gray-900 mb-3 line-clamp-2">
-                    {file.title}
-                  </h3>
-
-                  <div className="text-sm text-gray-600 space-y-2 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <span>{formatDate(file.created_at)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4" />
-                      <span>{formatFileSize(file.file_size)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 mt-4">
-                    <button
-                      onClick={() => handleDownloadFile(file)}
-                      className="flex-1 px-3 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={selectedFiles.size === files.length && files.length > 0}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedFiles(new Set(files.map(f => f.id)));
-                        } else {
-                          setSelectedFiles(new Set());
-                        }
-                      }}
-                      className="rounded border-gray-300 text-teal focus:ring-teal w-4 h-4"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Name</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Size</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {files.map((file) => (
-                  <tr
-                    key={file.id}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      selectedFiles.has(file.id) ? 'bg-teal/5' : ''
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedFiles.has(file.id)}
-                        onChange={() => {
-                          const newSelected = new Set(selectedFiles);
-                          if (newSelected.has(file.id)) {
-                            newSelected.delete(file.id);
-                          } else {
-                            newSelected.add(file.id);
-                          }
-                          setSelectedFiles(newSelected);
-                        }}
-                        className="rounded border-gray-300 text-teal focus:ring-teal w-4 h-4"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {activeTab === 'attendance' ? (
-                          <ClipboardCheck className="w-5 h-5 text-teal" />
-                        ) : (
-                          <BookOpen className="w-5 h-5 text-blue-500" />
-                        )}
-                        <span className="font-medium text-gray-900">{file.title}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {formatFileSize(file.file_size)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {formatDate(file.created_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleDownloadFile(file)}
-                        className="p-2 text-teal hover:bg-teal/10 rounded-lg transition-colors"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="text-center py-12">
+              <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Analytics Dashboard</h3>
+              <p className="text-gray-600">Coming in next implementation phase</p>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Upload Modal */}
+      {/* Modals - Placeholders for next phase */}
       <AnimatePresence>
-        {showUploadModal && (
+        {showCreateClassModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-xl shadow-xl max-w-lg w-full"
+              className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
             >
-              <div className="p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    Upload {activeTab === 'attendance' ? 'Attendance Record' : 'Lesson Plan'}
-                  </h3>
-                  <button
-                    onClick={() => setShowUploadModal(false)}
-                    className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <div
-                  className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-teal hover:bg-teal/5 transition-all duration-300 cursor-pointer group"
-                  onClick={() => document.getElementById('file-upload')?.click()}
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Create Class Modal</h3>
+                <p className="text-gray-600 mb-6">Coming in next implementation phase</p>
+                <button
+                  onClick={() => setShowCreateClassModal(false)}
+                  className="px-6 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors"
                 >
-                  <div className="w-16 h-16 rounded-full bg-teal/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-teal/20 transition-colors">
-                    <Upload className="w-8 h-8 text-teal group-hover:scale-110 transition-transform" />
-                  </div>
-                  <p className="text-gray-800 font-semibold mb-2">Click to select files</p>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Upload {activeTab === 'attendance' ? 'attendance records' : 'lesson plans'} in any format
-                  </p>
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500">Maximum file size: 2GB per file</p>
-                    <p className="text-xs text-gray-600 font-medium">
-                      Storage remaining: {formatFileSize((1024 * 1024 * 1024) - storageUsed)}
-                    </p>
-                  </div>
-                </div>
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
 
-                <input
-                  id="file-upload"
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files) {
-                      handleFileUpload(e.target.files);
-                    }
-                  }}
-                />
-
-                {isUploading && (
-                  <div className="flex items-center justify-center py-4 mt-4">
-                    <Loader className="w-6 h-6 text-teal animate-spin mr-3" />
-                    <span className="text-gray-600">Uploading files...</span>
-                  </div>
-                )}
+        {showAddStudentModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6"
+            >
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Add Student Modal</h3>
+                <p className="text-gray-600 mb-6">Coming in next implementation phase</p>
+                <button
+                  onClick={() => setShowAddStudentModal(false)}
+                  className="px-6 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors"
+                >
+                  Close
+                </button>
               </div>
             </motion.div>
           </div>
