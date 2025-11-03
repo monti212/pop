@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, MessageSquare, DollarSign, Database, Menu, X } from 'lucide-react';
+import { Activity, MessageSquare, Database, Menu, X } from 'lucide-react';
 import { supabase } from '../services/authService';
 
 const Brand = {
@@ -74,11 +74,6 @@ const AdminSidebar: React.FC = () => {
       path: '/admin/whatsapp',
       icon: MessageSquare,
       label: 'WhatsApp',
-    },
-    {
-      path: '/admin/cost-breakdown',
-      icon: DollarSign,
-      label: 'Cost Breakdown',
     },
     {
       path: '/admin/knowledge-base',
