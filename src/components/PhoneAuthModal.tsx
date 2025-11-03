@@ -139,13 +139,34 @@ const PhoneAuthModal: React.FC<PhoneAuthModalProps> = ({
       }
 
       console.log('Phone verification successful, user authenticated');
+      console.log('Session data received:', data.session);
 
       // Set the session if provided
       if (data.session && supabase) {
-        await supabase.auth.setSession({
+        console.log('Setting session with access_token:', data.session.access_token ? 'present' : 'missing');
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token || ''
         });
+
+        if (sessionError) {
+          console.error('Error setting session:', sessionError);
+          throw new Error('Failed to establish session');
+        }
+
+        console.log('Session set successfully:', sessionData);
+
+        // Wait for auth state to propagate and verify session is active
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Verify the session was set correctly
+        const { data: currentSession } = await supabase.auth.getSession();
+        console.log('Current session after setSession:', currentSession);
+
+        if (!currentSession.session) {
+          throw new Error('Session was not established properly');
+        }
       }
 
       onSuccess();

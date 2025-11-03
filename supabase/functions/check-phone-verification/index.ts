@@ -246,50 +246,61 @@ async function createUserWithPhone(phoneNumber: string): Promise<{
 }
 
 // Helper function to generate session for user
-async function generateUserSession(userId: string): Promise<{
+async function generateUserSession(userId: string, phoneNumber: string): Promise<{
   success: boolean;
   session?: any;
   error?: string;
 }> {
   try {
-    // Generate a sign-in link/session for the user
+    console.log(`Generating session for user: ${userId}`);
+
+    // Update user metadata to ensure phone is confirmed
+    const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+      phone: phoneNumber,
+      phone_confirm: true,
+      user_metadata: {
+        phone: phoneNumber,
+        phone_verified: true
+      }
+    });
+
+    if (updateError) {
+      console.error('Error updating user phone confirmation:', updateError);
+    }
+
+    // Generate a proper authentication token using the admin API
     const { data, error } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
-      email: undefined,
-      password: undefined,
+      email: `${userId}@phone.local`,
       options: {
         data: {
+          phone: phoneNumber,
           phone_verified: true
         }
       }
     });
 
     if (error) {
-      console.error('Error generating session:', error);
-      
-      // Alternative approach: create a custom JWT token
-      const customToken = {
-        sub: userId,
-        aud: 'authenticated',
-        role: 'authenticated',
-        phone_verified: true,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
-      };
-      
-      return {
-        success: true,
-        session: {
-          access_token: btoa(JSON.stringify(customToken)),
-          user_id: userId,
-          phone_verified: true
-        }
-      };
+      console.error('Error generating magic link:', error);
+      throw error;
     }
+
+    if (!data || !data.properties || !data.properties.access_token) {
+      console.error('No access token in response');
+      throw new Error('Failed to generate authentication token');
+    }
+
+    console.log('Session generated successfully');
 
     return {
       success: true,
-      session: data
+      session: {
+        access_token: data.properties.access_token,
+        refresh_token: data.properties.refresh_token || '',
+        expires_in: 3600,
+        token_type: 'bearer',
+        user: data.user
+      }
     };
   } catch (error: any) {
     console.error('Error generating user session:', error);
@@ -443,7 +454,7 @@ Deno.serve(async (req) => {
     }
 
     // Generate session for the user
-    const sessionResult = await generateUserSession(userId);
+    const sessionResult = await generateUserSession(userId, normalizedPhone);
     
     if (!sessionResult.success) {
       return new Response(JSON.stringify({ 
