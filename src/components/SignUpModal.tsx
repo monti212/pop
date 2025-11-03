@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Mail, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
-import { signUp } from '../services/authService';
+import { X, Mail, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Smartphone } from 'lucide-react';
+import { signUp, signInWithGoogle } from '../services/authService';
 import Particles from './Particles';
 import Logo from './Logo';
+import SocialAuthButton from './SocialAuthButton';
+import PhoneAuthModal from './PhoneAuthModal';
 
 interface SignUpModalProps {
   onClose: () => void;
@@ -28,8 +30,10 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPhoneAuth, setShowPhoneAuth] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -90,6 +94,25 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
       setError(err.message || 'Account creation isn\'t working right now. Try again?');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setError('');
+    setIsGoogleLoading(true);
+
+    try {
+      const { success, error } = await signInWithGoogle();
+
+      if (!success) {
+        throw new Error(error || 'Google sign-up isn\'t cooperating. Want to try again?');
+      }
+
+      // The OAuth flow will redirect the user, so we don't need to call onSuccess here
+    } catch (err: any) {
+      console.error('Google sign-up error:', err);
+      setError(err.message || 'Something went wrong with Google sign-up. Try again?');
+      setIsGoogleLoading(false);
     }
   };
   
@@ -281,7 +304,32 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
               )}
             </motion.button>
 
-            <div className="pt-2 text-center">
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#0170b9]/10"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or sign up with</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <SocialAuthButton
+                provider="Google"
+                icon={Mail}
+                onClick={handleGoogleSignUp}
+                isLoading={isGoogleLoading}
+                disabled={isLoading}
+              />
+              <SocialAuthButton
+                provider="Phone"
+                icon={Smartphone}
+                onClick={() => setShowPhoneAuth(true)}
+                disabled={isLoading || isGoogleLoading}
+              />
+            </div>
+
+            <div className="pt-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 By creating an account, you agree to our{' '}
                 <a href="/terms" className="text-teal dark:text-teal-400 hover:underline">Terms</a> and{' '}
@@ -289,7 +337,7 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
               </p>
             </div>
           </form>
-          
+
           <div className="mt-5 pt-5 border-t border-[#0170b9]/10 text-center">
             <p className="text-sm text-[#002F4B]/70">
               Already have an account?{' '}
@@ -303,6 +351,17 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
           </div>
         </div>
       </motion.div>
+
+      {showPhoneAuth && (
+        <PhoneAuthModal
+          onClose={() => setShowPhoneAuth(false)}
+          onSuccess={() => {
+            setShowPhoneAuth(false);
+            onSuccess();
+          }}
+          onSwitchToEmail={() => setShowPhoneAuth(false)}
+        />
+      )}
     </div>
   );
 };

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, Eye, EyeOff, AlertCircle, Smartphone } from 'lucide-react';
 import { signIn, resetPassword, signInWithGoogle } from '../services/authService';
 import Particles from './Particles';
 import Logo from './Logo';
+import SocialAuthButton from './SocialAuthButton';
+import PhoneAuthModal from './PhoneAuthModal';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -24,6 +26,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
   const [resetEmail, setResetEmail] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [showPhoneAuth, setShowPhoneAuth] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -337,9 +340,34 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                   </>
                 ) : "Sign In"}
               </motion.button>
+
+              <div className="relative my-5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-[#0170b9]/10"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <SocialAuthButton
+                  provider="Google"
+                  icon={Mail}
+                  onClick={handleGoogleSignIn}
+                  isLoading={isGoogleLoading}
+                  disabled={isLoading}
+                />
+                <SocialAuthButton
+                  provider="Phone"
+                  icon={Smartphone}
+                  onClick={() => setShowPhoneAuth(true)}
+                  disabled={isLoading || isGoogleLoading}
+                />
+              </div>
             </form>
           )}
-          
+
           <div className="mt-5 pt-5 border-t border-[#0170b9]/10 text-center">
             {!showForgotPassword && (
               <p className="text-sm text-[#002F4B]/70">
@@ -355,6 +383,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
           </div>
         </div>
       </motion.div>
+
+      {showPhoneAuth && (
+        <PhoneAuthModal
+          onClose={() => setShowPhoneAuth(false)}
+          onSuccess={() => {
+            setShowPhoneAuth(false);
+            onSuccess();
+          }}
+          onSwitchToEmail={() => setShowPhoneAuth(false)}
+        />
+      )}
     </div>
   );
 };

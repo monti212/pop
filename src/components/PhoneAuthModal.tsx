@@ -408,7 +408,7 @@ const PhoneAuthModal: React.FC<PhoneAuthModalProps> = ({
                 onClick={onSwitchToEmail}
                 className="text-teal hover:text-teal/80 font-medium transition-colors"
               >
-                Sign up with email
+                Use email
               </button>
             </p>
           </div>
