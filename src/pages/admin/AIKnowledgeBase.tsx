@@ -193,13 +193,6 @@ const AIKnowledgeBase: React.FC = () => {
           prev.map(f => f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 10 } : f)
         );
 
-        const reader = new FileReader();
-        const content = await new Promise<string>((resolve, reject) => {
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.onerror = reject;
-          reader.readAsText(uploadFile.file);
-        });
-
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error('No active session');
 
@@ -211,15 +204,41 @@ const AIKnowledgeBase: React.FC = () => {
         else if (fileExtension === '.txt') fileFormat = 'txt';
         else if (fileExtension === '.md') fileFormat = 'md';
 
+        // Upload to storage first
+        const timestamp = Date.now();
+        const sanitizedFileName = uploadFile.file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const storagePath = `knowledge-base/${session.user.id}/${timestamp}_${sanitizedFileName}`;
+
         setUploadingFiles(prev =>
-          prev.map(f => f.id === uploadFile.id ? { ...f, progress: 30 } : f)
+          prev.map(f => f.id === uploadFile.id ? { ...f, progress: 20 } : f)
         );
 
+        const { data: storageData, error: storageError } = await supabase.storage
+          .from('user-files')
+          .upload(storagePath, uploadFile.file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: uploadFile.file.type
+          });
+
+        if (storageError) throw storageError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('user-files')
+          .getPublicUrl(storagePath);
+
+        setUploadingFiles(prev =>
+          prev.map(f => f.id === uploadFile.id ? { ...f, progress: 40 } : f)
+        );
+
+        // Create document record with storage path
         const { data: docData, error: insertError } = await supabase
           .from('admin_knowledge_documents')
           .insert({
             title: uploadFile.file.name.replace(/\.[^/.]+$/, ''),
-            original_content: content,
+            original_content: `[File stored in storage: ${storagePath}]`,
+            storage_path: storagePath,
+            file_url: publicUrl,
             file_name: uploadFile.file.name,
             file_size: uploadFile.file.size,
             mime_type: uploadFile.file.type,
@@ -234,9 +253,10 @@ const AIKnowledgeBase: React.FC = () => {
         if (insertError) throw insertError;
 
         setUploadingFiles(prev =>
-          prev.map(f => f.id === uploadFile.id ? { ...f, status: 'processing', progress: 50, documentId: docData.id } : f)
+          prev.map(f => f.id === uploadFile.id ? { ...f, status: 'processing', progress: 60, documentId: docData.id } : f)
         );
 
+        // Process document on backend
         const processResponse = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-knowledge-document`,
           {

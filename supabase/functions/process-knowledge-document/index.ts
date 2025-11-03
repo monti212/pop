@@ -122,9 +122,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Any authenticated user can process documents
-    // No role restrictions
-
     const { documentId } = await req.json();
 
     if (!documentId) {
@@ -138,7 +135,6 @@ Deno.serve(async (req: Request) => {
 
     const processingStartTime = Date.now();
 
-    // Get document from database
     const { data: document, error: docError } = await supabase
       .from('admin_knowledge_documents')
       .select('*')
@@ -152,7 +148,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Update status to processing
     await supabase
       .from('admin_knowledge_documents')
       .update({
@@ -161,20 +156,46 @@ Deno.serve(async (req: Request) => {
       })
       .eq('id', documentId);
 
-    // Log the action
     await supabase.rpc('log_knowledge_action', {
       p_action: 'process',
       p_document_id: documentId,
       p_details: { document_title: document.title, document_type: document.document_type }
     });
 
+    let extractedContent = document.original_content;
+
+    if (document.storage_path) {
+      console.log(`📥 Downloading file from storage: ${document.storage_path}`);
+
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('user-files')
+        .download(document.storage_path);
+
+      if (downloadError) {
+        throw new Error(`Failed to download file: ${downloadError.message}`);
+      }
+
+      if (document.file_format === 'txt' || document.file_format === 'md') {
+        extractedContent = await fileData.text();
+      } else if (document.file_format === 'pdf' || document.file_format === 'docx' || document.file_format === 'doc') {
+        try {
+          extractedContent = await fileData.text();
+        } catch {
+          extractedContent = `[Binary file: ${document.file_name}. Size: ${document.file_size} bytes. Processing as metadata for now.]`;
+        }
+      } else {
+        extractedContent = await fileData.text();
+      }
+
+      console.log(`✅ Content extracted (${extractedContent.length} characters)`);
+    }
+
     console.log(`🤖 Calling Uhuru AI for summarization...`);
 
-    // Call Uhuru AI for summarization
     const summarizationPrompt = buildSummarizationPrompt(
       document.document_type,
       document.title,
-      document.original_content
+      extractedContent
     );
 
     const summaryResponse = await fetch(uhuruApiUrl, {
@@ -206,7 +227,6 @@ Deno.serve(async (req: Request) => {
     const summaryData = await summaryResponse.json();
     let aiSummary = '';
 
-    // Extract text from response
     if (summaryData.response?.output_text) {
       aiSummary = summaryData.response.output_text;
     } else if (summaryData.message?.content) {
@@ -216,7 +236,6 @@ Deno.serve(async (req: Request) => {
 
     console.log(`✅ Summary generated (${aiSummary.length} characters)`);
 
-    // Extract key concepts
     console.log(`🔍 Extracting key concepts...`);
 
     const conceptsResponse = await fetch(uhuruApiUrl, {
@@ -254,7 +273,6 @@ Deno.serve(async (req: Request) => {
       }
 
       try {
-        // Try to extract JSON from the response
         const jsonMatch = conceptsText.match(/\[.*\]/s);
         if (jsonMatch) {
           keyConcepts = JSON.parse(jsonMatch[0]);
@@ -266,18 +284,15 @@ Deno.serve(async (req: Request) => {
 
     console.log(`✅ Extracted ${keyConcepts.length} key concepts`);
 
-    // Calculate processing metadata
     const processingDuration = Date.now() - processingStartTime;
-    const wordCount = document.original_content.split(/\s+/).length;
-    const tokenCount = Math.ceil(document.original_content.length / 4);
-    const estimatedCost = (tokenCount / 1000000) * 2.5; // Rough estimate: $2.50 per 1M tokens
+    const wordCount = extractedContent.split(/\s+/).length;
+    const tokenCount = Math.ceil(extractedContent.length / 4);
+    const estimatedCost = (tokenCount / 1000000) * 2.5;
 
-    // Calculate extraction quality score
     const qualityScore = document.word_count > 0
       ? Math.min(100, Math.max(0, (wordCount / document.word_count) * 100))
       : 100;
 
-    // Update document with summary and key concepts
     const { error: updateError } = await supabase
       .from('admin_knowledge_documents')
       .update({
@@ -299,7 +314,6 @@ Deno.serve(async (req: Request) => {
       throw updateError;
     }
 
-    // Create structured summaries for efficient retrieval
     const summaryTypes = [
       { type: 'overview', priority: 10 },
       { type: 'key_points', priority: 9 },
@@ -340,10 +354,13 @@ Deno.serve(async (req: Request) => {
   } catch (error: any) {
     console.error('❌ Error processing document:', error);
 
-    // Try to update the document with error status
     try {
       const { documentId } = await req.json();
       if (documentId) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        
         await supabase
           .from('admin_knowledge_documents')
           .update({
