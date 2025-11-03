@@ -25,14 +25,6 @@ const CountryCodeSelector: React.FC<CountryCodeSelectorProps> = ({
   );
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearchQuery('');
-        setFocusedIndex(-1);
-      }
-    };
-
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
         setIsOpen(false);
@@ -42,13 +34,11 @@ const CountryCodeSelector: React.FC<CountryCodeSelectorProps> = ({
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscape);
       setTimeout(() => searchInputRef.current?.focus(), 100);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen]);
@@ -102,7 +92,7 @@ const CountryCodeSelector: React.FC<CountryCodeSelectorProps> = ({
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative inline-block" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -124,9 +114,21 @@ const CountryCodeSelector: React.FC<CountryCodeSelectorProps> = ({
 
       {isOpen && (
         <div
-          className="absolute top-full left-0 mt-2 w-[340px] bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200"
+          className="fixed left-0 right-0 bottom-0 top-0 z-[59]"
+          onClick={() => {
+            setIsOpen(false);
+            setSearchQuery('');
+            setFocusedIndex(-1);
+          }}
+        />
+      )}
+
+      {isOpen && (
+        <div
+          className="absolute left-0 top-full mt-2 w-[340px] sm:w-[380px] bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200"
           role="dialog"
           aria-label="Country selector"
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="p-3 border-b border-gray-200 bg-gray-50/50 rounded-t-xl">
             <div className="relative">

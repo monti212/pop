@@ -225,7 +225,7 @@ const PhoneLinkingSettings: React.FC<PhoneLinkingSettingsProps> = ({
                 <label className="block text-sm font-medium mb-2 text-navy">
                   Phone Number
                 </label>
-                <div className="flex gap-2">
+                <div className="flex rounded-lg border border-borders bg-white focus-within:ring-2 focus-within:ring-teal focus-within:border-transparent overflow-hidden">
                   <CountryCodeSelector
                     selectedCountry={selectedCountry}
                     onSelectCountry={setSelectedCountry}
@@ -235,7 +235,8 @@ const PhoneLinkingSettings: React.FC<PhoneLinkingSettingsProps> = ({
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value.replace(/[^\d]/g, ''))}
                     placeholder="71234567"
-                    className="flex-1 px-3 py-2 rounded-12 border border-borders text-navy focus:border-teal focus:ring-1 focus:ring-teal"
+                    className="flex-1 px-4 py-3 text-navy focus:outline-none text-sm"
+                    style={{ fontSize: '16px' }}
                   />
                 </div>
                 <p className="text-xs text-navy mt-1">
