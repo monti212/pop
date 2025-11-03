@@ -259,7 +259,7 @@ const PhoneAuthModal: React.FC<PhoneAuthModalProps> = ({
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
                   Phone Number
                 </label>
-                <div className="flex rounded-lg border border-borders bg-white focus-within:ring-2 focus-within:ring-teal focus-within:border-transparent overflow-hidden">
+                <div className="flex gap-2">
                   <CountryCodeSelector
                     selectedCountry={selectedCountry}
                     onSelectCountry={setSelectedCountry}
@@ -270,7 +270,7 @@ const PhoneAuthModal: React.FC<PhoneAuthModalProps> = ({
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="flex-1 px-4 py-3 text-navy focus:outline-none text-sm"
+                    className="flex-1 px-4 py-3 text-navy border border-borders rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent text-sm"
                     placeholder="72 123 456"
                     style={{ fontSize: '16px' }}
                   />

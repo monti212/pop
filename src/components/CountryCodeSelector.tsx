@@ -96,7 +96,7 @@ const CountryCodeSelector: React.FC<CountryCodeSelectorProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-3 py-3 border-r border-borders hover:bg-gray-50 transition-all duration-200 focus:outline-none focus:bg-gray-50"
+        className="flex items-center gap-1.5 px-3 py-3 border border-borders rounded-lg hover:bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent bg-white"
         aria-label="Select country code"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
