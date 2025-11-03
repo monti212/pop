@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, Loader, Eye, Trash2, RefreshCw, AlertCircle, X as XIcon, Search, Filter, Download, Archive, TrendingUp, Database, DollarSign, Clock } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, Loader, Eye, Trash2, RefreshCw, AlertCircle, X as XIcon, Search, Filter, Download, Archive, TrendingUp, Database, DollarSign, Clock, Zap } from 'lucide-react';
 import { supabase } from '../../services/authService';
 import AdminSidebar from '../../components/AdminSidebar';
 
@@ -419,12 +419,14 @@ const AIKnowledgeBase: React.FC = () => {
   const activeDocuments = documents.filter(d => d.is_active && d.processing_status === 'completed').length;
   const totalSize = documents.reduce((sum, d) => sum + (d.file_size || 0), 0);
   const totalCost = documents.reduce((sum, d) => sum + (d.estimated_cost || 0), 0);
+  const totalTokens = documents.reduce((sum, d) => sum + (d.token_count || 0), 0);
+  const avgTokensPerDoc = totalDocuments > 0 ? Math.round(totalTokens / totalDocuments) : 0;
 
   if (loading && documents.length === 0) {
     return (
-      <div className="flex min-h-screen" style={{ background: Brand.sand }}>
+      <div className="flex h-screen overflow-hidden" style={{ background: Brand.sand }}>
         <AdminSidebar />
-        <div className="flex-1 flex justify-center items-center">
+        <div className="flex-1 flex justify-center items-center overflow-hidden">
           <Loader className="w-8 h-8 animate-spin" style={{ color: Brand.teal }} />
         </div>
       </div>
@@ -432,9 +434,10 @@ const AIKnowledgeBase: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: Brand.sand }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: Brand.sand }}>
       <AdminSidebar />
-      <div className="flex-1 p-8">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex items-start justify-between">
             <div>
@@ -473,7 +476,7 @@ const AIKnowledgeBase: React.FC = () => {
             onChange={(e) => handleFileSelect(e.target.files)}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="rounded-xl p-5 border" style={{ borderColor: Brand.line, background: '#fff' }}>
               <div className="flex items-center justify-between">
                 <div>
@@ -491,6 +494,17 @@ const AIKnowledgeBase: React.FC = () => {
                   <p className="text-2xl font-bold mt-1" style={{ color: Brand.navy }}>{activeDocuments}</p>
                 </div>
                 <TrendingUp className="w-8 h-8" style={{ color: '#10b981', opacity: 0.3 }} />
+              </div>
+            </div>
+
+            <div className="rounded-xl p-5 border" style={{ borderColor: Brand.line, background: '#fff' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium" style={{ color: Brand.navy, opacity: 0.7 }}>Total Tokens</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: Brand.navy }}>{totalTokens.toLocaleString()}</p>
+                  <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.5 }}>Avg: {avgTokensPerDoc.toLocaleString()}</p>
+                </div>
+                <Zap className="w-8 h-8" style={{ color: Brand.orange, opacity: 0.3 }} />
               </div>
             </div>
 
@@ -711,6 +725,9 @@ const AIKnowledgeBase: React.FC = () => {
                     >
                       Words {sortField === 'word_count' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: Brand.navy }}>
+                      Tokens
+                    </th>
                     <th
                       className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-opacity-50"
                       style={{ color: Brand.navy }}
@@ -733,7 +750,7 @@ const AIKnowledgeBase: React.FC = () => {
                 <tbody className="divide-y" style={{ borderColor: Brand.line }}>
                   {filteredDocuments.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-5 py-12 text-center">
+                      <td colSpan={9} className="px-5 py-12 text-center">
                         <FileText className="w-12 h-12 mx-auto mb-3" style={{ color: Brand.navy, opacity: 0.2 }} />
                         <p className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>
                           {documents.length === 0 ? 'No documents uploaded yet' : 'No documents match your filters'}
@@ -773,6 +790,9 @@ const AIKnowledgeBase: React.FC = () => {
                         <td className="px-5 py-4 text-sm" style={{ color: Brand.navy }}>
                           {doc.word_count ? doc.word_count.toLocaleString() : 'N/A'}
                         </td>
+                        <td className="px-5 py-4 text-sm font-medium" style={{ color: Brand.orange }}>
+                          {doc.token_count ? doc.token_count.toLocaleString() : '-'}
+                        </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
                             {getStatusIcon(doc.processing_status)}
@@ -809,6 +829,7 @@ const AIKnowledgeBase: React.FC = () => {
               </table>
             </div>
           </div>
+        </div>
         </div>
       </div>
 

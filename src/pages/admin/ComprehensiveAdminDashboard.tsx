@@ -117,11 +117,18 @@ const ComprehensiveAdminDashboard: React.FC = () => {
 
       const tokensLast24h = tokens24hData?.reduce((sum, row) => sum + (row.token_count || 0), 0) || 0;
 
+      // Get knowledge base tokens
+      const { data: kbTokenData } = await supabase
+        .from('admin_knowledge_documents')
+        .select('token_count');
+
+      const knowledgeBaseTokens = kbTokenData?.reduce((sum, row) => sum + (row.token_count || 0), 0) || 0;
+
       setPlatformMetrics({
         totalUsers: totalUsers || 0,
         activeUsersToday: uniqueActiveUsers,
         totalMessages: totalMessages || 0,
-        totalTokens,
+        totalTokens: totalTokens + knowledgeBaseTokens,
         totalConversations: totalConversations || 0,
         messagesLast24h: messagesLast24h || 0,
         tokensLast24h,
@@ -298,9 +305,9 @@ const ComprehensiveAdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: Brand.sand }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: Brand.sand }}>
       <AdminSidebar />
-      <div className="flex-1 min-h-screen">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header */}
         <header
           className="sticky top-0 z-40 border-b"
@@ -349,7 +356,8 @@ const ComprehensiveAdminDashboard: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6 overflow-x-auto">
           {[
@@ -568,6 +576,7 @@ const ComprehensiveAdminDashboard: React.FC = () => {
             )}
           </motion.div>
         )}
+        </div>
       </div>
       </div>
     </div>
