@@ -1,1 +1,8 @@
 project_id = "${SUPABASE_PROJECT_ID}"
+
+[auth]
+enable_signup = true
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = false

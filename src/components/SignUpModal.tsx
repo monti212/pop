@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Mail, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Smartphone } from 'lucide-react';
-import { signUp, signInWithGoogle } from '../services/authService';
+import { signUp } from '../services/authService';
 import Particles from './Particles';
 import Logo from './Logo';
 import SocialAuthButton from './SocialAuthButton';
@@ -30,7 +30,6 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPhoneAuth, setShowPhoneAuth] = useState(false);
@@ -97,24 +96,6 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
     }
   };
 
-  const handleGoogleSignUp = async () => {
-    setError('');
-    setIsGoogleLoading(true);
-
-    try {
-      const { success, error } = await signInWithGoogle();
-
-      if (!success) {
-        throw new Error(error || 'Google sign-up isn\'t cooperating. Want to try again?');
-      }
-
-      // The OAuth flow will redirect the user, so we don't need to call onSuccess here
-    } catch (err: any) {
-      console.error('Google sign-up error:', err);
-      setError(err.message || 'Something went wrong with Google sign-up. Try again?');
-      setIsGoogleLoading(false);
-    }
-  };
   
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-[#E6F2F9] to-[#FEF7E8] flex items-center justify-center z-50 p-3 sm:p-4 overflow-hidden">
@@ -313,19 +294,12 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <SocialAuthButton
-                provider="Google"
-                icon={Mail}
-                onClick={handleGoogleSignUp}
-                isLoading={isGoogleLoading}
-                disabled={isLoading}
-              />
+            <div>
               <SocialAuthButton
                 provider="Phone"
                 icon={Smartphone}
                 onClick={() => setShowPhoneAuth(true)}
-                disabled={isLoading || isGoogleLoading}
+                disabled={isLoading}
               />
             </div>
 

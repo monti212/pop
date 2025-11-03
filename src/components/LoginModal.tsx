@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Mail, Lock, Eye, EyeOff, AlertCircle, Smartphone } from 'lucide-react';
-import { signIn, resetPassword, signInWithGoogle } from '../services/authService';
+import { signIn, resetPassword } from '../services/authService';
 import Particles from './Particles';
 import Logo from './Logo';
 import SocialAuthButton from './SocialAuthButton';
@@ -20,7 +20,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -63,24 +62,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
     }
   };
   
-  const handleGoogleSignIn = async () => {
-    setError('');
-    setIsGoogleLoading(true);
-    
-    try {
-      const { success, error } = await signInWithGoogle();
-      
-      if (!success) {
-        throw new Error(error || 'Google sign-in isn\'t cooperating. Want to try again?');
-      }
-      
-      // The OAuth flow will redirect the user, so we don't need to call onSuccess here
-    } catch (err: any) {
-      console.error('Google sign-in error:', err);
-      setError(err.message || 'Something went wrong with Google sign-in. Try again?');
-      setIsGoogleLoading(false);
-    }
-  };
   
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -325,7 +306,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
               
               <motion.button
                 type="submit"
-                disabled={isLoading || isGoogleLoading}
+                disabled={isLoading}
                 className="w-full bg-gradient-to-r from-[#0170b9] to-[#0096B3] hover:from-[#015a94] hover:to-[#007a94] text-white py-3 rounded-xl flex items-center justify-center min-h-[44px] text-sm font-medium transition-all shadow-lg hover:shadow-xl"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -350,19 +331,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <SocialAuthButton
-                  provider="Google"
-                  icon={Mail}
-                  onClick={handleGoogleSignIn}
-                  isLoading={isGoogleLoading}
-                  disabled={isLoading}
-                />
+              <div>
                 <SocialAuthButton
                   provider="Phone"
                   icon={Smartphone}
                   onClick={() => setShowPhoneAuth(true)}
-                  disabled={isLoading || isGoogleLoading}
+                  disabled={isLoading}
                 />
               </div>
             </form>
