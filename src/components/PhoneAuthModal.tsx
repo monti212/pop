@@ -152,7 +152,7 @@ const PhoneAuthModal: React.FC<PhoneAuthModalProps> = ({
         throw new Error(data.error || 'Verification failed');
       }
 
-      if (data.session) {
+      if (data.session && data.session.access_token) {
         const { error: signInError } = await supabase.auth.setSession({
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token || data.session.access_token
@@ -162,6 +162,11 @@ const PhoneAuthModal: React.FC<PhoneAuthModalProps> = ({
           console.error('Error setting session:', signInError);
           throw new Error('Failed to complete authentication. Please try again.');
         }
+      } else if (data.requires_client_refresh) {
+        // Server couldn't generate session, but user was created/found
+        // Force a page reload to refresh the auth state
+        window.location.reload();
+        return;
       }
 
       onSuccess();

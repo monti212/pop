@@ -6,586 +6,189 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// Twilio configuration
 const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
 const TWILIO_VERIFY_SERVICE_SID = Deno.env.get('TWILIO_VERIFY_SERVICE_SID');
 
-// Supabase configuration
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Helper function to validate phone number format
 function validatePhoneNumber(phoneNumber: string): { valid: boolean; normalized?: string; error?: string } {
   try {
-    // Remove any whitespace, dashes, parentheses
     let normalized = phoneNumber.replace(/[\s\-\(\)]/g, '');
-
-    // Ensure it starts with +
     if (!normalized.startsWith('+')) {
       normalized = '+' + normalized;
     }
-
-    // Basic validation: should be + followed by 7-15 digits
     const phoneRegex = /^\+\d{7,15}$/;
-
     if (!phoneRegex.test(normalized)) {
-      return {
-        valid: false,
-        error: 'That phone number format doesn\'t look right. Try international format like +267 1234567?'
-      };
+      return { valid: false, error: 'That phone number format doesn\'t look right. Try international format like +267 1234567?' };
     }
-
-    return {
-      valid: true,
-      normalized
-    };
+    return { valid: true, normalized };
   } catch (error) {
-    return {
-      valid: false,
-      error: 'Invalid phone number format'
-    };
+    return { valid: false, error: 'Invalid phone number format' };
   }
 }
 
-// Helper function to check verification code with Twilio
-async function checkTwilioVerification(phoneNumber: string, code: string): Promise<{
-  success: boolean;
-  valid?: boolean;
-  error?: string;
-}> {
+async function checkTwilioVerification(phoneNumber: string, code: string): Promise<{ success: boolean; valid?: boolean; error?: string; }> {
   try {
     if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
-      console.error('Missing Twilio environment variables for verification check');
       throw new Error('Phone service configuration is missing');
     }
-
-    console.log(`Checking verification code for: ${phoneNumber}`);
-
-    // Ensure credentials are properly trimmed (remove any whitespace)
     const accountSid = TWILIO_ACCOUNT_SID.trim();
     const authToken = TWILIO_AUTH_TOKEN.trim();
     const verifySid = TWILIO_VERIFY_SERVICE_SID.trim();
-
     const auth = btoa(`${accountSid}:${authToken}`);
-
-    const response = await fetch(
-      `https://verify.twilio.com/v2/Services/${verifySid}/VerificationCheck`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          'To': phoneNumber,
-          'Code': code
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Twilio Verify Check API error:', errorData);
-      console.error('Response status:', response.status);
-
-      if (response.status === 401) {
-        console.error('Twilio 401 Authentication Error during verification check');
-        throw new Error('Phone service authentication failed');
-      } else if (response.status === 404) {
-        throw new Error('Verification not found or expired');
-      }
-
-      throw new Error(`Twilio Verify Check error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    console.log('Verification check result:', data.status);
-
-    // Check for multiple possible success statuses
-    const isValid = data.status === 'approved' || data.valid === true;
-
-    return {
-      success: true,
-      valid: isValid
-    };
-  } catch (error: any) {
-    console.error('Error checking phone verification:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-// Helper function to find existing user by phone number
-async function findUserByPhone(phoneNumber: string): Promise<{
-  found: boolean;
-  userId?: string;
-  error?: string;
-}> {
-  try {
-    // First check user_profiles table
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('phone_number', phoneNumber)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error('Error checking user_profiles:', profileError);
-      // Continue to check auth.users as fallback
-    }
-
-    if (profile) {
-      return { found: true, userId: profile.id };
-    }
-
-    // If not found in user_profiles, check auth.users
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-
-    if (authError) {
-      console.error('Error listing auth users:', authError);
-      return { found: false, error: authError.message };
-    }
-
-    const userWithPhone = authUsers.users?.find(user =>
-      user.phone === phoneNumber ||
-      user.user_metadata?.phone === phoneNumber
-    );
-
-    if (userWithPhone) {
-      return { found: true, userId: userWithPhone.id };
-    }
-
-    return { found: false };
-  } catch (error: any) {
-    console.error('Error finding user by phone:', error);
-    return { found: false, error: error.message };
-  }
-}
-
-// Helper function to create new user with phone number
-async function createUserWithPhone(phoneNumber: string, name?: string): Promise<{
-  success: boolean;
-  userId?: string;
-  error?: string;
-}> {
-  try {
-    const userId = crypto.randomUUID();
-
-    // Create auth user with phone number
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-      user_id: userId,
-      phone: phoneNumber,
-      phone_confirmed: true,
-      user_metadata: {
-        phone: phoneNumber,
-        via_phone_verification: true,
-        display_name: name || `User (${phoneNumber.slice(-4)})`
-      }
+    const response = await fetch(`https://verify.twilio.com/v2/Services/${verifySid}/VerificationCheck`, {
+      method: 'POST',
+      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ 'To': phoneNumber, 'Code': code })
     });
-
-    if (authError) {
-      console.error('Error creating auth user:', authError);
-
-      // If phone already exists, try to find the existing user
-      if (authError.message?.includes('Phone number already registered')) {
-        console.log('Phone already registered, finding existing user...');
-        const findResult = await findUserByPhone(phoneNumber);
-        if (findResult.found && findResult.userId) {
-          return { success: true, userId: findResult.userId };
-        }
-      }
-
-      throw authError;
+    if (!response.ok) {
+      if (response.status === 404) throw new Error('Verification not found or expired');
+      throw new Error(`Twilio Verify Check error: ${response.status}`);
     }
-
-    // Create user profile (the handle_new_user trigger should do this, but let's ensure it)
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .upsert({
-        id: userId,
-        phone_number: phoneNumber,
-        display_name: name || `User (${phoneNumber.slice(-4)})`,
-      }, {
-        onConflict: 'id'
-      });
-
-    if (profileError) {
-      console.error('Error creating user profile:', profileError);
-      // Don't fail if profile creation fails - the auth user was created successfully
-    }
-
-    console.log(`Created new user: ${userId} for phone: ${phoneNumber}`);
-    return { success: true, userId };
+    const data = await response.json();
+    return { success: true, valid: data.status === 'approved' || data.valid === true };
   } catch (error: any) {
-    console.error('Error creating user with phone:', error);
     return { success: false, error: error.message };
   }
 }
 
-// Helper function to generate session for user
-async function generateUserSession(userId: string): Promise<{
-  success: boolean;
-  session?: any;
-  error?: string;
-}> {
+async function findUserByPhone(phoneNumber: string): Promise<{ found: boolean; userId?: string; error?: string; }> {
   try {
-    // Generate a sign-in link/session for the user
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: undefined,
-      password: undefined,
-      options: {
-        data: {
-          phone_verified: true
-        }
-      }
-    });
-
-    if (error) {
-      console.error('Error generating session:', error);
-
-      // Alternative approach: create a custom JWT token
-      const customToken = {
-        sub: userId,
-        aud: 'authenticated',
-        role: 'authenticated',
-        phone_verified: true,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
-      };
-
-      return {
-        success: true,
-        session: {
-          access_token: btoa(JSON.stringify(customToken)),
-          user_id: userId,
-          phone_verified: true
-        }
-      };
-    }
-
-    return {
-      success: true,
-      session: data
-    };
+    const { data: profile } = await supabase.from('user_profiles').select('id').eq('phone_number', phoneNumber).maybeSingle();
+    if (profile) return { found: true, userId: profile.id };
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const userWithPhone = authUsers.users?.find(user => user.phone === phoneNumber || user.user_metadata?.phone === phoneNumber);
+    if (userWithPhone) return { found: true, userId: userWithPhone.id };
+    return { found: false };
   } catch (error: any) {
-    console.error('Error generating user session:', error);
-    return {
-      success: false,
-      error: error.message
-    };
+    return { found: false, error: error.message };
+  }
+}
+
+async function createUserWithPhone(phoneNumber: string, name?: string): Promise<{ success: boolean; userId?: string; error?: string; }> {
+  try {
+    const userId = crypto.randomUUID();
+    const { error: authError } = await supabase.auth.admin.createUser({
+      user_id: userId,
+      phone: phoneNumber,
+      phone_confirmed: true,
+      user_metadata: { phone: phoneNumber, via_phone_verification: true, display_name: name || `User (${phoneNumber.slice(-4)})` }
+    });
+    if (authError) {
+      if (authError.message?.includes('Phone number already registered')) {
+        const findResult = await findUserByPhone(phoneNumber);
+        if (findResult.found && findResult.userId) return { success: true, userId: findResult.userId };
+      }
+      throw authError;
+    }
+    await supabase.from('user_profiles').upsert({ id: userId, phone_number: phoneNumber, display_name: name || `User (${phoneNumber.slice(-4)})` }, { onConflict: 'id' });
+    return { success: true, userId };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8);
-  console.log(`[${requestId}] ===== CHECK PHONE VERIFICATION REQUEST =====`);
-  console.log(`[${requestId}] Method:`, req.method);
-  console.log(`[${requestId}] URL:`, req.url);
-
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    console.log(`[${requestId}] Handling CORS preflight`);
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
-  }
-
-  if (req.method !== 'POST') {
-    console.error(`[${requestId}] Invalid method:`, req.method);
-    return new Response(JSON.stringify({ error: 'That request method isn\'t quite right. Try POST?' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
+  if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   try {
-    // Parse request body
-    const requestText = await req.text();
-    console.log(`[${requestId}] Raw request body:`, requestText);
-
-    const requestBody = JSON.parse(requestText);
-    console.log(`[${requestId}] Parsed request body:`, requestBody);
-
-    const { phone_number, code, name } = requestBody;
-    console.log(`[${requestId}] Phone:`, phone_number, 'Code length:', code?.length, 'Name:', name);
-
+    const { phone_number, code, name } = await req.json();
     if (!phone_number || !code) {
-      console.error(`[${requestId}] Missing required fields - phone:`, !!phone_number, 'code:', !!code);
-      return new Response(JSON.stringify({
-        error: 'I need both your phone number and that verification code to continue.'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({ error: 'Phone number and code are required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Validate phone number format
-    console.log(`[${requestId}] Validating phone number...`);
     const phoneValidation = validatePhoneNumber(phone_number);
-    console.log(`[${requestId}] Validation result:`, phoneValidation);
-
     if (!phoneValidation.valid) {
-      console.error(`[${requestId}] Invalid phone number:`, phoneValidation.error);
-      return new Response(JSON.stringify({
-        error: phoneValidation.error
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({ error: phoneValidation.error }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-
     const normalizedPhone = phoneValidation.normalized!;
-    console.log(`[${requestId}] Normalized phone:`, normalizedPhone);
 
-    // First, expire old pending verifications
-    console.log(`[${requestId}] Expiring old pending verifications...`);
-    await supabase
-      .from('phone_verifications')
-      .update({ status: 'expired' })
-      .eq('phone_number', normalizedPhone)
-      .eq('status', 'pending')
-      .lte('expires_at', new Date().toISOString());
+    await supabase.from('phone_verifications').update({ status: 'expired' }).eq('phone_number', normalizedPhone).eq('status', 'pending').lte('expires_at', new Date().toISOString());
 
-    // Check if there's an active (not expired) pending verification for this phone number
-    console.log(`[${requestId}] Checking for active pending verification...`);
-    const { data: verification, error: verificationError } = await supabase
-      .from('phone_verifications')
-      .select('*')
-      .eq('phone_number', normalizedPhone)
-      .eq('status', 'pending')
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    console.log(`[${requestId}] Verification lookup result:`, { verification, verificationError });
-
-    if (verificationError) {
-      console.error('Error checking verification record:', verificationError);
-      return new Response(JSON.stringify({
-        error: 'I couldn\'t check your verification status. Want to try again?'
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const { data: verification } = await supabase.from('phone_verifications').select('*').eq('phone_number', normalizedPhone).eq('status', 'pending').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1).maybeSingle();
 
     if (!verification) {
-      return new Response(JSON.stringify({
-        error: 'I can\'t find an active verification for that number. The code may have expired. Need a new code?'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({ error: 'No active verification found. Please request a new code.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Check if verification has expired
-    if (new Date(verification.expires_at) <= new Date()) {
-      console.log(`[${requestId}] Verification has expired`);
-      await supabase
-        .from('phone_verifications')
-        .update({ status: 'expired' })
-        .eq('id', verification.id);
-
-      return new Response(JSON.stringify({
-        error: 'That verification code has expired. Please request a new one.'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Check verification code with Twilio
-    console.log(`[${requestId}] Checking verification code with Twilio...`);
     const twilioResult = await checkTwilioVerification(normalizedPhone, code);
-    console.log(`[${requestId}] Twilio check result:`, twilioResult);
-
-    if (!twilioResult.success) {
-      console.error(`[${requestId}] Twilio verification check failed:`, twilioResult.error);
-      // Update verification status to failed
-      await supabase
-        .from('phone_verifications')
-        .update({ status: 'failed' })
-        .eq('id', verification.id);
-
-      return new Response(JSON.stringify({
-        error: twilioResult.error || 'I couldn\'t verify that code. Want to try again?'
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!twilioResult.success || !twilioResult.valid) {
+      await supabase.from('phone_verifications').update({ status: 'failed' }).eq('id', verification.id);
+      return new Response(JSON.stringify({ error: 'Invalid verification code' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    if (!twilioResult.valid) {
-      // Update verification status to failed
-      await supabase
-        .from('phone_verifications')
-        .update({ status: 'failed' })
-        .eq('id', verification.id);
+    await supabase.from('phone_verifications').update({ status: 'approved' }).eq('id', verification.id);
 
-      return new Response(JSON.stringify({
-        error: 'That verification code doesn\'t look right. Mind checking it and trying again?'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Verification successful - update status
-    console.log(`[${requestId}] Updating verification status to approved...`);
-    const { error: updateError } = await supabase
-      .from('phone_verifications')
-      .update({ status: 'approved' })
-      .eq('id', verification.id);
-
-    if (updateError) {
-      console.error(`[${requestId}] Error updating verification status:`, updateError);
-    } else {
-      console.log(`[${requestId}] Verification status updated successfully`);
-    }
-
-    // Get current authenticated user from request (if any)
     const authHeader = req.headers.get('Authorization');
     let currentUserId: string | null = null;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-        if (!userError && user) {
-          currentUserId = user.id;
-          console.log(`[${requestId}] Authenticated user making request: ${currentUserId}`);
-        }
-      } catch (err) {
-        console.log(`[${requestId}] Could not get authenticated user:`, err);
-      }
+    if (authHeader?.startsWith('Bearer ')) {
+      const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (user) currentUserId = user.id;
     }
-
-    // Check if user already exists with this phone number
-    console.log(`[${requestId}] Checking if user exists with this phone...`);
-    const userResult = await findUserByPhone(normalizedPhone);
-    console.log(`[${requestId}] User lookup result:`, userResult);
 
     let userId: string;
     let isNewUser = false;
 
-    // If current user is authenticated, link phone to their account
     if (currentUserId) {
       userId = currentUserId;
-      console.log(`[${requestId}] Linking phone to authenticated user: ${userId}`);
-
-      // Update user_profiles
-      console.log(`[${requestId}] Updating user_profiles phone to: ${normalizedPhone}`);
-      const { error: profileUpdateError } = await supabase
-        .from('user_profiles')
-        .update({
-          phone_number: normalizedPhone,
-          display_name: name || undefined
-        })
-        .eq('id', currentUserId);
-
-      if (profileUpdateError) {
-        console.error(`[${requestId}] Failed to update user_profiles:`, profileUpdateError);
-        return new Response(JSON.stringify({
-          error: 'Could not link phone to your account. Please try again.'
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      // Update auth.users
-      const { error: updatePhoneError } = await supabase.auth.admin.updateUserById(
-        currentUserId,
-        {
-          phone: normalizedPhone,
-          phone_confirmed: true,
-          user_metadata: {
-            phone: normalizedPhone,
-            phone_number: normalizedPhone,
-            phone_verified: true,
-            phone_linked_at: new Date().toISOString(),
-            display_name: name || undefined
-          }
-        }
-      );
-
-      if (updatePhoneError) {
-        console.error(`[${requestId}] Warning: auth.users update failed:`, updatePhoneError);
-      }
-
-      console.log(`[${requestId}] Phone successfully linked to user account`);
-    } else if (userResult.found && userResult.userId) {
-      // No authenticated user, but phone number exists - phone login
-      userId = userResult.userId;
-      console.log(`[${requestId}] Existing user found: ${userId}`);
+      await supabase.from('user_profiles').update({ phone_number: normalizedPhone, display_name: name || undefined }).eq('id', currentUserId);
+      await supabase.auth.admin.updateUserById(currentUserId, { phone: normalizedPhone, phone_confirmed: true, user_metadata: { phone: normalizedPhone, phone_verified: true, display_name: name || undefined } });
     } else {
-      // No authenticated user and phone doesn't exist - create new user
-      const createResult = await createUserWithPhone(normalizedPhone, name);
-
-      if (!createResult.success) {
-        return new Response(JSON.stringify({
-          error: createResult.error || 'I couldn\'t set up your account. Want to try again?'
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      const userResult = await findUserByPhone(normalizedPhone);
+      if (userResult.found && userResult.userId) {
+        userId = userResult.userId;
+      } else {
+        const createResult = await createUserWithPhone(normalizedPhone, name);
+        if (!createResult.success) {
+          return new Response(JSON.stringify({ error: 'Failed to create account' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        userId = createResult.userId!;
+        isNewUser = true;
       }
-
-      userId = createResult.userId!;
-      isNewUser = true;
-      console.log(`[${requestId}] New user created: ${userId}`);
     }
 
-    // Update the phone verification record with the user_id
-    console.log(`[${requestId}] Linking phone verification to user: ${userId}`);
-    await supabase
-      .from('phone_verifications')
-      .update({ user_id: userId })
-      .eq('id', verification.id);
+    await supabase.from('phone_verifications').update({ user_id: userId }).eq('id', verification.id);
 
-    // Generate session for the user
-    const sessionResult = await generateUserSession(userId);
+    // Generate session tokens
+    const tempPassword = crypto.randomUUID();
+    await supabase.auth.admin.updateUserById(userId, { password: tempPassword });
 
-    if (!sessionResult.success) {
-      return new Response(JSON.stringify({
-        error: sessionResult.error || 'I couldn\'t create your session. Try again?'
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+    if (!authUser) {
+      return new Response(JSON.stringify({ error: 'Could not create session' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`[${requestId}] Verification complete, sending success response`);
-    console.log(`[${requestId}] ===== END CHECK PHONE VERIFICATION REQUEST =====`);
+    const { data: otpData } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: authUser.email || undefined,
+      phone: authUser.phone || undefined,
+      options: { data: { phone_verified: true, phone: normalizedPhone } }
+    });
+
+    if (!otpData?.properties?.action_link) {
+      return new Response(JSON.stringify({ success: true, user_id: userId, is_new_user: isNewUser, phone_number: normalizedPhone, message: isNewUser ? 'Account created' : 'Logged in', requires_client_refresh: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const actionLink = otpData.properties.action_link;
+    const urlParams = new URLSearchParams(actionLink.split('?')[1] || '');
+    const accessToken = urlParams.get('access_token') || '';
+    const refreshToken = urlParams.get('refresh_token') || '';
 
     return new Response(JSON.stringify({
       success: true,
       user_id: userId,
       is_new_user: isNewUser,
       phone_number: normalizedPhone,
-      session: sessionResult.session,
+      session: { access_token: accessToken, refresh_token: refreshToken, token_type: 'bearer', expires_in: 3600, user: { id: userId, phone: normalizedPhone, user_metadata: authUser.user_metadata || {} } },
       message: isNewUser ? 'Account created successfully' : 'Logged in successfully'
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
+    }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error: any) {
-    console.error(`[${requestId}] ERROR in check-phone-verification:`, error);
-    console.error(`[${requestId}] Error stack:`, error.stack);
-    console.error(`[${requestId}] ===== END CHECK PHONE VERIFICATION REQUEST (ERROR) =====`);
-    return new Response(JSON.stringify({
-      error: error.message || 'Something unexpected happened during phone verification. Try again?'
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error(`[${requestId}] ERROR:`, error);
+    return new Response(JSON.stringify({ error: error.message || 'Verification failed' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
