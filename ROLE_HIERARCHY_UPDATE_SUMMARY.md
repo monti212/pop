@@ -35,9 +35,11 @@ Complete restructuring of the admin role hierarchy with new naming convention.
 
 ---
 
-### 3. Database Migration Created ✅
+### 3. Database Migrations Created ✅
 
-**Migration File:** `supabase/migrations/20251104110439_update_admin_role_hierarchy.sql`
+**Migration Files:**
+1. `supabase/migrations/20251104110439_update_admin_role_hierarchy.sql` - Role hierarchy update
+2. `supabase/migrations/20251104113120_add_pencils_of_promise_admin_users.sql` - Add Pencils of Promise admin users
 
 **What It Does:**
 1. **Creates New Enum Type** - `team_role_enum_new` with updated values
@@ -137,6 +139,18 @@ Complete restructuring of the admin role hierarchy with new naming convention.
 | `free` | `free` | Free user (unchanged) |
 
 **IMPORTANT:** Users who previously had `prime` role with admin access will LOSE admin access after this migration. They will retain premium features but cannot access the admin dashboard.
+
+### Pencils of Promise Admin Users:
+
+The following users will automatically be assigned the `admin` role:
+- **skpo@pencilsofpromise.org**
+- **sklu@pencilsofpromise.org**
+- **ddavordzi@pencilsofpromise.org**
+
+**How it works:**
+1. If these users already exist, their role will be updated to `admin` immediately
+2. If they sign up in the future, they will automatically be assigned `admin` role
+3. A database trigger ensures automatic admin role assignment for these emails
 
 ---
 
