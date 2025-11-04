@@ -68,9 +68,8 @@ async function findUserByPhone(phoneNumber: string): Promise<{ found: boolean; u
   }
 }
 
-async function createUserWithPhone(phoneNumber: string, name?: string, requestId?: string): Promise<{ success: boolean; userId?: string; error?: string; }> {
+async function createUserWithPhone(phoneNumber: string, name?: string): Promise<{ success: boolean; userId?: string; error?: string; }> {
   try {
-    console.log(`[${requestId}] Creating user with phone: ${phoneNumber}`);
     const userId = crypto.randomUUID();
     const { error: authError } = await supabase.auth.admin.createUser({
       user_id: userId,
@@ -79,23 +78,15 @@ async function createUserWithPhone(phoneNumber: string, name?: string, requestId
       user_metadata: { phone: phoneNumber, via_phone_verification: true, display_name: name || `User (${phoneNumber.slice(-4)})` }
     });
     if (authError) {
-      console.error(`[${requestId}] Auth user creation error:`, authError.message);
       if (authError.message?.includes('Phone number already registered')) {
-        console.log(`[${requestId}] Phone already registered, finding existing user`);
         const findResult = await findUserByPhone(phoneNumber);
-        if (findResult.found && findResult.userId) {
-          console.log(`[${requestId}] Found existing user: ${findResult.userId}`);
-          return { success: true, userId: findResult.userId };
-        }
+        if (findResult.found && findResult.userId) return { success: true, userId: findResult.userId };
       }
       throw authError;
     }
-    console.log(`[${requestId}] Auth user created: ${userId}`);
     await supabase.from('user_profiles').upsert({ id: userId, phone_number: phoneNumber, display_name: name || `User (${phoneNumber.slice(-4)})` }, { onConflict: 'id' });
-    console.log(`[${requestId}] User profile created`);
     return { success: true, userId };
   } catch (error: any) {
-    console.error(`[${requestId}] User creation failed:`, error.message);
     return { success: false, error: error.message };
   }
 }
@@ -144,75 +135,56 @@ Deno.serve(async (req) => {
     let isNewUser = false;
 
     if (currentUserId) {
-      console.log(`[${requestId}] Linking phone to existing user: ${currentUserId}`);
       userId = currentUserId;
       await supabase.from('user_profiles').update({ phone_number: normalizedPhone, display_name: name || undefined }).eq('id', currentUserId);
       await supabase.auth.admin.updateUserById(currentUserId, { phone: normalizedPhone, phone_confirmed: true, user_metadata: { phone: normalizedPhone, phone_verified: true, display_name: name || undefined } });
-      console.log(`[${requestId}] Phone linked successfully`);
     } else {
-      console.log(`[${requestId}] No existing session, checking for user by phone`);
       const userResult = await findUserByPhone(normalizedPhone);
       if (userResult.found && userResult.userId) {
         userId = userResult.userId;
-        console.log(`[${requestId}] Existing user found: ${userId}`);
       } else {
-        console.log(`[${requestId}] User not found, creating new user`);
-        const createResult = await createUserWithPhone(normalizedPhone, name, requestId);
+        const createResult = await createUserWithPhone(normalizedPhone, name);
         if (!createResult.success) {
-          console.error(`[${requestId}] Failed to create user:`, createResult.error);
-          return new Response(JSON.stringify({ error: 'Failed to create account', details: createResult.error }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          return new Response(JSON.stringify({ error: 'Failed to create account' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
         userId = createResult.userId!;
         isNewUser = true;
-        console.log(`[${requestId}] New user created: ${userId}`);
       }
     }
 
     await supabase.from('phone_verifications').update({ user_id: userId }).eq('id', verification.id);
 
-    // Generate session using admin.createSession API
-    console.log(`[${requestId}] Creating session for user ${userId}`);
+    // Generate session tokens
+    const tempPassword = crypto.randomUUID();
+    await supabase.auth.admin.updateUserById(userId, { password: tempPassword });
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.admin.createSession({
-      user_id: userId,
-      expires_in: 3600 // 1 hour
-    });
-
-    if (sessionError || !sessionData) {
-      console.error(`[${requestId}] Session creation error:`, sessionError);
-      return new Response(JSON.stringify({
-        error: 'Failed to create session',
-        details: sessionError?.message || 'Unknown error',
-        user_id: userId,
-        is_new_user: isNewUser
-      }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+    if (!authUser) {
+      return new Response(JSON.stringify({ error: 'Could not create session' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`[${requestId}] Session created successfully for user ${userId}`);
-    console.log(`[${requestId}] Access token present: ${!!sessionData.access_token}`);
-    console.log(`[${requestId}] Refresh token present: ${!!sessionData.refresh_token}`);
+    const { data: otpData } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: authUser.email || undefined,
+      phone: authUser.phone || undefined,
+      options: { data: { phone_verified: true, phone: normalizedPhone } }
+    });
 
-    // Get user details for response
-    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+    if (!otpData?.properties?.action_link) {
+      return new Response(JSON.stringify({ success: true, user_id: userId, is_new_user: isNewUser, phone_number: normalizedPhone, message: isNewUser ? 'Account created' : 'Logged in', requires_client_refresh: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const actionLink = otpData.properties.action_link;
+    const urlParams = new URLSearchParams(actionLink.split('?')[1] || '');
+    const accessToken = urlParams.get('access_token') || '';
+    const refreshToken = urlParams.get('refresh_token') || '';
 
     return new Response(JSON.stringify({
       success: true,
       user_id: userId,
       is_new_user: isNewUser,
       phone_number: normalizedPhone,
-      session: {
-        access_token: sessionData.access_token,
-        refresh_token: sessionData.refresh_token,
-        token_type: 'bearer',
-        expires_in: 3600,
-        expires_at: sessionData.expires_at,
-        user: {
-          id: userId,
-          phone: normalizedPhone,
-          user_metadata: authUser?.user_metadata || {},
-          phone_confirmed: true
-        }
-      },
+      session: { access_token: accessToken, refresh_token: refreshToken, token_type: 'bearer', expires_in: 3600, user: { id: userId, phone: normalizedPhone, user_metadata: authUser.user_metadata || {} } },
       message: isNewUser ? 'Account created successfully' : 'Logged in successfully'
     }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error: any) {
