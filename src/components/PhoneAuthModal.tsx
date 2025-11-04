@@ -152,23 +152,31 @@ const PhoneAuthModal: React.FC<PhoneAuthModalProps> = ({
         throw new Error(data.error || 'Verification failed');
       }
 
-      if (data.session && data.session.access_token) {
-        const { error: signInError } = await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token || data.session.access_token
-        });
-
-        if (signInError) {
-          console.error('Error setting session:', signInError);
-          throw new Error('Failed to complete authentication. Please try again.');
-        }
-      } else if (data.requires_client_refresh) {
-        // Server couldn't generate session, but user was created/found
-        // Force a page reload to refresh the auth state
-        window.location.reload();
-        return;
+      // Validate session data
+      if (!data.session || !data.session.access_token || !data.session.refresh_token) {
+        console.error('Invalid session data received:', data);
+        throw new Error('Server failed to create a valid session. Please try again.');
       }
 
+      console.log('Setting session with tokens from server...');
+
+      // Set the session using tokens from the server
+      const { data: sessionResult, error: signInError } = await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token
+      });
+
+      if (signInError) {
+        console.error('Error setting session:', signInError);
+        throw new Error(`Failed to complete authentication: ${signInError.message}`);
+      }
+
+      if (!sessionResult?.session) {
+        console.error('Session was not set properly');
+        throw new Error('Failed to establish session. Please try again.');
+      }
+
+      console.log('Session set successfully, user ID:', sessionResult.user?.id);
       onSuccess();
     } catch (err: any) {
       console.error('Error verifying code:', err);
