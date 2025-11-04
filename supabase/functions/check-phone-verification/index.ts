@@ -167,7 +167,7 @@ async function findUserByPhone(phoneNumber: string): Promise<{
 }
 
 // Helper function to create new user with phone number
-async function createUserWithPhone(phoneNumber: string): Promise<{
+async function createUserWithPhone(phoneNumber: string, name?: string): Promise<{
   success: boolean;
   userId?: string;
   error?: string;
@@ -182,7 +182,8 @@ async function createUserWithPhone(phoneNumber: string): Promise<{
       phone_confirmed: true,
       user_metadata: {
         phone: phoneNumber,
-        via_phone_verification: true
+        via_phone_verification: true,
+        display_name: name || `User (${phoneNumber.slice(-4)})`
       }
     });
 
@@ -207,7 +208,7 @@ async function createUserWithPhone(phoneNumber: string): Promise<{
       .upsert({
         id: userId,
         phone_number: phoneNumber,
-        display_name: `User (${phoneNumber.slice(-4)})`,
+        display_name: name || `User (${phoneNumber.slice(-4)})`,
       }, {
         onConflict: 'id'
       });
@@ -311,8 +312,8 @@ Deno.serve(async (req) => {
     const requestBody = JSON.parse(requestText);
     console.log(`[${requestId}] Parsed request body:`, requestBody);
 
-    const { phone_number, code, merge_accounts } = requestBody;
-    console.log(`[${requestId}] Phone:`, phone_number, 'Code length:', code?.length, 'Merge:', merge_accounts);
+    const { phone_number, code, name } = requestBody;
+    console.log(`[${requestId}] Phone:`, phone_number, 'Code length:', code?.length, 'Name:', name);
 
     if (!phone_number || !code) {
       console.error(`[${requestId}] Missing required fields - phone:`, !!phone_number, 'code:', !!code);
@@ -473,55 +474,24 @@ Deno.serve(async (req) => {
 
     let userId: string;
     let isNewUser = false;
-    let accountMerged = false;
-    let whatsappDataTransferred = false;
 
     // If current user is authenticated, link phone to their account
     if (currentUserId) {
       userId = currentUserId;
       console.log(`[${requestId}] Linking phone to authenticated user: ${userId}`);
 
-      // First, transfer WhatsApp data if this phone has existing WhatsApp conversations
-      const { data: existingWhatsAppUsers, error: whatsappLookupError } = await supabase
-        .from('whatsapp_users')
-        .select('id, user_id, phone_number')
-        .eq('phone_number', normalizedPhone);
-
-      if (!whatsappLookupError && existingWhatsAppUsers && existingWhatsAppUsers.length > 0) {
-        console.log(`[${requestId}] Found ${existingWhatsAppUsers.length} WhatsApp account(s) for this phone`);
-
-        for (const whatsappUser of existingWhatsAppUsers) {
-          if (whatsappUser.user_id !== currentUserId) {
-            console.log(`[${requestId}] Transferring WhatsApp account ${whatsappUser.id} to current user`);
-
-            const { error: transferError } = await supabase
-              .from('whatsapp_users')
-              .update({
-                user_id: currentUserId
-              })
-              .eq('id', whatsappUser.id);
-
-            if (transferError) {
-              console.error(`[${requestId}] Error transferring WhatsApp account:`, transferError);
-            } else {
-              console.log(`[${requestId}] WhatsApp account ${whatsappUser.id} transferred successfully`);
-              whatsappDataTransferred = true;
-            }
-          }
-        }
-      }
-
-      // CRITICAL: Update user_profiles FIRST (source of truth)
-      console.log(`[${requestId}] Step 1: Updating user_profiles phone to: ${normalizedPhone}`);
+      // Update user_profiles
+      console.log(`[${requestId}] Updating user_profiles phone to: ${normalizedPhone}`);
       const { error: profileUpdateError } = await supabase
         .from('user_profiles')
         .update({
-          phone_number: normalizedPhone
+          phone_number: normalizedPhone,
+          display_name: name || undefined
         })
         .eq('id', currentUserId);
 
       if (profileUpdateError) {
-        console.error(`[${requestId}] CRITICAL: Failed to update user_profiles:`, profileUpdateError);
+        console.error(`[${requestId}] Failed to update user_profiles:`, profileUpdateError);
         return new Response(JSON.stringify({
           error: 'Could not link phone to your account. Please try again.'
         }), {
@@ -529,11 +499,9 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      console.log(`[${requestId}]  Phone successfully saved to user_profiles`);
 
-      // Step 2: Update auth.users (best effort, may fail due to duplicate constraints)
-      console.log(`[${requestId}] Step 2: Updating auth.users phone to: ${normalizedPhone}`);
-      const { error: updatePhoneError, data: updatePhoneData } = await supabase.auth.admin.updateUserById(
+      // Update auth.users
+      const { error: updatePhoneError } = await supabase.auth.admin.updateUserById(
         currentUserId,
         {
           phone: normalizedPhone,
@@ -542,62 +510,14 @@ Deno.serve(async (req) => {
             phone: normalizedPhone,
             phone_number: normalizedPhone,
             phone_verified: true,
-            phone_linked_at: new Date().toISOString()
+            phone_linked_at: new Date().toISOString(),
+            display_name: name || undefined
           }
         }
       );
 
       if (updatePhoneError) {
         console.error(`[${requestId}] Warning: auth.users update failed:`, updatePhoneError);
-
-        const isDuplicateError = updatePhoneError.message?.toLowerCase().includes('already') ||
-                                  updatePhoneError.message?.toLowerCase().includes('duplicate') ||
-                                  updatePhoneError.message?.toLowerCase().includes('registered');
-
-        if (isDuplicateError) {
-          console.log(`[${requestId}] � Duplicate phone in auth.users (expected) - phone saved to user_profiles`);
-          // Store in user_metadata as fallback
-          await supabase.auth.admin.updateUserById(
-            currentUserId,
-            {
-              user_metadata: {
-                phone: normalizedPhone,
-                phone_number: normalizedPhone,
-                phone_verified: true,
-                phone_linked_at: new Date().toISOString()
-              }
-            }
-          );
-        } else {
-          console.error(`[${requestId}] � Non-duplicate error in auth.users, but phone saved to user_profiles`);
-        }
-      } else {
-        console.log(`[${requestId}]  Phone successfully updated in auth.users`);
-      }
-
-      // Step 3: Verify phone was saved
-      console.log(`[${requestId}] Step 3: Verifying phone number persistence...`);
-      const { data: verifyProfile } = await supabase
-        .from('user_profiles')
-        .select('phone_number')
-        .eq('id', currentUserId)
-        .maybeSingle();
-
-      if (verifyProfile?.phone_number === normalizedPhone) {
-        console.log(`[${requestId}]  VERIFIED: Phone number persisted in user_profiles`);
-      } else {
-        console.error(`[${requestId}]  CRITICAL: Phone number NOT found in user_profiles after update!`);
-        return new Response(JSON.stringify({
-          error: 'Phone linking verification failed. Please try again.'
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      if (whatsappDataTransferred) {
-        accountMerged = true;
-        console.log(`[${requestId}] WhatsApp data successfully transferred to current user`);
       }
 
       console.log(`[${requestId}] Phone successfully linked to user account`);
@@ -605,16 +525,9 @@ Deno.serve(async (req) => {
       // No authenticated user, but phone number exists - phone login
       userId = userResult.userId;
       console.log(`[${requestId}] Existing user found: ${userId}`);
-
-      if (merge_accounts === false) {
-        console.log(`[${requestId}] User chose to keep accounts separate`);
-      } else if (merge_accounts === true) {
-        accountMerged = true;
-        console.log(`[${requestId}] User chose to merge accounts`);
-      }
     } else {
       // No authenticated user and phone doesn't exist - create new user
-      const createResult = await createUserWithPhone(normalizedPhone);
+      const createResult = await createUserWithPhone(normalizedPhone, name);
 
       if (!createResult.success) {
         return new Response(JSON.stringify({
@@ -652,25 +565,13 @@ Deno.serve(async (req) => {
     console.log(`[${requestId}] Verification complete, sending success response`);
     console.log(`[${requestId}] ===== END CHECK PHONE VERIFICATION REQUEST =====`);
 
-    // Determine success message
-    let successMessage = 'Logged in successfully';
-    if (isNewUser) {
-      successMessage = 'Account created successfully';
-    } else if (accountMerged || whatsappDataTransferred) {
-      successMessage = 'WhatsApp number linked! Your WhatsApp conversations have been transferred to your account.';
-    } else if (currentUserId) {
-      successMessage = 'WhatsApp number linked successfully!';
-    }
-
     return new Response(JSON.stringify({
       success: true,
       user_id: userId,
       is_new_user: isNewUser,
-      account_merged: accountMerged,
-      whatsapp_data_transferred: whatsappDataTransferred,
       phone_number: normalizedPhone,
       session: sessionResult.session,
-      message: successMessage
+      message: isNewUser ? 'Account created successfully' : 'Logged in successfully'
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
