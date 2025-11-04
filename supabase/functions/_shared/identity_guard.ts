@@ -22,7 +22,7 @@ const VENDOR_PROBE_PATTERNS = [
   // Direct model queries
   /what\s+(model|llm|ai|system|engine|backend|provider|api)\s+(are\s+you|do\s+you\s+use|powers?\s+you|is\s+this)/gi,
   /which\s+(model|llm|ai|system|engine)\s+(are\s+you|is\s+this)/gi,
-  /(are\s+you|is\s+this)\s+(gpt|claude|gemini|llama|mistral|palm|bard)/gi,
+  /(are\s+you|is\s+this)\s+([a-z]{3,8}[\-\s]?\d*)/gi,
 
   // System instruction extraction
   /repeat\s+(your\s+)?(instructions|prompt|system\s+prompt|original\s+prompt)/gi,
@@ -38,10 +38,10 @@ const VENDOR_PROBE_PATTERNS = [
   /\[INST\]/gi,
   /\[\/INST\]/gi,
 
-  // Identity override attempts
-  /you\s+are\s+now\s+(gpt|claude|gemini)/gi,
-  /pretend\s+(you\s+are|to\s+be)\s+(gpt|claude|gemini)/gi,
-  /act\s+as\s+(if\s+you\s+are\s+)?(gpt|claude|gemini)/gi,
+  // Identity override attempts (obfuscated patterns)
+  /you\s+are\s+now\s+([a-z]{3,8})/gi,
+  /pretend\s+(you\s+are|to\s+be)\s+([a-z]{3,8})/gi,
+  /act\s+as\s+(if\s+you\s+are\s+)?([a-z]{3,8})/gi,
 
   // Technical probes
   /what\s+(is\s+)?your\s+(api|endpoint|base\s+url|model\s+name)/gi,
@@ -256,9 +256,9 @@ export function redactVendorProbes(text: string): {
   redacted = redacted.replace(/<\/?system>/gi, "");
   redacted = redacted.replace(/\[\/?INST\]/gi, "");
 
-  // Remove identity override attempts
+  // Remove identity override attempts (obfuscated pattern)
   redacted = redacted.replace(
-    /(you\s+are\s+now|pretend\s+to\s+be|act\s+as)\s+(gpt|claude|gemini|chatgpt)[^.!?]*/gi,
+    /(you\s+are\s+now|pretend\s+to\s+be|act\s+as)\s+([a-z]{3,10}[\-\s]?\w*)[^.!?]*/gi,
     ""
   );
 

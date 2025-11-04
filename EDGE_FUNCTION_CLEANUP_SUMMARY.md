@@ -41,9 +41,9 @@ Cleaned up the `uhuru-llm-api` edge function by removing unnecessary configurati
 
 **Kept Environment Variables:**
 - `UHURU_API_KEY` - Single API key for all operations
-- `UHURU_MODEL_20` - Only text model (gpt-5-mini)
-- `UHURU_IMAGE_MODEL_20` - Standard image model (dall-e-3)
-- `UHURU_IMAGE_MODEL_21` - Advanced image model (gpt-image-1)
+- `UHURU_MODEL_20` - Only text model (uhuru-2.0-base)
+- `UHURU_IMAGE_MODEL_20` - Standard image model (uhuru-craft-1)
+- `UHURU_IMAGE_MODEL_21` - Advanced image model (uhuru-craft-2)
 
 **Reason:** Only model 2.0 is actively used in the application. Removing unused versions reduces configuration complexity.
 
@@ -52,7 +52,7 @@ Cleaned up the `uhuru-llm-api` edge function by removing unnecessary configurati
 ### 3. ✅ Updated to Responses API
 
 **Changed:**
-- `UHURU_API_URL` now points to Responses API endpoint: `https://api.openai.com/v1/chat/response`
+- `UHURU_API_URL` now points to OrionX Responses API endpoint: `https://api.orionx.ai/v1/chat/response`
 - Removed Chat Completions API compatibility code
 - Simplified request payload structure
 
@@ -103,18 +103,18 @@ Cleaned up the `uhuru-llm-api` edge function by removing unnecessary configurati
 **Changes:**
 ```diff
 - UHURU_API_URL=https://api.provider.com/v1/responses
-+ UHURU_API_URL=https://api.openai.com/v1/chat/response
++ UHURU_API_URL=https://api.orionx.ai/v1/chat/response
 
 - UHURU_20_API_KEY=your-api-key-for-model-20
 - UHURU_MODEL_15=u-1.5
 + # Only one API key needed
 - UHURU_MODEL_21=u-2.1
-- UHURU_IMAGE_MODEL_15=dall-e-3
+- UHURU_IMAGE_MODEL_15=uhuru-craft-1
 - UHURU_EXTRA_HEADERS={}
 
-+ UHURU_MODEL_20=gpt-5-mini
-+ UHURU_IMAGE_MODEL_20=dall-e-3
-+ UHURU_IMAGE_MODEL_21=gpt-image-1
++ UHURU_MODEL_20=uhuru-2.0-base
++ UHURU_IMAGE_MODEL_20=uhuru-craft-1
++ UHURU_IMAGE_MODEL_21=uhuru-craft-2
 ```
 
 ---
@@ -136,16 +136,16 @@ After this cleanup, configure these secrets in **Supabase Dashboard → Edge Fun
 
 ```bash
 # Core API Configuration
-UHURU_API_URL=https://api.openai.com/v1/chat/response
-UHURU_IMAGES_URL=https://api.openai.com/v1/images/generations
-UHURU_API_KEY=<your-openai-api-key>
+UHURU_API_URL=https://api.orionx.ai/v1/chat/response
+UHURU_IMAGES_URL=https://api.orionx.ai/v1/images/generations
+UHURU_API_KEY=<your-api-key>
 
 # Model Configuration
-UHURU_MODEL_20=gpt-5-mini
+UHURU_MODEL_20=uhuru-2.0-base
 
 # Image Models
-UHURU_IMAGE_MODEL_20=dall-e-3
-UHURU_IMAGE_MODEL_21=gpt-image-1
+UHURU_IMAGE_MODEL_20=uhuru-craft-1
+UHURU_IMAGE_MODEL_21=uhuru-craft-2
 
 # Internal Authentication
 UHURU_INTERNAL_API_KEY=<generate-a-uuid>

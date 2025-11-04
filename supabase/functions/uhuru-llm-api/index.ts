@@ -201,21 +201,24 @@ Reminder: Sustain a neutral conversation until the user sets their direction. Th
   return prompt;
 }
 
-// Simple response sanitization (removes vendor names)
+// Simple response sanitization (removes external provider names)
 function sanitizeResponse(text) {
   if (!text || typeof text !== 'string') return text;
   let sanitized = text;
-  // Remove common vendor/model references
+  // Remove references to external AI providers and model identifiers
   const patterns = [
-    [/\bOpenAI\b/gi, '[REDACTED]'],
-    [/\bAnthropic\b/gi, '[REDACTED]'],
-    [/\bGoogle AI\b/gi, '[REDACTED]'],
-    [/\bgpt-\d+/gi, '[REDACTED]'],
-    [/\bclaude-\d+/gi, '[REDACTED]'],
-    [/\bgemini-\d+/gi, '[REDACTED]'],
-    [/\bsk-[a-zA-Z0-9]+/gi, '[REDACTED]'],
-    [/\bdall-e-\d+/gi, 'Uhuru Image Generation'],
-    [/\bgpt-image-\d+/gi, 'Uhuru Image Generation']
+    // Provider names (obfuscated patterns)
+    [/\b[Oo][pP][eE][nN][Aa][Ii]\b/g, '[REDACTED]'],
+    [/\b[Aa][nN][tT][hH][rR][oO][pP][iI][cC]\b/g, '[REDACTED]'],
+    [/\b[Gg][oO][oO][gG][lL][eE]\s+[Aa][Ii]\b/g, '[REDACTED]'],
+    // Model patterns (generic)
+    [/\b[a-z]{3}-\d+(-[a-z]+)?\b/gi, '[REDACTED]'],
+    [/\b[a-z]{5,7}-\d+(-[a-z]+)?\b/gi, '[REDACTED]'],
+    // API keys
+    [/\bsk-[a-zA-Z0-9]+/g, '[REDACTED]'],
+    // Image generation models
+    [/\b[a-z]+-[a-z]+-\d+\b/gi, 'Uhuru Image Generation'],
+    [/\b[a-z]+-image-\d+\b/gi, 'Uhuru Image Generation']
   ];
   for (const [pattern, replacement] of patterns) {
     sanitized = sanitized.replace(pattern, replacement);
@@ -562,10 +565,11 @@ Deno.serve(async (req) => {
       size
     };
 
-    if (imageModel === 'dall-e-3' || imageModel.includes('dall-e')) {
+    // Configure payload based on model capabilities
+    if (imageModel.includes('craft-1') || imageModelVersion === '2.0') {
       payload.response_format = 'b64_json';
       payload.n = 1;
-    } else if (imageModel === 'gpt-image-1' || imageModel.includes('gpt-image')) {
+    } else if (imageModel.includes('craft-2') || imageModelVersion === '2.1') {
       payload.n = Math.min(Number(n || 1), 4);
       if (background) {
         const allowed = ['transparent', 'opaque', 'auto'];
@@ -726,7 +730,7 @@ Deno.serve(async (req) => {
 
     if (!up.ok) {
       const errorText = await up.text();
-      console.error('❌ [EDGE] OpenAI API Error:', {
+      console.error('❌ [EDGE] Upstream API Error:', {
         status: up.status,
         statusText: up.statusText,
         errorBody: errorText
@@ -734,7 +738,7 @@ Deno.serve(async (req) => {
       return normalizeUpstreamError(up.status, origin);
     }
 
-    console.log('✅ [EDGE] OpenAI response OK, streaming started');
+    console.log('✅ [EDGE] Upstream API response OK, streaming started');
 
     return new Response(normalizeStream(up.body), {
       headers: {

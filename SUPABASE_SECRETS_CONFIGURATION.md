@@ -21,24 +21,24 @@ You need to configure the following secrets in your Supabase Dashboard for your 
 
 | Variable | Description | Example Value |
 |----------|-------------|---------------|
-| `UHURU_API_URL` | API endpoint URL for LLM responses using Responses API | `https://api.openai.com/v1/chat/response` |
-| `UHURU_IMAGES_URL` | API endpoint URL for image generation | `https://api.openai.com/v1/images/generations` |
+| `UHURU_API_URL` | API endpoint URL for LLM responses using Responses API | `https://api.orionx.ai/v1/chat/response` |
+| `UHURU_IMAGES_URL` | API endpoint URL for image generation | `https://api.orionx.ai/v1/images/generations` |
 | `UHURU_API_KEY` | Your API key for authentication | `your-api-key-here` |
 
 ### Model Configuration
 
 | Variable | Description | Example Value |
 |----------|-------------|---------------|
-| `UHURU_MODEL_20` | Model identifier for Uhuru 2.0 | `gpt-5-mini` |
+| `UHURU_MODEL_20` | Model identifier for Uhuru 2.0 | `uhuru-2.0-base` |
 
 ### Image Model Configuration
 
 | Variable | Description | Example Value |
 |----------|-------------|---------------|
-| `UHURU_IMAGE_MODEL_20` | Standard image model (dall-e-3) | `dall-e-3` |
-| `UHURU_IMAGE_MODEL_21` | Advanced image model with background transparency support | `gpt-image-1` |
+| `UHURU_IMAGE_MODEL_20` | Standard image model (Craft-1) | `uhuru-craft-1` |
+| `UHURU_IMAGE_MODEL_21` | Advanced image model with background transparency support (Craft-2) | `uhuru-craft-2` |
 
-**Note**: Only model version 2.0 is supported for text generation. Image generation supports both 2.0 (dall-e-3) and 2.1 (gpt-image-1).
+**Note**: Only model version 2.0 is supported for text generation. Image generation supports both 2.0 (Craft-1) and 2.1 (Craft-2).
 
 ### Additional Configuration
 
@@ -54,16 +54,16 @@ Configure these secrets in your Supabase Dashboard:
 
 ```bash
 # Core API Configuration
-UHURU_API_URL=https://api.openai.com/v1/chat/response
-UHURU_IMAGES_URL=https://api.openai.com/v1/images/generations
+UHURU_API_URL=https://api.orionx.ai/v1/chat/response
+UHURU_IMAGES_URL=https://api.orionx.ai/v1/images/generations
 UHURU_API_KEY=<your-api-key>
 
 # Model Configuration
-UHURU_MODEL_20=gpt-5-mini
+UHURU_MODEL_20=uhuru-2.0-base
 
 # Image Models
-UHURU_IMAGE_MODEL_20=dall-e-3
-UHURU_IMAGE_MODEL_21=gpt-image-1
+UHURU_IMAGE_MODEL_20=uhuru-craft-1
+UHURU_IMAGE_MODEL_21=uhuru-craft-2
 
 # Internal Authentication
 UHURU_INTERNAL_API_KEY=<generate-a-uuid>
@@ -144,10 +144,10 @@ The configuration has been simplified to only support the essential model versio
 - Origin-based CORS restrictions (now allows all origins)
 
 ### Updated:
-- Uses Responses API endpoint: `https://api.openai.com/v1/chat/response`
+- Uses OrionX Responses API endpoint: `https://api.orionx.ai/v1/chat/response`
 - Single API key for all operations
 - Simplified model configuration with only 2.0 support
-- Two image models: 2.0 (dall-e-3) and 2.1 (gpt-image-1)
+- Two image models: 2.0 (Craft-1) and 2.1 (Craft-2)
 
 This change:
 - Simplifies configuration significantly

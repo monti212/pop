@@ -101,7 +101,7 @@ OrionX set out to build an AI assistant that:
 - Multi-modal content handling in database
 
 ### Phase 3: User Experience (Months 5-6)
-**Goal:** Create world-class UX rivaling ChatGPT and Claude
+**Goal:** Create world-class UX rivaling industry-leading AI assistants
 
 **Design Principles:**
 - Clean, distraction-free interface

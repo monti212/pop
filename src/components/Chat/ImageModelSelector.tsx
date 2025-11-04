@@ -28,7 +28,7 @@ const IMAGE_MODELS = [
     tagline: "Advanced Quality",
     icon: <Sparkles className="w-4 h-4" />,
     accent: "blue",
-    backendId: "uhuru-image-2.1"
+    backendId: "uhuru-craft-2"
   },
 ] as const;
 

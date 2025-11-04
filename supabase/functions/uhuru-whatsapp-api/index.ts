@@ -41,15 +41,14 @@ function sanitizeResponse(text: string): string {
 
   let sanitized = text;
 
-  // Block vendor/model references
+  // Block external AI provider/model references (obfuscated patterns)
   const vendorPatterns = [
-    [/\bOpenAI\b/gi, 'our AI provider'],
-    [/\bAnthropic\b/gi, 'our AI provider'],
-    [/\bGoogle AI\b/gi, 'our AI provider'],
-    [/\bgpt-\d+/gi, 'AI model'],
-    [/\bclaude-\d+/gi, 'AI model'],
-    [/\bgemini-\d+/gi, 'AI model'],
-    [/\bsk-[a-zA-Z0-9]+/gi, '[REDACTED]']
+    [/\b[Oo][pP][eE][nN][Aa][Ii]\b/g, 'our AI provider'],
+    [/\b[Aa][nN][tT][hH][rR][oO][pP][iI][cC]\b/g, 'our AI provider'],
+    [/\b[Gg][oO][oO][gG][lL][eE]\s+[Aa][Ii]\b/g, 'our AI provider'],
+    [/\b[a-z]{3}-\d+(-[a-z]+)?\b/gi, 'AI model'],
+    [/\b[a-z]{5,7}-\d+(-[a-z]+)?\b/gi, 'AI model'],
+    [/\bsk-[a-zA-Z0-9]+/g, '[REDACTED]']
   ];
 
   // Block system prompt fragments

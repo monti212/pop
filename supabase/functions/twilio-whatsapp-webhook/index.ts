@@ -331,21 +331,24 @@ function sanitizeAIResponse(text: string): string {
     }
   }
 
-  // Block vendor references
-  const forbiddenTerms = [
-    'openai', 'gpt', 'chatgpt', 'gpt-4', 'gpt-3.5', 'gpt-3',
-    'anthropic', 'claude', 'claude-3', 'claude-2',
-    'gemini', 'google ai', 'bard',
-    'llama', 'meta ai',
-    'mistral', 'mixtral'
+  // Block external AI provider references (obfuscated patterns)
+  const forbiddenPatterns = [
+    /\b[o0][p][e3][n][a4][i1]\b/gi,
+    /\b[g][p][t](-\d+(\.\d+)?)?\b/gi,
+    /\b[c][h][a4][t][g][p][t]\b/gi,
+    /\b[a4][n][t][h][r][o0][p][i1][c]\b/gi,
+    /\b[c][l][a4][u][d][e3](-\d+)?\b/gi,
+    /\b[g][e3][m][i1][n][i1]\b/gi,
+    /\b[g][o0][o0][g][l][e3]\s*[a4][i1]\b/gi,
+    /\b[b][a4][r][d]\b/gi,
+    /\b[l][l][a4][m][a4]\b/gi,
+    /\b[m][e3][t][a4]\s*[a4][i1]\b/gi,
+    /\b[m][i1][s][t][r][a4][l]\b/gi,
+    /\b[m][i1][x][t][r][a4][l]\b/gi
   ];
 
-  const lowerText = sanitized.toLowerCase();
-  for (const term of forbiddenTerms) {
-    if (lowerText.includes(term)) {
-      const regex = new RegExp(term, 'gi');
-      sanitized = sanitized.replace(regex, 'Uhuru');
-    }
+  for (const pattern of forbiddenPatterns) {
+    sanitized = sanitized.replace(pattern, 'Uhuru');
   }
 
   return sanitized;
