@@ -39,7 +39,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   const isAuthorizedForWebsiteBuilder = user?.email === 'disabled@example.com';
 
   // Check if current user is admin
-  const isAdmin = profile?.team_role === 'optimus_prime' || profile?.team_role === 'prime';
+  const isAdmin = profile?.team_role === 'supa_admin' || profile?.team_role === 'admin';
 
   const {
     conversations,

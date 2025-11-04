@@ -331,6 +331,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                 </div>
               </div>
 
+              {/* Phone authentication temporarily hidden
               <div>
                 <SocialAuthButton
                   provider="Phone"
@@ -339,6 +340,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                   disabled={isLoading}
                 />
               </div>
+              */}
             </form>
           )}
 

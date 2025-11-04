@@ -11,8 +11,8 @@ const AdminRoute: React.FC = () => {
       // Only allow admin users with is_admin flag or specific team roles
       if (user && profile) {
         const isAdmin = profile.is_admin === true ||
-                       profile.team_role === 'optimus_prime' ||
-                       profile.team_role === 'prime';
+                       profile.team_role === 'supa_admin' ||
+                       profile.team_role === 'admin';
         setHasAccess(isAdmin);
       } else {
         setHasAccess(false);

@@ -22,7 +22,7 @@ interface SubscriptionPaymentMethod {
 interface PaymentMethodSettingsProps {
   darkMode?: boolean;
   userSubscription?: any;
-  teamRole?: 'optimus_prime' | 'prime' | 'autobot' | 'free';
+  teamRole?: 'supa_admin' | 'admin' | 'prime' | 'free';
 }
 
 const PaymentMethodSettings: React.FC<PaymentMethodSettingsProps> = ({ 
@@ -37,17 +37,17 @@ const PaymentMethodSettings: React.FC<PaymentMethodSettingsProps> = ({
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Check if user is a team member
-  const isTeamMember = teamRole === 'optimus_prime' || teamRole === 'prime' || teamRole === 'autobot';
+  const isTeamMember = teamRole === 'supa_admin' || teamRole === 'admin' || teamRole === 'prime';
   
   // Get team role display name
   const getTeamRoleDisplayName = (role: string) => {
     switch (role) {
-      case 'optimus_prime':
-        return 'Chief AI Officer';
+      case 'supa_admin':
+        return 'Super Admin';
+      case 'admin':
+        return 'Admin';
       case 'prime':
-        return 'CEO';
-      case 'autobot':
-        return 'Team Member';
+        return 'Premium User';
       default:
         return 'Free User';
     }

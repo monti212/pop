@@ -194,7 +194,7 @@ if (isSupabaseConfigured()) {
 export interface UserProfile {
   id: string;
   display_name: string | null;
-  team_role?: 'optimus_prime' | 'prime' | 'autobot' | 'free';
+  team_role?: 'supa_admin' | 'admin' | 'prime' | 'free';
   daily_message_count?: number;
   daily_image_count?: number;
   created_at: string;
@@ -204,7 +204,7 @@ export interface UserProfile {
   last_subscription_change_at?: string | null;
 }
 
-export type TeamRoleEnum = 'optimus_prime' | 'prime' | 'autobot' | 'free';
+export type TeamRoleEnum = 'supa_admin' | 'admin' | 'prime' | 'free';
 
 export interface AuthUser {
   user: User | null;

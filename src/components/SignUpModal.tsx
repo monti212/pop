@@ -294,6 +294,7 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
               </div>
             </div>
 
+            {/* Phone authentication temporarily hidden
             <div>
               <SocialAuthButton
                 provider="Phone"
@@ -302,6 +303,7 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
                 disabled={isLoading}
               />
             </div>
+            */}
 
             <div className="pt-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400">
