@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
-import { getCurrentUser, onAuthStateChange, UserProfile } from '../services/authService';
+import { getCurrentUser, onAuthStateChange, UserProfile, supabase } from '../services/authService';
 import { withTimeout, AUTH_TIMEOUT } from '../utils/timeout';
 import { logger } from '../utils/logger';
+import { validateSession } from '../utils/sessionValidator';
 
 interface AuthContextType {
   user: User | null;
@@ -104,6 +105,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
+        // First, validate the current session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          logger.error('Session error during initialization:', sessionError);
+          throw sessionError;
+        }
+
+        if (sessionData.session) {
+          const validation = validateSession(sessionData.session);
+
+          if (!validation.valid) {
+            logger.error('Cached session is invalid:', validation.errors);
+            // Clear invalid session
+            try {
+              const keysToRemove: string[] = [];
+              for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.includes('supabase') && key.includes('auth')) {
+                  keysToRemove.push(key);
+                }
+              }
+              keysToRemove.forEach(key => localStorage.removeItem(key));
+              await supabase.auth.signOut();
+            } catch (clearError) {
+              logger.warn('Failed to clear invalid session:', clearError);
+            }
+
+            setUser(null);
+            setProfile(null);
+            localStorage.removeItem(CACHE_KEY);
+            setIsLoading(false);
+            return;
+          }
+
+          logger.debug('Session validated successfully');
+        }
+
         const authUser = await withTimeout(
           getCurrentUser(),
           AUTH_TIMEOUT,

@@ -154,30 +154,92 @@ Deno.serve(async (req) => {
 
     await supabase.from('phone_verifications').update({ user_id: userId }).eq('id', verification.id);
 
-    // Generate session tokens
-    const tempPassword = crypto.randomUUID();
-    await supabase.auth.admin.updateUserById(userId, { password: tempPassword });
+    // Generate session tokens with proper JWT claims
+    console.log(`[${requestId}] Generating session for user:`, userId);
 
-    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
-    if (!authUser) {
-      return new Response(JSON.stringify({ error: 'Could not create session' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // First, ensure user exists and fetch latest data
+    const { data: { user: authUser }, error: getUserError } = await supabase.auth.admin.getUserById(userId);
+    if (getUserError || !authUser) {
+      console.error(`[${requestId}] Failed to get user:`, getUserError);
+      return new Response(JSON.stringify({ error: 'Could not retrieve user account' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const { data: otpData } = await supabase.auth.admin.generateLink({
+    console.log(`[${requestId}] User retrieved:`, { id: authUser.id, phone: authUser.phone, email: authUser.email });
+
+    // Generate a secure session using magic link generation
+    // This ensures all required JWT claims including 'sub' are properly set
+    const { data: otpData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: authUser.email || undefined,
       phone: authUser.phone || undefined,
-      options: { data: { phone_verified: true, phone: normalizedPhone } }
+      options: {
+        data: {
+          phone_verified: true,
+          phone: normalizedPhone,
+          source: 'phone_verification'
+        }
+      }
     });
 
-    if (!otpData?.properties?.action_link) {
-      return new Response(JSON.stringify({ success: true, user_id: userId, is_new_user: isNewUser, phone_number: normalizedPhone, message: isNewUser ? 'Account created' : 'Logged in', requires_client_refresh: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (linkError) {
+      console.error(`[${requestId}] Failed to generate link:`, linkError);
+      return new Response(JSON.stringify({ error: 'Could not generate authentication link' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    if (!otpData?.properties?.action_link) {
+      console.error(`[${requestId}] No action link generated, falling back to client refresh`);
+      return new Response(JSON.stringify({
+        success: true,
+        user_id: userId,
+        is_new_user: isNewUser,
+        phone_number: normalizedPhone,
+        message: isNewUser ? 'Account created' : 'Logged in',
+        requires_client_refresh: true
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Extract tokens from the magic link
     const actionLink = otpData.properties.action_link;
+    console.log(`[${requestId}] Action link generated successfully`);
+
     const urlParams = new URLSearchParams(actionLink.split('?')[1] || '');
     const accessToken = urlParams.get('access_token') || '';
     const refreshToken = urlParams.get('refresh_token') || '';
+
+    // Validate that tokens were extracted
+    if (!accessToken || !refreshToken) {
+      console.error(`[${requestId}] Failed to extract tokens from action link`);
+      return new Response(JSON.stringify({
+        success: true,
+        user_id: userId,
+        is_new_user: isNewUser,
+        phone_number: normalizedPhone,
+        message: isNewUser ? 'Account created' : 'Logged in',
+        requires_client_refresh: true
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Validate access token has required JWT claims
+    try {
+      const tokenParts = accessToken.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
+
+        if (!payload.sub) {
+          console.error(`[${requestId}] Generated access token missing 'sub' claim!`);
+          console.error(`[${requestId}] Token claims:`, Object.keys(payload));
+          return new Response(JSON.stringify({
+            error: 'Generated session token is invalid',
+            details: 'Missing required user ID claim'
+          }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        console.log(`[${requestId}] Token validated successfully with sub claim:`, payload.sub);
+      }
+    } catch (decodeError) {
+      console.error(`[${requestId}] Failed to decode token:`, decodeError);
+      // Continue anyway - client will validate
+    }
 
     return new Response(JSON.stringify({
       success: true,

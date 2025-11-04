@@ -1,4 +1,5 @@
 import { createClient, User, UserResponse } from '@supabase/supabase-js';
+import { validateSession, validateJWTClaims, waitForSessionReady, isJWTExpired as checkJWTExpired } from '../utils/sessionValidator';
 
 // Helper function to clear Supabase auth tokens from localStorage
 const clearSupabaseAuthTokens = () => {
@@ -37,36 +38,8 @@ if (!supabaseUrl || !supabaseKey) {
   console.error('3. Restart your development server');
 }
 
-// Helper function to decode JWT without verification (just for validation)
-const decodeJWT = (token: string): any => {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = parts[1];
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-    return decoded;
-  } catch (error) {
-    return null;
-  }
-};
-
-// Helper function to check if JWT is expired
-const isJWTExpired = (token: string): boolean => {
-  const decoded = decodeJWT(token);
-  if (!decoded || !decoded.exp) return true;
-
-  const now = Math.floor(Date.now() / 1000);
-  const isExpired = decoded.exp <= now;
-
-  if (isExpired) {
-    console.error('🔧 JWT token is expired!');
-    console.error('Token issued at:', new Date(decoded.iat * 1000).toISOString());
-    console.error('Token expired at:', new Date(decoded.exp * 1000).toISOString());
-    console.error('Current time:', new Date(now * 1000).toISOString());
-  }
-
-  return isExpired;
-};
+// Use the centralized JWT validation utilities from sessionValidator
+const isJWTExpired = checkJWTExpired;
 
 // Helper function to check if Supabase is properly configured
 const isSupabaseConfigured = (): boolean => {
@@ -492,14 +465,26 @@ export const getCurrentUser = async (): Promise<AuthUser> => {
       return { user: null, profile: null, isLoading: false };
     }
 
-    // First check if we have a valid session
+    // First check if we have a valid session using the session validator
     let session, sessionError;
-    
+
     try {
       // Wrap in additional try-catch to handle network errors
       const result = await supabase.auth.getSession();
       session = result.data.session;
       sessionError = result.error;
+
+      // Validate session has required claims
+      if (session) {
+        const validation = validateSession(session);
+        if (!validation.valid) {
+          console.error('Session validation failed:', validation.errors);
+          // Clear invalid session
+          clearSupabaseAuthTokens();
+          await supabase.auth.signOut();
+          return { user: null, profile: null, isLoading: false };
+        }
+      }
     } catch (error: any) {
       // Handle network/fetch errors specifically
       if (error.message && (

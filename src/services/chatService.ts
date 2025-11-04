@@ -2,6 +2,7 @@ import { supabase } from './authService';
 import { MessageContent, TextContent, ImageUrlContent } from '../types/chat';
 import { uploadBase64Image } from './fileService';
 import { logger } from '../utils/logger';
+import { checkAuthBeforeApiCall } from '../utils/apiGuard';
 
 // Response validation helper
 function validateResponse(data: any): boolean {
@@ -31,8 +32,19 @@ export const createConversation = async (userId: string, title: string = 'New Co
   try {
     if (!supabase) {
       logger.warn('Supabase not configured - creating local conversation');
-    logger.warn('I\'m working in offline mode - creating a local conversation for now');
+      logger.warn('I\'m working in offline mode - creating a local conversation for now');
       return null;
+    }
+
+    // Pre-flight auth check
+    const authCheck = await checkAuthBeforeApiCall({
+      requireAuth: true,
+      operation: 'create conversation'
+    });
+
+    if (!authCheck.allowed) {
+      logger.error('Auth check failed for create conversation:', authCheck.error);
+      throw new Error(authCheck.error || 'Authentication required');
     }
 
     const { data, error } = await supabase
@@ -57,6 +69,17 @@ export const getConversations = async (userId: string, limit: number = 50) => {
   try {
     if (!supabase) {
       logger.warn('Supabase not configured - returning empty conversations');
+      return [];
+    }
+
+    // Pre-flight auth check
+    const authCheck = await checkAuthBeforeApiCall({
+      requireAuth: true,
+      operation: 'get conversations'
+    });
+
+    if (!authCheck.allowed) {
+      logger.error('Auth check failed for get conversations:', authCheck.error);
       return [];
     }
 

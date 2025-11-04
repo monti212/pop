@@ -4,6 +4,7 @@ import { X, Smartphone, AlertCircle, User } from 'lucide-react';
 import CountryCodeSelector from './CountryCodeSelector';
 import { countries, Country } from '../utils/countryCodes';
 import { supabase } from '../services/authService';
+import { waitForSessionReady } from '../utils/sessionValidator';
 
 interface PhoneAuthModalProps {
   onClose: () => void;
@@ -153,15 +154,30 @@ const PhoneAuthModal: React.FC<PhoneAuthModalProps> = ({
       }
 
       if (data.session && data.session.access_token) {
+        console.log('[PhoneAuth] Setting session with tokens from server...');
         const { error: signInError } = await supabase.auth.setSession({
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token || data.session.access_token
         });
 
         if (signInError) {
-          console.error('Error setting session:', signInError);
+          console.error('[PhoneAuth] Error setting session:', signInError);
           throw new Error('Failed to complete authentication. Please try again.');
         }
+
+        // Wait for session to be fully established with validation
+        console.log('[PhoneAuth] Waiting for session to be ready...');
+        const sessionResult = await waitForSessionReady(
+          () => supabase.auth.getSession(),
+          { maxAttempts: 5, delayMs: 200, validateClaims: true }
+        );
+
+        if (sessionResult.error || !sessionResult.session) {
+          console.error('[PhoneAuth] Session validation failed:', sessionResult.error);
+          throw new Error('Session validation failed. Please try again.');
+        }
+
+        console.log('[PhoneAuth] Session validated successfully');
       } else if (data.requires_client_refresh) {
         // Server couldn't generate session, but user was created/found
         // Force a page reload to refresh the auth state
