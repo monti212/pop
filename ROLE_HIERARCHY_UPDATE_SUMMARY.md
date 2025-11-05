@@ -28,9 +28,9 @@ Complete restructuring of the admin role hierarchy with new naming convention.
 - `free` - Basic features
 
 #### New Hierarchy:
-- `supa_admin` - Full system admin access (highest level)
+- `supa_admin` - Full system admin access (highest level) + Admin Dashboard
 - `admin` - Standard admin dashboard access
-- `prime` - Premium user features (NO admin access)
+- `prime` - Premium user features + Admin Dashboard Access
 - `free` - Basic user features
 
 ---
@@ -49,7 +49,7 @@ Complete restructuring of the admin role hierarchy with new naming convention.
    - `prime` → `prime` (unchanged)
    - `free` → `free` (unchanged)
 3. **Updates Database Schema** - Replaces old enum with new one
-4. **Updates is_admin() Function** - Now checks for `supa_admin` and `admin` roles only
+4. **Updates is_admin() Function** - Now checks for `supa_admin`, `admin`, and `prime` roles
 5. **Updates ALL RLS Policies** - All admin policies now use new role names:
    - WhatsApp Messages
    - WhatsApp Sessions
@@ -116,10 +116,11 @@ Complete restructuring of the admin role hierarchy with new naming convention.
 - Can manage administrative features
 - Cannot assign roles (only supa_admin can)
 
-❌ **prime** - NO admin access
-- Premium user features only
-- Cannot access admin dashboard
-- Cannot view admin data
+✅ **prime** - Premium user with admin access
+- Can access admin dashboard
+- Can view and manage admin features
+- Premium user features included
+- Cannot assign roles (only supa_admin can)
 
 ❌ **free** - NO admin access
 - Basic user features only
@@ -135,10 +136,10 @@ Complete restructuring of the admin role hierarchy with new naming convention.
 |----------|----------|--------------|
 | `optimus_prime` | `supa_admin` | Full admin (unchanged) |
 | `autobot` | `admin` | Standard admin |
-| `prime` | `prime` | Premium user (NO admin) |
+| `prime` | `prime` | Premium user WITH admin access |
 | `free` | `free` | Free user (unchanged) |
 
-**IMPORTANT:** Users who previously had `prime` role with admin access will LOSE admin access after this migration. They will retain premium features but cannot access the admin dashboard.
+**UPDATED:** `prime` role users now have full admin dashboard access along with their premium features.
 
 ### Pencils of Promise Admin Users:
 

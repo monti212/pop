@@ -122,9 +122,9 @@ BEGIN
   FROM user_profiles
   WHERE id = target_id;
 
-  -- supa_admin and admin have admin access
-  -- prime and free do NOT have admin access
-  RETURN user_role IN ('supa_admin', 'admin');
+  -- supa_admin, admin, and prime have admin access
+  -- free does NOT have admin access
+  RETURN user_role IN ('supa_admin', 'admin', 'prime');
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -146,7 +146,7 @@ CREATE POLICY "Admins can view all messages"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -156,7 +156,7 @@ CREATE POLICY "Admins can insert messages"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -166,7 +166,7 @@ CREATE POLICY "Admins can update messages"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -176,7 +176,7 @@ CREATE POLICY "Admins can delete messages"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -191,7 +191,7 @@ CREATE POLICY "Admins can view all sessions"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -201,7 +201,7 @@ CREATE POLICY "Admins can update sessions"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -211,7 +211,7 @@ CREATE POLICY "Admins can delete sessions"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -226,7 +226,7 @@ CREATE POLICY "Admins can view all whatsapp users"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -236,7 +236,7 @@ CREATE POLICY "Admins can update whatsapp users"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -246,7 +246,7 @@ CREATE POLICY "Admins can delete whatsapp users"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -259,7 +259,7 @@ CREATE POLICY "Admins can view all usage"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -274,7 +274,7 @@ CREATE POLICY "Admins can view all user context"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -284,7 +284,7 @@ CREATE POLICY "Admins can update user context"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -294,7 +294,7 @@ CREATE POLICY "Admins can delete user context"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -310,7 +310,7 @@ CREATE POLICY "Admins can view settings"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -320,7 +320,7 @@ CREATE POLICY "Admins can insert settings"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -330,7 +330,7 @@ CREATE POLICY "Admins can update settings"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 
@@ -340,7 +340,7 @@ CREATE POLICY "Admins can delete settings"
     EXISTS (
       SELECT 1 FROM user_profiles
       WHERE user_profiles.id = auth.uid()
-      AND user_profiles.team_role IN ('supa_admin', 'admin')
+      AND user_profiles.team_role IN ('supa_admin', 'admin', 'prime')
     )
   );
 

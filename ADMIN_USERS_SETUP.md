@@ -24,6 +24,15 @@ Previously known as `autobot`, standard administrative access.
 - ✅ Administrative features
 - ❌ Cannot assign roles (only supa_admin can)
 
+### Premium Users (prime)
+Premium user tier with admin dashboard access.
+
+**Access:**
+- ✅ Admin Dashboard
+- ✅ Administrative features
+- ✅ Premium user features
+- ❌ Cannot assign roles (only supa_admin can)
+
 ---
 
 ## How Admin Assignment Works
