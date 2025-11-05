@@ -139,7 +139,7 @@ export default function ChatInterface({
   const assistantLocalIdRef = useRef<string | null>(null);
   
   // Detect admin status from profile team_role
-  const isAdmin = profile?.team_role === 'supa_admin' || profile?.team_role === 'admin' || profile?.team_role === 'prime';
+  const isAdmin = profile?.team_role === 'supa_admin' || profile?.team_role === 'optimus_prime' || profile?.team_role === 'admin' || profile?.team_role === 'prime';
 
   // Update sidebar width when collapse state changes
   useEffect(() => {

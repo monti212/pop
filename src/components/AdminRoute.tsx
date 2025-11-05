@@ -12,6 +12,7 @@ const AdminRoute: React.FC = () => {
       if (user && profile) {
         const isAdmin = profile.is_admin === true ||
                        profile.team_role === 'supa_admin' ||
+                       profile.team_role === 'optimus_prime' || // Legacy support
                        profile.team_role === 'admin' ||
                        profile.team_role === 'prime';
         setHasAccess(isAdmin);
