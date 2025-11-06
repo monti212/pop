@@ -32,7 +32,8 @@ import { signIn, signUp, signOut } from './services/authService';
 import ProtectedRoute from './components/ProtectedRoute';
 import ApiDocumentation from './pages/ApiDocumentation';
 import AdminLogin from './pages/AdminLogin';
-import AdminRoute from './components/AdminRoute'; // Keep this import if it's used elsewhere
+import AdminRoute from './components/AdminRoute';
+import SupaAdminRoute from './components/SupaAdminRoute';
 const WhatsAppMessages = lazy(() => import('./pages/admin/WhatsAppMessages'));
 const CostBreakdownMaker = lazy(() => import('./pages/admin/CostBreakdownMaker'));
 const ComprehensiveAdminDashboard = lazy(() => import('./pages/admin/ComprehensiveAdminDashboard'));
@@ -41,6 +42,7 @@ const UhuruDocsPage = lazy(() => import('./pages/UhuruOfficePage'));
 const UhuruSheetsPage = lazy(() => import('./pages/UhuruSheetsPage'));
 const UhuruFilesPage = lazy(() => import('./pages/UhuruFilesPage'));
 const TechnicalDocumentationSystem = lazy(() => import('./pages/TechnicalDocumentationSystem'));
+const SupaAdmin = lazy(() => import('./pages/SupaAdmin'));
 
 function App() {
   return (
@@ -300,6 +302,11 @@ const AppContentInner: React.FC = () => {
           <Route path="/admin/whatsapp" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><WhatsAppMessages /></Suspense>} />
           <Route path="/admin/cost-breakdown" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><CostBreakdownMaker /></Suspense>} />
           <Route path="/admin/knowledge-base" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><AIKnowledgeBase /></Suspense>} />
+        </Route>
+
+        {/* Protected Supa Admin Route - Only for monti@orionx.xyz */}
+        <Route element={<SupaAdminRoute><Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"><div className="text-white text-xl">Loading...</div></div>}><SupaAdmin /></Suspense></SupaAdminRoute>}>
+          <Route path="/supa-admin" element={null} />
         </Route>
         
         <Route path="/*" element={

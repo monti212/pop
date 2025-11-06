@@ -41,6 +41,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
   // Check if current user is admin
   const isAdmin = profile?.team_role === 'supa_admin' || profile?.team_role === 'optimus_prime' || profile?.team_role === 'admin' || profile?.team_role === 'prime';
 
+  // Check if current user is supa admin (monti@orionx.xyz only)
+  const isSupaAdmin = user?.email === 'monti@orionx.xyz';
+
   const {
     conversations,
     currentConversation,
@@ -419,6 +422,23 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 >
                   <Shield className="w-4 h-4 text-[#FF6A00]" />
                   <span className="text-sm font-medium">Admin Dashboard</span>
+                </motion.button>
+              )}
+
+              {/* Supa Admin Button - Only visible to monti@orionx.xyz */}
+              {isSupaAdmin && (
+                <motion.button
+                  onClick={() => {
+                    navigate('/supa-admin');
+                    if (onClose) onClose();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-12 border-2 border-red-500 bg-gradient-to-r from-red-50 to-orange-50 hover:from-red-100 hover:to-orange-100 hover:shadow-lg hover:scale-[1.02] transition-all duration-150 ease-out"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.2 }}
+                >
+                  <Crown className="w-4 h-4 text-red-600" />
+                  <span className="text-sm font-bold text-red-600">Supa Admin</span>
                 </motion.button>
               )}
             </motion.div>
