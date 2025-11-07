@@ -193,7 +193,7 @@ const FilesBrowser: React.FC<FilesBrowserProps> = ({
             <div className="flex items-center justify-between p-4 border-b border-borders">
               <div className="flex items-center gap-2">
                 <FolderOpen className="w-4 h-4 text-[#f5b233]" />
-                <span className="text-sm font-medium text-[#19324A]">U Files</span>
+                <span className="text-sm font-medium text-[#19324A]">U Class</span>
               </div>
               <button
                 onClick={() => onClose?.()}
@@ -271,7 +271,7 @@ const FilesBrowser: React.FC<FilesBrowserProps> = ({
                 }}
                 className="w-full px-3 py-2 bg-[#f5b233] text-white rounded-lg hover:bg-[#f5b233]/90 transition-colors duration-200 text-sm font-medium"
               >
-                Open U Files
+                Open U Class
               </button>
             </div>
 

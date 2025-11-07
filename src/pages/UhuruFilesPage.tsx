@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Loader, AlertTriangle, X, Users, ClipboardCheck,
-  Calendar, Edit, Trash2, UserPlus, BarChart3, School, Archive
+  Calendar, Edit, Trash2, UserPlus, BarChart3, School, Archive, FolderOpen
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -15,8 +15,9 @@ import AddStudentModal from '../components/AddStudentModal';
 import EditStudentModal from '../components/EditStudentModal';
 import AttendanceModal from '../components/AttendanceModal';
 import AnalyticsModal from '../components/AnalyticsModal';
+import ClassDocumentsView from '../components/ClassDocumentsView';
 
-type ViewMode = 'classes' | 'students' | 'attendance' | 'analytics';
+type ViewMode = 'classes' | 'students' | 'attendance' | 'analytics' | 'documents';
 
 const UhuruFilesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -164,12 +165,14 @@ const UhuruFilesPage: React.FC = () => {
                   {viewMode === 'students' && `${selectedClass?.class_name} - Students`}
                   {viewMode === 'attendance' && `${selectedClass?.class_name} - Take Attendance`}
                   {viewMode === 'analytics' && `${selectedClass?.class_name} - Analytics`}
+                  {viewMode === 'documents' && `${selectedClass?.class_name} - Documents`}
                 </h1>
                 <p className="text-sm text-gray-600">
                   {viewMode === 'classes' && `${classCount} of 5 classes created`}
                   {viewMode === 'students' && `${students.length} of 35 students`}
                   {viewMode === 'attendance' && 'Record daily attendance'}
                   {viewMode === 'analytics' && 'View attendance statistics'}
+                  {viewMode === 'documents' && 'Lesson plans, notes, and reports'}
                 </p>
               </div>
             </div>
@@ -257,22 +260,22 @@ const UhuruFilesPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {classes.map((classItem) => (
                 <motion.div
                   key={classItem.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                  className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
                 >
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-1">
+                        <h3 className="text-lg font-bold text-gray-900 mb-0.5">
                           {classItem.class_name}
                         </h3>
                         {classItem.subject && (
-                          <p className="text-sm text-gray-600 mb-1">{classItem.subject}</p>
+                          <p className="text-xs text-gray-600 mb-0.5">{classItem.subject}</p>
                         )}
                         {classItem.grade_level && (
                           <p className="text-xs text-gray-500">Grade {classItem.grade_level}</p>
@@ -283,38 +286,48 @@ const UhuruFilesPage: React.FC = () => {
                           setSelectedClass(classItem);
                           setShowEditClassModal(true);
                         }}
-                        className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-teal transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-teal transition-colors"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-2 mb-4 text-sm text-gray-700">
-                      <Users className="w-4 h-4 text-teal" />
+                    <div className="flex items-center gap-1.5 mb-3 text-xs text-gray-700">
+                      <Users className="w-3.5 h-3.5 text-teal" />
                       <span className="font-medium">{classItem.student_count} students</span>
                     </div>
 
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1.5">
                       <button
                         onClick={() => handleTakeAttendance(classItem)}
-                        className="w-full px-4 py-3 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors font-semibold flex items-center justify-center gap-2"
+                        className="w-full px-3 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors text-sm font-semibold flex items-center justify-center gap-1.5"
                       >
-                        <ClipboardCheck className="w-4 h-4" />
+                        <ClipboardCheck className="w-3.5 h-3.5" />
                         Take Attendance
                       </button>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-1.5">
                         <button
                           onClick={() => handleClassSelect(classItem)}
-                          className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                          className="px-2 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
                         >
-                          <Users className="w-4 h-4" />
+                          <Users className="w-3 h-3" />
                           Students
                         </button>
                         <button
-                          onClick={() => handleViewAnalytics(classItem)}
-                          className="px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                          onClick={() => {
+                            setSelectedClass(classItem);
+                            setViewMode('documents');
+                          }}
+                          className="px-2 py-1.5 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
                         >
-                          <BarChart3 className="w-4 h-4" />
+                          <FolderOpen className="w-3 h-3" />
+                          Docs
+                        </button>
+                        <button
+                          onClick={() => handleViewAnalytics(classItem)}
+                          className="px-2 py-1.5 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
+                        >
+                          <BarChart3 className="w-3 h-3" />
                           Analytics
                         </button>
                       </div>
@@ -406,6 +419,8 @@ const UhuruFilesPage: React.FC = () => {
               </div>
             </div>
           )
+        ) : viewMode === 'documents' && selectedClass ? (
+          <ClassDocumentsView classId={selectedClass.id} className={selectedClass.class_name} />
         ) : null}
       </div>
 

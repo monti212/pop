@@ -391,7 +391,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.05 }}
               >
                 <FolderOpen className="w-4 h-4 text-[#0096B3]" />
-                <span className="text-sm font-medium">Uhuru Files</span>
+                <span className="text-sm font-medium">U Class</span>
               </motion.button>
 
               <motion.button
