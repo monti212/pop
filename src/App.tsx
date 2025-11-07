@@ -89,6 +89,7 @@ const AppContentInner: React.FC = () => {
   const isApiDocsPage = location.pathname === '/api-docs';
   const isAdminLoginPage = location.pathname === '/admin/login';
   const isAdminPage = location.pathname.startsWith('/admin');
+  const isSupaAdminPage = location.pathname === '/supa-admin';
   const isChatPage = location.pathname === '/chat';
 
   // U Pages detection
@@ -116,7 +117,7 @@ const AppContentInner: React.FC = () => {
       // Only navigate to chat if not already on a U page or other special page
       const isOnSpecialPage = isUPage || isTermsPage || isPrivacyPolicyPage ||
                               isResetPasswordPage || isApiDocsPage ||
-                              isAdminLoginPage || isAdminPage;
+                              isAdminLoginPage || isAdminPage || isSupaAdminPage;
 
       if (!isOnSpecialPage && location.pathname !== '/chat') {
         // Use navigate to go to chat route instead of modal
@@ -124,7 +125,7 @@ const AppContentInner: React.FC = () => {
         sessionStorage.setItem('uhuru_chat_open', 'true');
       }
     }
-  }, [isAuthenticated, isLoading, chatIntentOpen, navigate, location.pathname, isUPage, isTermsPage, isPrivacyPolicyPage, isResetPasswordPage, isApiDocsPage, isAdminLoginPage, isAdminPage]);
+  }, [isAuthenticated, isLoading, chatIntentOpen, navigate, location.pathname, isUPage, isTermsPage, isPrivacyPolicyPage, isResetPasswordPage, isApiDocsPage, isAdminLoginPage, isAdminPage, isSupaAdminPage]);
 
   // Clear chat intent when navigating to U pages
   useEffect(() => {
@@ -305,8 +306,8 @@ const AppContentInner: React.FC = () => {
         </Route>
 
         {/* Protected Supa Admin Route - Only for monti@orionx.xyz */}
-        <Route element={<SupaAdminRoute><Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"><div className="text-white text-xl">Loading...</div></div>}><SupaAdmin /></Suspense></SupaAdminRoute>}>
-          <Route path="/supa-admin" element={null} />
+        <Route element={<SupaAdminRoute />}>
+          <Route path="/supa-admin" element={<Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"><div className="text-white text-xl">Loading...</div></div>}><SupaAdmin /></Suspense>} />
         </Route>
         
         <Route path="/*" element={
@@ -315,7 +316,7 @@ const AppContentInner: React.FC = () => {
               <HeroSkeleton />
             ) : (
               <div className="min-h-screen bg-sand-200 text-navy">
-                {(isAuthenticated || authState.showChatInterface) && !isTermsPage && !isPrivacyPolicyPage && !isResetPasswordPage && !isApiDocsPage && !isAdminLoginPage && !isAdminPage && !isChatPage && !isUPage ? (
+                {(isAuthenticated || authState.showChatInterface) && !isTermsPage && !isPrivacyPolicyPage && !isResetPasswordPage && !isApiDocsPage && !isAdminLoginPage && !isAdminPage && !isSupaAdminPage && !isChatPage && !isUPage ? (
                   <Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}>
                     <ChatInterface
                     onClose={handleSignOut}

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/authService';
 import { Users, Activity, Zap, TrendingUp, Clock, MessageSquare, FileText, BarChart3 } from 'lucide-react';
 
@@ -30,7 +29,6 @@ interface OrgMetrics {
 }
 
 export default function SupaAdmin() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [userMetrics, setUserMetrics] = useState<UserMetric[]>([]);
   const [tokenMetrics, setTokenMetrics] = useState<TokenMetric[]>([]);
@@ -38,18 +36,8 @@ export default function SupaAdmin() {
   const [selectedView, setSelectedView] = useState<'overview' | 'users' | 'tokens'>('overview');
 
   useEffect(() => {
-    checkAccess();
     fetchMetrics();
   }, []);
-
-  const checkAccess = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user || user.email !== 'monti@orionx.xyz') {
-      navigate('/');
-      return;
-    }
-  };
 
   const fetchMetrics = async () => {
     try {

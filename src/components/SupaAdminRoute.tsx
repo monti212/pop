@@ -1,14 +1,22 @@
-import { Navigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-interface SupaAdminRouteProps {
-  children: React.ReactNode;
-}
+const SupaAdminRoute: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
-export default function SupaAdminRoute({ children }: SupaAdminRouteProps) {
-  const { user, loading } = useAuth();
+  useEffect(() => {
+    if (!isLoading) {
+      if (user && user.email === 'monti@orionx.xyz') {
+        setHasAccess(true);
+      } else {
+        setHasAccess(false);
+      }
+    }
+  }, [user, isLoading]);
 
-  if (loading) {
+  if (isLoading || hasAccess === null) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-white text-xl">Loading...</div>
@@ -16,9 +24,7 @@ export default function SupaAdminRoute({ children }: SupaAdminRouteProps) {
     );
   }
 
-  if (!user || user.email !== 'monti@orionx.xyz') {
-    return <Navigate to="/" replace />;
-  }
+  return hasAccess ? <Outlet /> : <Navigate to="/" replace />;
+};
 
-  return <>{children}</>;
-}
+export default SupaAdminRoute;
