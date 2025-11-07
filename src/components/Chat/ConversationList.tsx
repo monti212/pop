@@ -405,7 +405,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.1 }}
               >
                 <FileText className="w-4 h-4 text-[#0096B3]" />
-                <span className="text-sm font-medium">Uhuru Office</span>
+                <span className="text-sm font-medium">U Docs</span>
               </motion.button>
 
               {/* Admin Dashboard Button - Only show for admin users */}
