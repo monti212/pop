@@ -322,25 +322,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                 ) : "Sign In"}
               </motion.button>
 
-              <div className="relative my-5">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#0170b9]/10"></div>
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-gray-500">Or continue with</span>
-                </div>
-              </div>
-
-              {/* Phone authentication temporarily hidden
-              <div>
-                <SocialAuthButton
-                  provider="Phone"
-                  icon={Smartphone}
-                  onClick={() => setShowPhoneAuth(true)}
-                  disabled={isLoading}
-                />
-              </div>
-              */}
             </form>
           )}
 
