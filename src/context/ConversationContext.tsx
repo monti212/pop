@@ -116,29 +116,11 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               await loadConversationMessages(userConversations[0]);
             }
           } else if (userConversations.length === 0) {
-            try {
-              const newConversation = await createConversation(user.id);
-              if (newConversation) {
-                  // New conversation starts with empty messages
-                const emptyConversation = {
-                  ...newConversation,
-                  messages: []
-                };
-
-                setConversations([emptyConversation]);
-                setCurrentConversation(emptyConversation);
-              } else {
-                // If we couldn't create a conversation in the database, use a local one
-                const localConversation = createLocalConversation();
-                setConversations([localConversation]);
-                setCurrentConversation(localConversation);
-              }
-            } catch (createError) {
-              // If conversation creation fails, use local conversation
-              const localConversation = createLocalConversation();
-              setConversations([localConversation]);
-              setCurrentConversation(localConversation);
-            }
+            // Don't create a conversation in the database yet
+            // Just create a temporary local conversation that will be persisted when the user sends their first message
+            const localConversation = createLocalConversation();
+            setConversations([localConversation]);
+            setCurrentConversation(localConversation);
           } else {
             // Set conversations and load messages for the most recent one
             setConversations(userConversations);

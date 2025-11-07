@@ -210,12 +210,15 @@ const ConversationList: React.FC<ConversationListProps> = ({
     setOpenMenuId(openMenuId === conversationId ? null : conversationId);
   };
 
-  // Group conversations by date
+  // Group conversations by date (excluding temporary conversations)
   const getTodayConversations = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     return conversations.filter(conv => {
+      // Filter out temporary conversations (not yet persisted to database)
+      if (conv.isTemporary) return false;
+
       const convDate = new Date(conv.updatedAt);
       convDate.setHours(0, 0, 0, 0);
       return convDate.getTime() === today.getTime();
@@ -229,6 +232,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
     yesterday.setDate(yesterday.getDate() - 1);
 
     return conversations.filter(conv => {
+      // Filter out temporary conversations (not yet persisted to database)
+      if (conv.isTemporary) return false;
+
       const convDate = new Date(conv.updatedAt);
       convDate.setHours(0, 0, 0, 0);
       return convDate.getTime() === yesterday.getTime();
@@ -242,6 +248,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
     yesterday.setDate(yesterday.getDate() - 1);
 
     return conversations.filter(conv => {
+      // Filter out temporary conversations (not yet persisted to database)
+      if (conv.isTemporary) return false;
+
       const convDate = new Date(conv.updatedAt);
       convDate.setHours(0, 0, 0, 0);
       return convDate.getTime() < yesterday.getTime();
