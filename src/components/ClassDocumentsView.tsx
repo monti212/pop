@@ -1,19 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FolderOpen, FileText, Plus, Search, Download, Eye, Trash2,
-  Edit3, X, Loader, AlertTriangle, Calendar, Tag, File
+  FolderOpen, FileText, Upload, Search, Download, Eye, Trash2,
+  Edit3, X, Loader, AlertTriangle, Calendar, Tag, File, HardDrive, CheckCircle2
 } from 'lucide-react';
 import {
   getClassFolders,
   getClassDocuments,
   getFolderDocuments,
-  createDocument,
   deleteDocument,
   ClassFolder,
   ClassDocument,
-  DocumentWithFolder
+  DocumentWithFolder,
+  uploadClassDocuments,
+  getTotalStorageUsed,
+  UploadProgress
 } from '../services/classDocumentService';
+import { useAuth } from '../context/AuthContext';
 
 interface ClassDocumentsViewProps {
   classId: string;
@@ -21,17 +24,27 @@ interface ClassDocumentsViewProps {
 }
 
 const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, className }) => {
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [folders, setFolders] = useState<ClassFolder[]>([]);
   const [documents, setDocuments] = useState<DocumentWithFolder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<ClassFolder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
+  const [storageInfo, setStorageInfo] = useState<{ used: number; total: number }>({ used: 0, total: 1024 * 1024 * 1024 });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   useEffect(() => {
     loadFoldersAndDocuments();
-  }, [classId]);
+    if (user) {
+      loadStorageInfo();
+    }
+  }, [classId, user]);
 
   const loadFoldersAndDocuments = async () => {
     setIsLoading(true);
@@ -58,6 +71,72 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
       setError(error.message || 'Failed to load data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadStorageInfo = async () => {
+    if (!user) return;
+
+    const result = await getTotalStorageUsed(user.id);
+    if (result.success && result.data) {
+      setStorageInfo({
+        used: result.data.totalBytes,
+        total: 1024 * 1024 * 1024
+      });
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 5) {
+      setError('You can upload up to 5 files at once');
+      return;
+    }
+    setSelectedFiles(files);
+    setShowUploadModal(true);
+  };
+
+  const handleUpload = async () => {
+    if (!user || selectedFiles.length === 0) return;
+
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      const result = await uploadClassDocuments(
+        selectedFiles,
+        classId,
+        user.id,
+        selectedFolder?.id || null,
+        (progress) => setUploadProgress(progress)
+      );
+
+      if (result.success) {
+        setShowUploadModal(false);
+        setSelectedFiles([]);
+        setUploadProgress([]);
+        await loadFoldersAndDocuments();
+        await loadStorageInfo();
+
+        if (result.failedFiles && result.failedFiles.length > 0) {
+          setError(`Some files failed to upload: ${result.failedFiles.map(f => f.fileName).join(', ')}`);
+        }
+      } else {
+        setError(result.error || 'Upload failed');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Upload failed');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleCancelUpload = () => {
+    setShowUploadModal(false);
+    setSelectedFiles([]);
+    setUploadProgress([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -115,7 +194,19 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
     if (!bytes) return 'N/A';
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  };
+
+  const getStoragePercentage = (): number => {
+    return (storageInfo.used / storageInfo.total) * 100;
+  };
+
+  const getStorageColor = (): string => {
+    const percentage = getStoragePercentage();
+    if (percentage >= 90) return 'bg-red-500';
+    if (percentage >= 80) return 'bg-orange-500';
+    return 'bg-teal';
   };
 
   const formatDate = (dateString: string): string => {
@@ -207,19 +298,58 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
         </div>
       )}
 
+      {/* Storage Usage Bar */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <HardDrive className="w-5 h-5 text-gray-600" />
+            <span className="text-sm font-medium text-gray-900">Storage Usage</span>
+          </div>
+          <span className="text-sm text-gray-600">
+            {formatFileSize(storageInfo.used)} / {formatFileSize(storageInfo.total)}
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div
+            className={`h-2.5 rounded-full transition-all duration-300 ${getStorageColor()}`}
+            style={{ width: `${Math.min(getStoragePercentage(), 100)}%` }}
+          ></div>
+        </div>
+        {getStoragePercentage() >= 80 && (
+          <p className="text-xs text-orange-600 mt-2">
+            {getStoragePercentage() >= 90 ? 'Storage almost full!' : 'Storage getting full'}
+          </p>
+        )}
+      </div>
+
       {/* Documents List */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">
             {selectedFolder ? `${selectedFolder.folder_name} Documents` : 'All Documents'}
           </h3>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors text-sm font-medium flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            New Document
-          </button>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={getStoragePercentage() >= 95}
+              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                getStoragePercentage() >= 95
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-teal text-white hover:bg-teal/90'
+              }`}
+            >
+              <Upload className="w-4 h-4" />
+              Upload Documents
+            </button>
+          </div>
         </div>
 
         {filteredDocuments.length === 0 ? (
@@ -229,15 +359,20 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
             <p className="text-gray-600 mb-6">
               {selectedFolder
                 ? `No documents in ${selectedFolder.folder_name}`
-                : 'Create your first document to get started'
+                : 'Upload your first document to get started'
               }
             </p>
             <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-6 py-3 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors font-medium inline-flex items-center gap-2"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={getStoragePercentage() >= 95}
+              className={`px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2 transition-colors ${
+                getStoragePercentage() >= 95
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-teal text-white hover:bg-teal/90'
+              }`}
             >
-              <Plus className="w-5 h-5" />
-              Create Document
+              <Upload className="w-5 h-5" />
+              Upload Documents
             </button>
           </div>
         ) : (
@@ -310,6 +445,113 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
           </div>
         )}
       </div>
+
+      {/* Upload Modal */}
+      <AnimatePresence>
+        {showUploadModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+            >
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-gray-900">Upload Documents</h3>
+                  <button
+                    onClick={handleCancelUpload}
+                    disabled={isUploading}
+                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors disabled:opacity-50"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+                  {selectedFolder && ` • Uploading to ${selectedFolder.folder_name}`}
+                </p>
+              </div>
+
+              <div className="p-6 max-h-[60vh] overflow-y-auto">
+                {selectedFiles.length > 0 && (
+                  <div className="space-y-3">
+                    {selectedFiles.map((file, index) => {
+                      const progress = uploadProgress.find(p => p.fileName === file.name);
+                      return (
+                        <div key={index} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <File className="w-5 h-5 text-gray-600 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-900 truncate">{file.name}</p>
+                                <p className="text-xs text-gray-600">{formatFileSize(file.size)}</p>
+                              </div>
+                            </div>
+                            {progress?.status === 'completed' && (
+                              <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                            )}
+                            {progress?.status === 'error' && (
+                              <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                            )}
+                          </div>
+                          {progress && (
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs text-gray-600 capitalize">{progress.status}</span>
+                                <span className="text-xs text-gray-600">{progress.progress}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div
+                                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                                    progress.status === 'error' ? 'bg-red-500' :
+                                    progress.status === 'completed' ? 'bg-green-500' : 'bg-teal'
+                                  }`}
+                                  style={{ width: `${progress.progress}%` }}
+                                ></div>
+                              </div>
+                              {progress.error && (
+                                <p className="text-xs text-red-600 mt-1">{progress.error}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-200 flex items-center justify-between">
+                <button
+                  onClick={handleCancelUpload}
+                  disabled={isUploading}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpload}
+                  disabled={isUploading || selectedFiles.length === 0}
+                  className="px-6 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      Upload {selectedFiles.length} File{selectedFiles.length !== 1 ? 's' : ''}
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

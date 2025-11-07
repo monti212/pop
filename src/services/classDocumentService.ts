@@ -1,4 +1,6 @@
 import { supabase } from './authService';
+import { parseDocumentContent } from '../utils/documentParser';
+import { getUserStorageUsed } from './fileService';
 
 export interface ClassFolder {
   id: string;
@@ -171,6 +173,296 @@ export const createDocument = async (
   } catch (error: any) {
     console.error('Error creating document:', error);
     return { success: false, error: error.message || 'Failed to create document' };
+  }
+};
+
+const STORAGE_BUCKET = 'user-files';
+const MAX_USER_STORAGE_BYTES = 1 * 1024 * 1024 * 1024;
+const MAX_FILES_PER_UPLOAD = 5;
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+
+export interface UploadProgress {
+  fileName: string;
+  progress: number;
+  status: 'pending' | 'uploading' | 'processing' | 'complete' | 'error';
+  error?: string;
+}
+
+export interface UploadResult {
+  success: boolean;
+  documents?: ClassDocument[];
+  failedFiles?: { fileName: string; error: string }[];
+  storageUsed?: number;
+  error?: string;
+}
+
+const sanitizeFilename = (filename: string): string => {
+  try {
+    const lastDotIndex = filename.lastIndexOf('.');
+    const name = lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename;
+    const extension = lastDotIndex > 0 ? filename.substring(lastDotIndex) : '';
+
+    const sanitizedName = name
+      .replace(/[^a-zA-Z0-9-_]/g, '_')
+      .replace(/_{2,}/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    const sanitizedExt = extension.replace(/[^a-zA-Z0-9.]/g, '');
+    const result = sanitizedName || 'document';
+    return result + sanitizedExt;
+  } catch (error) {
+    console.error('Error sanitizing filename:', error);
+    return 'document.bin';
+  }
+};
+
+const detectDocumentType = (fileName: string, fileType: string): ClassDocument['document_type'] => {
+  const lowerFileName = fileName.toLowerCase();
+  const lowerFileType = fileType.toLowerCase();
+
+  if (lowerFileName.includes('lesson') || lowerFileName.includes('plan')) {
+    return 'lesson_plan';
+  }
+  if (lowerFileName.includes('note')) {
+    return 'note';
+  }
+  if (lowerFileName.includes('report')) {
+    return 'report';
+  }
+  if (lowerFileName.includes('resource')) {
+    return 'resource';
+  }
+
+  if (lowerFileType.includes('pdf') || lowerFileType.includes('word') || lowerFileType.includes('document')) {
+    return 'resource';
+  }
+
+  return 'other';
+};
+
+export const getClassDocumentsStorageUsed = async (
+  classId: string
+): Promise<ServiceResponse<number>> => {
+  try {
+    const { data, error } = await supabase
+      .from('class_documents')
+      .select('file_size')
+      .eq('class_id', classId)
+      .is('deleted_at', null);
+
+    if (error) throw error;
+
+    const totalBytes = data?.reduce((sum, doc) => sum + (doc.file_size || 0), 0) || 0;
+
+    return { success: true, data: totalBytes };
+  } catch (error: any) {
+    console.error('Error getting class documents storage:', error);
+    return { success: false, error: error.message || 'Failed to get storage usage' };
+  }
+};
+
+export const getTotalStorageUsed = async (
+  userId: string
+): Promise<ServiceResponse<{ totalBytes: number; classDocsBytes: number; userFilesBytes: number }>> => {
+  try {
+    const userStorageResult = await getUserStorageUsed(userId);
+    if (!userStorageResult.success) {
+      return { success: false, error: userStorageResult.error };
+    }
+
+    const { data: classDocsData, error: classDocsError } = await supabase
+      .from('class_documents')
+      .select('file_size')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+
+    if (classDocsError) throw classDocsError;
+
+    const classDocsBytes = classDocsData?.reduce((sum, doc) => sum + (doc.file_size || 0), 0) || 0;
+    const userFilesBytes = userStorageResult.bytesUsed || 0;
+    const totalBytes = classDocsBytes + userFilesBytes;
+
+    return {
+      success: true,
+      data: { totalBytes, classDocsBytes, userFilesBytes }
+    };
+  } catch (error: any) {
+    console.error('Error getting total storage:', error);
+    return { success: false, error: error.message || 'Failed to get total storage usage' };
+  }
+};
+
+export const uploadClassDocuments = async (
+  files: File[],
+  classId: string,
+  userId: string,
+  folderId: string | null,
+  onProgress?: (progress: UploadProgress[]) => void
+): Promise<UploadResult> => {
+  const uploadedDocuments: ClassDocument[] = [];
+  const failedFiles: { fileName: string; error: string }[] = [];
+  const progressMap = new Map<string, UploadProgress>();
+
+  try {
+    if (!supabase) {
+      return { success: false, error: 'Service temporarily unavailable' };
+    }
+
+    if (files.length === 0) {
+      return { success: false, error: 'No files selected' };
+    }
+
+    if (files.length > MAX_FILES_PER_UPLOAD) {
+      return { success: false, error: `Maximum ${MAX_FILES_PER_UPLOAD} files can be uploaded at once` };
+    }
+
+    files.forEach(file => {
+      progressMap.set(file.name, {
+        fileName: file.name,
+        progress: 0,
+        status: 'pending'
+      });
+    });
+
+    if (onProgress) {
+      onProgress(Array.from(progressMap.values()));
+    }
+
+    const totalFileSize = files.reduce((sum, file) => sum + file.size, 0);
+    const storageResult = await getTotalStorageUsed(userId);
+
+    if (!storageResult.success || !storageResult.data) {
+      return { success: false, error: 'Could not check storage availability' };
+    }
+
+    const { totalBytes: currentUsage } = storageResult.data;
+    const newTotal = currentUsage + totalFileSize;
+
+    if (newTotal > MAX_USER_STORAGE_BYTES) {
+      const currentGB = (currentUsage / (1024 * 1024 * 1024)).toFixed(2);
+      const neededGB = (totalFileSize / (1024 * 1024 * 1024)).toFixed(2);
+      return {
+        success: false,
+        error: `Storage limit exceeded. You're using ${currentGB}GB of 1GB. These files require ${neededGB}GB. Please delete some files first.`
+      };
+    }
+
+    for (const file of files) {
+      const progressItem = progressMap.get(file.name)!;
+
+      try {
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          throw new Error(`File too large. Maximum size is ${(MAX_FILE_SIZE_BYTES / (1024 * 1024)).toFixed(0)}MB`);
+        }
+
+        progressItem.status = 'uploading';
+        progressItem.progress = 25;
+        if (onProgress) onProgress(Array.from(progressMap.values()));
+
+        const timestamp = Date.now();
+        const sanitizedName = sanitizeFilename(file.name);
+        const fileExtension = sanitizedName.split('.').pop() || '';
+        const storagePath = `${userId}/class-documents/${classId}/${timestamp}-${sanitizedName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(STORAGE_BUCKET)
+          .upload(storagePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type || 'application/octet-stream'
+          });
+
+        if (uploadError) throw uploadError;
+
+        progressItem.progress = 50;
+        progressItem.status = 'processing';
+        if (onProgress) onProgress(Array.from(progressMap.values()));
+
+        const { data: { publicUrl } } = supabase.storage
+          .from(STORAGE_BUCKET)
+          .getPublicUrl(storagePath);
+
+        let contentPreview = '';
+        try {
+          contentPreview = await parseDocumentContent(file);
+          if (contentPreview.length > 5000) {
+            contentPreview = contentPreview.substring(0, 5000) + '...';
+          }
+        } catch (error) {
+          console.warn('Could not extract content from file:', file.name, error);
+        }
+
+        progressItem.progress = 75;
+        if (onProgress) onProgress(Array.from(progressMap.values()));
+
+        const documentType = detectDocumentType(file.name, file.type);
+        const isLessonPlan = contentPreview.toLowerCase().includes('lesson') && contentPreview.toLowerCase().includes('objective');
+
+        const { data: docData, error: docError } = await supabase
+          .from('class_documents')
+          .insert({
+            class_id: classId,
+            folder_id: folderId,
+            user_id: userId,
+            title: file.name.replace(/\.[^/.]+$/, ''),
+            document_type: documentType,
+            content: contentPreview,
+            file_url: publicUrl,
+            storage_path: storagePath,
+            file_extension: fileExtension,
+            file_size: file.size,
+            is_lesson_plan: isLessonPlan,
+            metadata: {
+              originalName: file.name,
+              mimeType: file.type,
+              uploadedAt: new Date().toISOString(),
+              lastModified: file.lastModified ? new Date(file.lastModified).toISOString() : null
+            }
+          })
+          .select()
+          .single();
+
+        if (docError) throw docError;
+
+        uploadedDocuments.push(docData as ClassDocument);
+        progressItem.status = 'complete';
+        progressItem.progress = 100;
+        if (onProgress) onProgress(Array.from(progressMap.values()));
+
+      } catch (error: any) {
+        console.error(`Error uploading ${file.name}:`, error);
+        progressItem.status = 'error';
+        progressItem.error = error.message || 'Upload failed';
+        failedFiles.push({ fileName: file.name, error: error.message || 'Upload failed' });
+        if (onProgress) onProgress(Array.from(progressMap.values()));
+      }
+    }
+
+    const finalStorageResult = await getTotalStorageUsed(userId);
+    const storageUsed = finalStorageResult.success ? finalStorageResult.data?.totalBytes : currentUsage;
+
+    if (uploadedDocuments.length === 0) {
+      return {
+        success: false,
+        failedFiles,
+        error: 'All file uploads failed'
+      };
+    }
+
+    return {
+      success: true,
+      documents: uploadedDocuments,
+      failedFiles: failedFiles.length > 0 ? failedFiles : undefined,
+      storageUsed
+    };
+
+  } catch (error: any) {
+    console.error('Error in batch upload:', error);
+    return {
+      success: false,
+      error: error.message || 'Batch upload failed',
+      failedFiles
+    };
   }
 };
 
