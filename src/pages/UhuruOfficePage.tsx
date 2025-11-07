@@ -39,8 +39,8 @@ const UhuruDocsPage: React.FC = () => {
   const [showAutoSavedOnly, setShowAutoSavedOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const { user, profile } = useAuth();
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const quillRef = useRef<ReactQuill>(null);
 
   // Get initial content from navigation state
@@ -71,76 +71,6 @@ const UhuruDocsPage: React.FC = () => {
     'blockquote', 'code-block',
     'link', 'image'
   ];
-
-  useEffect(() => {
-    if (content && content.trim() !== '' && content !== '<p><br></p>') {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      
-      saveTimeoutRef.current = setTimeout(() => {
-        if (document.hasFocus()) {
-          handleAutoSave();
-        }
-      }, 5000);
-    }
-    
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [content]);
-
-  const handleAutoSave = async () => {
-    if (!user) return;
-
-    try {
-      if (currentDocument?.id) {
-        // Update existing document
-        const result = await updateDocument(currentDocument.id, user.id, {
-          title: title || 'Untitled Document',
-          content
-        });
-
-        if (result.success && result.document) {
-          const updatedDoc: UhuruDocument = {
-            id: result.document.id,
-            title: result.document.title,
-            content: result.document.content,
-            created_at: result.document.created_at,
-            updated_at: result.document.updated_at,
-            isAutoSaved: result.document.is_auto_saved
-          };
-          setCurrentDocument(updatedDoc);
-          // Refresh the documents list
-          await loadSavedDocuments();
-        }
-      } else {
-        // Create new document
-        const result = await createDocument(user.id, title || 'Untitled Document', content, {
-          documentType: 'office',
-          isAutoSaved: true,
-          source: location.state?.source || 'manual'
-        });
-
-        if (result.success && result.document) {
-          const newDoc: UhuruDocument = {
-            id: result.document.id,
-            title: result.document.title,
-            content: result.document.content,
-            created_at: result.document.created_at,
-            updated_at: result.document.updated_at,
-            isAutoSaved: result.document.is_auto_saved
-          };
-          setCurrentDocument(newDoc);
-          await loadSavedDocuments();
-        }
-      }
-    } catch (error) {
-      console.error('Auto-save error:', error);
-    }
-  };
 
   const loadSavedDocuments = async () => {
     if (!user) {
@@ -193,13 +123,22 @@ const UhuruDocsPage: React.FC = () => {
     }
   };
 
-  const handleSaveDocument = async (showNotification = true) => {
+  const handleSaveDocument = async () => {
     if (!user) {
       setError('Please sign in to save documents');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    if (!content || content.trim() === '' || content === '<p><br></p>') {
+      setError('Cannot save empty document');
+      setTimeout(() => setError(null), 3000);
       return;
     }
 
     setIsSaving(true);
+    setError(null);
+    setSaveSuccess(false);
 
     try {
       if (currentDocument?.id) {
@@ -219,9 +158,12 @@ const UhuruDocsPage: React.FC = () => {
             isAutoSaved: false
           };
           setCurrentDocument(updatedDoc);
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 2000);
           await loadSavedDocuments();
         } else {
           setError(result.error || 'Failed to save document');
+          setTimeout(() => setError(null), 3000);
         }
       } else {
         // Create new document
@@ -241,14 +183,18 @@ const UhuruDocsPage: React.FC = () => {
             isAutoSaved: false
           };
           setCurrentDocument(newDoc);
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 2000);
           await loadSavedDocuments();
         } else {
           setError(result.error || 'Failed to create document');
+          setTimeout(() => setError(null), 3000);
         }
       }
     } catch (error: any) {
       console.error('Save error:', error);
       setError(error.message || 'Failed to save document');
+      setTimeout(() => setError(null), 3000);
     } finally {
       setIsSaving(false);
     }
@@ -436,6 +382,11 @@ const UhuruDocsPage: React.FC = () => {
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       <div className="h-screen bg-sand-200 flex flex-col overflow-hidden">
       <header className="bg-white shadow-card border-b border-borders px-6 py-4 flex-shrink-0">
+        {error && (
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-12 shadow-card z-50 max-w-md">
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           {/* Left side - Back button */}
           <button
@@ -454,13 +405,20 @@ const UhuruDocsPage: React.FC = () => {
               <h1 className="text-xl font-bold text-gray-800">Uhuru Docs</h1>
             </div>
             
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="px-3 py-1 border border-borders rounded-12 focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent text-navy bg-white"
-              placeholder="Document title..."
-            />
+            <div className="flex flex-col">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="px-3 py-1 border border-borders rounded-12 focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent text-navy bg-white"
+                placeholder="Document title..."
+              />
+              {currentDocument && (
+                <span className="text-xs text-navy/50 mt-1 px-1">
+                  Last saved: {new Date(currentDocument.updated_at).toLocaleString()}
+                </span>
+              )}
+            </div>
           </div>
           
           {/* Right side - Action buttons */}
@@ -545,14 +503,20 @@ const UhuruDocsPage: React.FC = () => {
             </div>
 
             <button
-              onClick={() => handleSaveDocument()}
-              disabled={isSaving}
-              className="px-3 py-2 rounded-12 bg-teal text-white hover:bg-teal/90 transition-colors duration-200 flex items-center gap-2 text-sm shadow-card"
+              onClick={handleSaveDocument}
+              disabled={isSaving || !user}
+              className="px-3 py-2 rounded-12 bg-teal text-white hover:bg-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center gap-2 text-sm shadow-card"
+              title={!user ? 'Please sign in to save' : 'Save document'}
             >
               {isSaving ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span className="hidden sm:inline">Saving</span>
+                </>
+              ) : saveSuccess ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span className="hidden sm:inline">Saved</span>
                 </>
               ) : (
                 <>
