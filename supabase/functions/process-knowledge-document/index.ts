@@ -61,6 +61,40 @@ Provide a comprehensive but concise summary in the following structure:
 - Extract information that directly helps teachers plan and deliver lessons`;
 }
 
+// Micro summary prompt - ultra-compressed version
+function buildMicroSummaryPrompt(fullSummary: string) {
+  return `Create an ultra-compressed summary (100-150 tokens maximum) of this teaching document.
+
+Full Summary:
+${fullSummary.substring(0, 2000)}
+
+Requirements:
+- Maximum 100-150 tokens (about 2-3 sentences)
+- Focus only on the MOST critical information
+- Include document type and primary application
+- Use extremely concise language
+- Omit examples and detailed explanations
+
+Output only the micro summary text, nothing else.`;
+}
+
+// Standard summary prompt - medium compression
+function buildStandardSummaryPrompt(fullSummary: string) {
+  return `Create a medium-length summary (300-500 tokens) of this teaching document.
+
+Full Summary:
+${fullSummary.substring(0, 5000)}
+
+Requirements:
+- Maximum 300-500 tokens (about 1-2 paragraphs)
+- Include key principles and main applications
+- Mention grade levels and subjects if applicable
+- Keep it actionable and practical
+- Use concise language but retain important details
+
+Output only the standard summary text, nothing else.`;
+}
+
 function extractKeyConceptsPrompt(summary: string) {
   return `Based on this document summary, extract the TOP 10 most important concepts, rules, or guidelines as a JSON array.
 
@@ -284,9 +318,83 @@ Deno.serve(async (req: Request) => {
 
     console.log(`✅ Extracted ${keyConcepts.length} key concepts`);
 
+    // Generate micro summary (ultra-compressed)
+    console.log(`📝 Generating micro summary...`);
+    const microSummaryResponse = await fetch(uhuruApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${uhuruApiKey}`,
+      },
+      body: JSON.stringify({
+        model: uhuruModel,
+        input: [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              { type: 'input_text', text: buildMicroSummaryPrompt(aiSummary) }
+            ]
+          }
+        ],
+        instructions: 'Create ultra-compressed summary. Maximum 100-150 tokens.',
+        stream: false
+      }),
+    });
+
+    let microSummary = '';
+    if (microSummaryResponse.ok) {
+      const microData = await microSummaryResponse.json();
+      if (microData.response?.output_text) {
+        microSummary = microData.response.output_text;
+      } else if (microData.message?.content) {
+        const textParts = microData.message.content.filter((p: any) => p.type === 'output_text');
+        microSummary = textParts.map((p: any) => p.text).join('\n');
+      }
+    }
+    console.log(`✅ Micro summary generated (${microSummary.length} characters)`);
+
+    // Generate standard summary (medium compression)
+    console.log(`📝 Generating standard summary...`);
+    const standardSummaryResponse = await fetch(uhuruApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${uhuruApiKey}`,
+      },
+      body: JSON.stringify({
+        model: uhuruModel,
+        input: [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              { type: 'input_text', text: buildStandardSummaryPrompt(aiSummary) }
+            ]
+          }
+        ],
+        instructions: 'Create medium-length summary. Maximum 300-500 tokens.',
+        stream: false
+      }),
+    });
+
+    let standardSummary = '';
+    if (standardSummaryResponse.ok) {
+      const standardData = await standardSummaryResponse.json();
+      if (standardData.response?.output_text) {
+        standardSummary = standardData.response.output_text;
+      } else if (standardData.message?.content) {
+        const textParts = standardData.message.content.filter((p: any) => p.type === 'output_text');
+        standardSummary = textParts.map((p: any) => p.text).join('\n');
+      }
+    }
+    console.log(`✅ Standard summary generated (${standardSummary.length} characters)`);
+
     const processingDuration = Date.now() - processingStartTime;
     const wordCount = extractedContent.split(/\s+/).length;
     const tokenCount = Math.ceil(extractedContent.length / 4);
+    const microTokenCount = Math.ceil(microSummary.length / 4);
+    const standardTokenCount = Math.ceil(standardSummary.length / 4);
     const estimatedCost = (tokenCount / 1000000) * 2.5;
 
     const qualityScore = document.word_count > 0
@@ -297,12 +405,16 @@ Deno.serve(async (req: Request) => {
       .from('admin_knowledge_documents')
       .update({
         ai_summary: aiSummary,
+        micro_summary: microSummary,
+        standard_summary: standardSummary,
         key_concepts: keyConcepts,
         processing_status: 'completed',
         processed_at: new Date().toISOString(),
         is_active: true,
         word_count: wordCount,
         token_count: tokenCount,
+        micro_token_count: microTokenCount,
+        standard_token_count: standardTokenCount,
         estimated_cost: estimatedCost,
         processing_duration_ms: processingDuration,
         extraction_quality_score: qualityScore,

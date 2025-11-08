@@ -21,50 +21,79 @@ function getRandomUhuruIntro() {
 // GreyEd line (only shown on follow-up identity questions)
 const GREYED_LINE = "Built by GreyEd to support teachers with a curated knowledge base and privacy-first controls.";
 
-// Function to fetch active knowledge base from database
-async function fetchKnowledgeBase(supabaseClient: any): Promise<string> {
+// Smart knowledge base fetcher with relevance filtering and token budget
+async function fetchRelevantKnowledgeBase(
+  supabaseClient: any,
+  userQuery: string,
+  messageCount: number,
+  useStandardSummaries: boolean = false
+): Promise<{ content: string; documentIds: string[] }> {
   try {
-    const { data, error } = await supabaseClient.rpc('get_active_knowledge_base');
+    // Calculate token budget based on conversation depth
+    // First message: use micro summaries with tight budget
+    // Follow-up messages: expand budget if needed
+    const maxTokenBudget = messageCount <= 2 ? 800 : 1500;
+
+    console.log(`📊 Knowledge base fetch: query="${userQuery.substring(0, 50)}...", messages=${messageCount}, budget=${maxTokenBudget}`);
+
+    // Use the smart relevance-based function
+    const { data, error } = await supabaseClient.rpc('get_relevant_knowledge_base', {
+      query_text: userQuery,
+      max_token_budget: maxTokenBudget,
+      use_standard_summaries: useStandardSummaries
+    });
 
     if (error || !data || data.length === 0) {
-      return '';
+      console.log('⚠️ No relevant knowledge base documents found');
+      return { content: '', documentIds: [] };
     }
 
+    console.log(`✅ Found ${data.length} relevant documents (total ${data.reduce((sum: number, d: any) => sum + (d.token_count || 0), 0)} tokens)`);
+
     let knowledgeSection = '\n\n# GREYED KNOWLEDGE BASE\n\n';
-    knowledgeSection += 'You have access to the following curated knowledge from GreyEd. This information is critical and must inform your responses when relevant:\n\n';
+    knowledgeSection += 'Relevant curated knowledge from GreyEd. Use this information when applicable:\n\n';
+
+    const documentIds: string[] = [];
 
     for (const doc of data) {
+      documentIds.push(doc.document_id);
+
       knowledgeSection += `## ${doc.document_title}\n`;
-      knowledgeSection += `**Type:** ${doc.document_type}\n`;
+      knowledgeSection += `**Type:** ${doc.document_type}`;
 
       if (doc.grade_level && doc.grade_level !== 'All') {
-        knowledgeSection += `**Grade Level:** ${doc.grade_level}\n`;
+        knowledgeSection += ` | **Grade:** ${doc.grade_level}`;
       }
 
       if (doc.subject && doc.subject !== 'All') {
-        knowledgeSection += `**Subject:** ${doc.subject}\n`;
+        knowledgeSection += ` | **Subject:** ${doc.subject}`;
       }
 
-      knowledgeSection += '\n' + doc.summary + '\n\n';
+      knowledgeSection += '\n\n' + doc.summary_content + '\n\n';
 
-      if (doc.key_concepts && Array.isArray(doc.key_concepts) && doc.key_concepts.length > 0) {
-        knowledgeSection += '**Key Concepts:**\n';
-        for (const concept of doc.key_concepts) {
-          knowledgeSection += `- **${concept.concept}**: ${concept.description}\n`;
-        }
-        knowledgeSection += '\n';
+      // Only include key concepts for high-relevance documents (score > 50)
+      if (doc.relevance_score > 50 && doc.key_concepts && Array.isArray(doc.key_concepts) && doc.key_concepts.length > 0) {
+        knowledgeSection += '**Key Concepts:** ';
+        const topConcepts = doc.key_concepts.slice(0, 3); // Limit to top 3 concepts
+        knowledgeSection += topConcepts.map((c: any) => c.concept).join(', ') + '\n\n';
       }
 
       knowledgeSection += '---\n\n';
     }
 
-    knowledgeSection += '**IMPORTANT:** Use this knowledge base to inform your responses. When a teacher asks about methodologies, curriculum, or syllabus content covered in these documents, draw from this information naturally without citing sources. This knowledge should be seamlessly integrated into your teaching assistance.\n\n';
+    knowledgeSection += '**Note:** Apply this knowledge naturally without citing sources.\n\n';
 
-    return knowledgeSection;
+    return { content: knowledgeSection, documentIds };
   } catch (error) {
-    console.error('Error fetching knowledge base:', error);
-    return '';
+    console.error('❌ Error fetching relevant knowledge base:', error);
+    return { content: '', documentIds: [] };
   }
+}
+
+// Legacy function for backward compatibility - now uses smart fetching
+async function fetchKnowledgeBase(supabaseClient: any): Promise<string> {
+  const result = await fetchRelevantKnowledgeBase(supabaseClient, '', 1, false);
+  return result.content;
 }
 
 // System prompt builder for Pencils of Promise (only 2.0)
@@ -679,12 +708,44 @@ Deno.serve(async (req) => {
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  console.log('📚 [EDGE] Fetching knowledge base...');
-  const knowledgeBase = await fetchKnowledgeBase(supabase);
+  // Extract user's latest query for relevance matching
+  const userMessages = messages.filter(m => m.role === 'user');
+  const latestUserQuery = userMessages.length > 0
+    ? getTextContentFromMessage(userMessages[userMessages.length - 1].content)
+    : '';
+
+  const messageCount = messages.length;
+  const useStandardSummaries = messageCount > 4; // Use more detailed summaries for deeper conversations
+
+  console.log('📚 [EDGE] Fetching relevant knowledge base...');
+  console.log('📚 [EDGE] Query context:', {
+    latestQuery: latestUserQuery.substring(0, 100),
+    messageCount,
+    useStandardSummaries
+  });
+
+  const { content: knowledgeBase, documentIds } = await fetchRelevantKnowledgeBase(
+    supabase,
+    latestUserQuery,
+    messageCount,
+    useStandardSummaries
+  );
+
   console.log('📚 [EDGE] Knowledge base fetched:', {
     hasKnowledge: !!knowledgeBase,
-    knowledgeLength: knowledgeBase.length
+    knowledgeLength: knowledgeBase.length,
+    documentsUsed: documentIds.length,
+    estimatedTokens: Math.ceil(knowledgeBase.length / 4)
   });
+
+  // Track usage statistics
+  if (documentIds.length > 0) {
+    try {
+      await supabase.rpc('update_knowledge_usage_stats', { doc_ids: documentIds });
+    } catch (statsError) {
+      console.warn('⚠️ Failed to update knowledge usage stats:', statsError);
+    }
+  }
 
   const systemPrompt = await buildUhuruSystemPrompt({ language, region, displayName, knowledgeBase });
   const model = MODEL_20;

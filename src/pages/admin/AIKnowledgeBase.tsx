@@ -22,8 +22,12 @@ interface KnowledgeDocument {
   original_content: string;
   processing_status: string;
   ai_summary: string | null;
+  micro_summary: string | null;
+  standard_summary: string | null;
   key_concepts: any[];
+  keywords: any;
   is_active: boolean;
+  priority_level: 'critical' | 'high' | 'standard';
   file_name: string | null;
   file_size: number | null;
   file_format: string | null;
@@ -31,7 +35,11 @@ interface KnowledgeDocument {
   word_count: number | null;
   extraction_quality_score: number | null;
   token_count: number | null;
+  micro_token_count: number | null;
+  standard_token_count: number | null;
   estimated_cost: number | null;
+  usage_count: number | null;
+  last_used_at: string | null;
   error_message: string | null;
   created_at: string;
   updated_at: string;
@@ -369,6 +377,31 @@ const AIKnowledgeBase: React.FC = () => {
     }
   };
 
+  const handlePriorityChange = async (documentId: string, newPriority: 'critical' | 'high' | 'standard') => {
+    try {
+      setError(null);
+      const { error } = await supabase
+        .from('admin_knowledge_documents')
+        .update({ priority_level: newPriority })
+        .eq('id', documentId);
+
+      if (error) throw error;
+      await fetchDocuments();
+    } catch (err: any) {
+      console.error('Error updating priority:', err);
+      setError(err.message);
+    }
+  };
+
+  const getPriorityBadgeColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return '#ef4444'; // Red
+      case 'high': return Brand.orange;
+      case 'standard': return Brand.teal;
+      default: return Brand.navy;
+    }
+  };
+
   const removeUploadingFile = (fileId: string) => {
     setUploadingFiles(prev => prev.filter(f => f.id !== fileId));
   };
@@ -421,6 +454,14 @@ const AIKnowledgeBase: React.FC = () => {
   const totalCost = documents.reduce((sum, d) => sum + (d.estimated_cost || 0), 0);
   const totalTokens = documents.reduce((sum, d) => sum + (d.token_count || 0), 0);
   const avgTokensPerDoc = totalDocuments > 0 ? Math.round(totalTokens / totalDocuments) : 0;
+
+  // Token efficiency metrics
+  const totalMicroTokens = documents.reduce((sum, d) => sum + (d.micro_token_count || 0), 0);
+  const totalStandardTokens = documents.reduce((sum, d) => sum + (d.standard_token_count || 0), 0);
+  const avgMicroTokens = activeDocuments > 0 ? Math.round(totalMicroTokens / activeDocuments) : 0;
+  const avgStandardTokens = activeDocuments > 0 ? Math.round(totalStandardTokens / activeDocuments) : 0;
+  const tokenSavingsPercent = totalTokens > 0 ? Math.round(((totalTokens - totalMicroTokens) / totalTokens) * 100) : 0;
+  const totalUsageCount = documents.reduce((sum, d) => sum + (d.usage_count || 0), 0);
 
   if (loading && documents.length === 0) {
     return (
@@ -482,6 +523,7 @@ const AIKnowledgeBase: React.FC = () => {
                 <div>
                   <p className="text-sm font-medium" style={{ color: Brand.navy, opacity: 0.7 }}>Total Documents</p>
                   <p className="text-2xl font-bold mt-1" style={{ color: Brand.navy }}>{totalDocuments}</p>
+                  <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.5 }}>{activeDocuments} active</p>
                 </div>
                 <Database className="w-8 h-8" style={{ color: Brand.teal, opacity: 0.3 }} />
               </div>
@@ -490,8 +532,9 @@ const AIKnowledgeBase: React.FC = () => {
             <div className="rounded-xl p-5 border" style={{ borderColor: Brand.line, background: '#fff' }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium" style={{ color: Brand.navy, opacity: 0.7 }}>Active in AI</p>
-                  <p className="text-2xl font-bold mt-1" style={{ color: Brand.navy }}>{activeDocuments}</p>
+                  <p className="text-sm font-medium" style={{ color: Brand.navy, opacity: 0.7 }}>Token Savings</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: '#10b981' }}>{tokenSavingsPercent}%</p>
+                  <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.5 }}>Micro vs Full</p>
                 </div>
                 <TrendingUp className="w-8 h-8" style={{ color: '#10b981', opacity: 0.3 }} />
               </div>
@@ -500,31 +543,33 @@ const AIKnowledgeBase: React.FC = () => {
             <div className="rounded-xl p-5 border" style={{ borderColor: Brand.line, background: '#fff' }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium" style={{ color: Brand.navy, opacity: 0.7 }}>Total Tokens</p>
-                  <p className="text-2xl font-bold mt-1" style={{ color: Brand.navy }}>{totalTokens.toLocaleString()}</p>
-                  <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.5 }}>Avg: {avgTokensPerDoc.toLocaleString()}</p>
+                  <p className="text-sm font-medium" style={{ color: Brand.navy, opacity: 0.7 }}>Avg per Query</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: Brand.navy }}>{avgMicroTokens}</p>
+                  <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.5 }}>micro tokens</p>
+                </div>
+                <Zap className="w-8 h-8" style={{ color: Brand.teal, opacity: 0.3 }} />
+              </div>
+            </div>
+
+            <div className="rounded-xl p-5 border" style={{ borderColor: Brand.line, background: '#fff' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium" style={{ color: Brand.navy, opacity: 0.7 }}>Total Usage</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: Brand.navy }}>{totalUsageCount}</p>
+                  <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.5 }}>queries served</p>
+                </div>
+                <TrendingUp className="w-8 h-8" style={{ color: Brand.orange, opacity: 0.3 }} />
+              </div>
+            </div>
+
+            <div className="rounded-xl p-5 border" style={{ borderColor: Brand.line, background: '#fff' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium" style={{ color: Brand.navy, opacity: 0.7 }}>Efficiency</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: Brand.navy }}>{avgStandardTokens}</p>
+                  <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.5 }}>standard tokens</p>
                 </div>
                 <Zap className="w-8 h-8" style={{ color: Brand.orange, opacity: 0.3 }} />
-              </div>
-            </div>
-
-            <div className="rounded-xl p-5 border" style={{ borderColor: Brand.line, background: '#fff' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium" style={{ color: Brand.navy, opacity: 0.7 }}>Storage Used</p>
-                  <p className="text-2xl font-bold mt-1" style={{ color: Brand.navy }}>{formatFileSize(totalSize)}</p>
-                </div>
-                <Archive className="w-8 h-8" style={{ color: Brand.orange, opacity: 0.3 }} />
-              </div>
-            </div>
-
-            <div className="rounded-xl p-5 border" style={{ borderColor: Brand.line, background: '#fff' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium" style={{ color: Brand.navy, opacity: 0.7 }}>Total Cost</p>
-                  <p className="text-2xl font-bold mt-1" style={{ color: Brand.navy }}>${totalCost.toFixed(2)}</p>
-                </div>
-                <DollarSign className="w-8 h-8" style={{ color: Brand.teal, opacity: 0.3 }} />
               </div>
             </div>
           </div>
@@ -728,6 +773,12 @@ const AIKnowledgeBase: React.FC = () => {
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: Brand.navy }}>
                       Tokens
                     </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: Brand.navy }}>
+                      Priority
+                    </th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: Brand.navy }}>
+                      Usage
+                    </th>
                     <th
                       className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-opacity-50"
                       style={{ color: Brand.navy }}
@@ -750,7 +801,7 @@ const AIKnowledgeBase: React.FC = () => {
                 <tbody className="divide-y" style={{ borderColor: Brand.line }}>
                   {filteredDocuments.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-5 py-12 text-center">
+                      <td colSpan={11} className="px-5 py-12 text-center">
                         <FileText className="w-12 h-12 mx-auto mb-3" style={{ color: Brand.navy, opacity: 0.2 }} />
                         <p className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>
                           {documents.length === 0 ? 'No documents uploaded yet' : 'No documents match your filters'}
@@ -790,8 +841,34 @@ const AIKnowledgeBase: React.FC = () => {
                         <td className="px-5 py-4 text-sm" style={{ color: Brand.navy }}>
                           {doc.word_count ? doc.word_count.toLocaleString() : 'N/A'}
                         </td>
-                        <td className="px-5 py-4 text-sm font-medium" style={{ color: Brand.orange }}>
-                          {doc.token_count ? doc.token_count.toLocaleString() : '-'}
+                        <td className="px-5 py-4">
+                          <div className="text-xs">
+                            <div className="font-medium" style={{ color: Brand.navy }}>
+                              Micro: {doc.micro_token_count || '-'}
+                            </div>
+                            <div style={{ color: Brand.navy, opacity: 0.6 }}>
+                              Std: {doc.standard_token_count || '-'}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <select
+                            value={doc.priority_level || 'standard'}
+                            onChange={(e) => handlePriorityChange(doc.id, e.target.value as 'critical' | 'high' | 'standard')}
+                            className="text-xs px-2 py-1 rounded border outline-none"
+                            style={{
+                              borderColor: Brand.line,
+                              color: '#fff',
+                              background: getPriorityBadgeColor(doc.priority_level || 'standard')
+                            }}
+                          >
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="standard">Standard</option>
+                          </select>
+                        </td>
+                        <td className="px-5 py-4 text-sm" style={{ color: Brand.navy }}>
+                          {doc.usage_count || 0}×
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
