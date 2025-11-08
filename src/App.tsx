@@ -38,6 +38,7 @@ const WhatsAppMessages = lazy(() => import('./pages/admin/WhatsAppMessages'));
 const CostBreakdownMaker = lazy(() => import('./pages/admin/CostBreakdownMaker'));
 const ComprehensiveAdminDashboard = lazy(() => import('./pages/admin/ComprehensiveAdminDashboard'));
 const AIKnowledgeBase = lazy(() => import('./pages/admin/AIKnowledgeBase'));
+const TokenUsage = lazy(() => import('./pages/admin/TokenUsage'));
 const UhuruDocsPage = lazy(() => import('./pages/UhuruOfficePage'));
 const UhuruSheetsPage = lazy(() => import('./pages/UhuruSheetsPage'));
 const UhuruFilesPage = lazy(() => import('./pages/UhuruFilesPage'));
@@ -300,6 +301,7 @@ const AppContentInner: React.FC = () => {
         {/* Protected Admin Routes */}
         <Route element={<AdminRoute />}>
           <Route path="/admin" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><ComprehensiveAdminDashboard /></Suspense>} />
+          <Route path="/admin/token-usage" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TokenUsage /></Suspense>} />
           <Route path="/admin/whatsapp" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><WhatsAppMessages /></Suspense>} />
           <Route path="/admin/cost-breakdown" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><CostBreakdownMaker /></Suspense>} />
           <Route path="/admin/knowledge-base" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><AIKnowledgeBase /></Suspense>} />

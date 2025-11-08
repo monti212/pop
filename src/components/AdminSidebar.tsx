@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Database, Menu, X } from 'lucide-react';
+import { Activity, Database, Menu, X, Zap } from 'lucide-react';
 import { supabase } from '../services/authService';
 
 const Brand = {
@@ -69,6 +69,11 @@ const AdminSidebar: React.FC = () => {
       icon: Activity,
       label: 'Dashboard',
       exact: true,
+    },
+    {
+      path: '/admin/token-usage',
+      icon: Zap,
+      label: 'Token Usage',
     },
     {
       path: '/admin/knowledge-base',
