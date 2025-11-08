@@ -44,6 +44,7 @@ const UhuruSheetsPage = lazy(() => import('./pages/UhuruSheetsPage'));
 const UhuruFilesPage = lazy(() => import('./pages/UhuruFilesPage'));
 const TechnicalDocumentationSystem = lazy(() => import('./pages/TechnicalDocumentationSystem'));
 const SupaAdmin = lazy(() => import('./pages/SupaAdmin'));
+const EnhancedSupaAdmin = lazy(() => import('./pages/EnhancedSupaAdmin'));
 
 function App() {
   return (
@@ -310,6 +311,7 @@ const AppContentInner: React.FC = () => {
         {/* Protected Supa Admin Route - Only for monti@orionx.xyz */}
         <Route element={<SupaAdminRoute />}>
           <Route path="/supa-admin" element={<Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"><div className="text-white text-xl">Loading...</div></div>}><SupaAdmin /></Suspense>} />
+          <Route path="/supa-admin/live" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><EnhancedSupaAdmin /></Suspense>} />
         </Route>
         
         <Route path="/*" element={
