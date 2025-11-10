@@ -94,13 +94,22 @@ export default function SupaAdmin() {
               <h1 className="text-4xl font-bold text-white mb-2">Supa Admin Dashboard</h1>
               <p className="text-slate-400">Optimus Prime - Complete System Metrics</p>
             </div>
-            <Link
-              to="/supa-admin/live"
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
-            >
-              <Zap className="w-5 h-5" />
-              Live Command Center
-            </Link>
+            <div className="flex gap-3">
+              <Link
+                to="/supa-admin/monitor"
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              >
+                <Activity className="w-5 h-5" />
+                Live System Monitor
+              </Link>
+              <Link
+                to="/supa-admin/live"
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              >
+                <Zap className="w-5 h-5" />
+                Live Command Center
+              </Link>
+            </div>
           </div>
         </div>
 

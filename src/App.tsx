@@ -45,6 +45,7 @@ const UhuruFilesPage = lazy(() => import('./pages/UhuruFilesPage'));
 const TechnicalDocumentationSystem = lazy(() => import('./pages/TechnicalDocumentationSystem'));
 const SupaAdmin = lazy(() => import('./pages/SupaAdmin'));
 const EnhancedSupaAdmin = lazy(() => import('./pages/EnhancedSupaAdmin'));
+const LiveSystemMonitor = lazy(() => import('./pages/admin/LiveSystemMonitor'));
 
 function App() {
   return (
@@ -312,6 +313,7 @@ const AppContentInner: React.FC = () => {
         <Route element={<SupaAdminRoute />}>
           <Route path="/supa-admin" element={<Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"><div className="text-white text-xl">Loading...</div></div>}><SupaAdmin /></Suspense>} />
           <Route path="/supa-admin/live" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><EnhancedSupaAdmin /></Suspense>} />
+          <Route path="/supa-admin/monitor" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><LiveSystemMonitor /></Suspense>} />
         </Route>
         
         <Route path="/*" element={
