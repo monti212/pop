@@ -92,7 +92,7 @@ const AppContentInner: React.FC = () => {
   const isApiDocsPage = location.pathname === '/api-docs';
   const isAdminLoginPage = location.pathname === '/admin/login';
   const isAdminPage = location.pathname.startsWith('/admin');
-  const isSupaAdminPage = location.pathname === '/supa-admin';
+  const isSupaAdminPage = location.pathname.startsWith('/supa-admin');
   const isChatPage = location.pathname === '/chat';
 
   // U Pages detection
