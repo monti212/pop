@@ -102,7 +102,7 @@ export default function TokenCostBreakdown() {
   const DAILY_HARD_CAP = 30000;
   const CHAT_DAILY_CAP = 7500;
   const MONTHLY_BASE = 833333;
-  const PLAN_TOTAL = 10000000;
+  const PLAN_TOTAL = 10250000;
   const IMAGE_CREDITS = 250000;
 
   const IMAGE_TOKEN_COSTS = {
@@ -302,7 +302,7 @@ export default function TokenCostBreakdown() {
   });
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen pb-20">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-4">
@@ -480,7 +480,7 @@ export default function TokenCostBreakdown() {
             </div>
           </div>
           <div className="text-xs text-gray-600 space-y-1">
-            <div>YTD Used: {(usageData.tokens_used_ytd / 1000000).toFixed(2)}M / 10M</div>
+            <div>YTD Used: {(usageData.tokens_used_ytd / 1000000).toFixed(2)}M / 10.25M</div>
             <div>Refill Balance: {(usageData.refill_balance / 1000).toFixed(0)}K tokens</div>
           </div>
         </div>
