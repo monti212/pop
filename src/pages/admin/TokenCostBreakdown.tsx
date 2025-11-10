@@ -195,16 +195,16 @@ export default function TokenCostBreakdown() {
 
         const refill_balance = refills.reduce((sum, r) => sum + (r.amount - r.consumed), 0);
 
-        const prev_month_unused = 0;
+        const prev_month_unused = balanceData.prev_month_unused || 0;
         const rollover_in = Math.min(prev_month_unused, MONTHLY_BASE);
         const monthly_cap = MONTHLY_BASE + rollover_in;
         const monthly_balance = Math.max(0, monthly_cap - tokens_used_month);
-        const plan_balance_total = Math.max(0, PLAN_TOTAL - balanceData.total_tokens_used) + refill_balance;
+        const plan_balance_total = Math.max(0, PLAN_TOTAL - (balanceData.used_text_total_ytd || 0)) + refill_balance;
 
         const usage: UsageData = {
           tokens_used_today,
           tokens_used_month,
-          tokens_used_ytd: balanceData.total_tokens_used || 0,
+          tokens_used_ytd: balanceData.used_text_total_ytd || 0,
           monthly_base: MONTHLY_BASE,
           monthly_cap,
           monthly_balance,
