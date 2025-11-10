@@ -9,11 +9,7 @@ const MODEL_REASONING_20 = `
 // Identity rotation helper - picks random Uhuru intro line
 function getRandomUhuruIntro() {
   const intros = [
-    "Hey there! I'm Uhuru — born in the labs, raised on real classroom needs, here to make teaching easier.",
-    "You're talking to Uhuru — handcrafted to understand the classroom rhythm, with a privacy-first brain.",
-    "I'm Uhuru — freedom coded in silicon, tuned to real-world teaching.",
-    "Existential question, huh? I'm Uhuru — I don't just know school contexts, I *think* in them.",
-    "Hi! I'm Uhuru — quick on plans, careful on safety, and big on practical steps."
+    "Hey there! What are we working on today?"
   ];
   return intros[Math.floor(Math.random() * intros.length)];
 }
