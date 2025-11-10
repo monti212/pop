@@ -829,22 +829,37 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             null
           ) : role === 'assistant' ? (
             <>
-              {/* Edit (only when long enough) */}
+              {/* U Docs button (only when long enough) */}
               {isAssistantLongMessage && !assistEditing && (
-                <button
-                  onClick={enterAssistEdit}
-                  className="text-sm font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white/90 backdrop-blur-sm rounded-md px-2 py-0.5"
-                  title="Edit"
-                >
-                  Edit
-                </button>
+                <>
+                  <button
+                    onClick={() => handleOpenUhuruDocs()}
+                    className="text-xs font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white/90 backdrop-blur-sm rounded-md px-2 py-0.5"
+                    title="Open in U Docs"
+                  >
+                    U Docs
+                  </button>
+                  <span className="text-navy/30 mx-1">|</span>
+                </>
               )}
 
-              {isAssistantLongMessage && !assistEditing && <span className="text-navy/30 mx-1">|</span>}
+              {/* Edit (only when long enough) */}
+              {isAssistantLongMessage && !assistEditing && (
+                <>
+                  <button
+                    onClick={enterAssistEdit}
+                    className="text-xs font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white/90 backdrop-blur-sm rounded-md px-2 py-0.5"
+                    title="Edit"
+                  >
+                    Edit
+                  </button>
+                  <span className="text-navy/30 mx-1">|</span>
+                </>
+              )}
 
               <button
                 onClick={copyAssistant}
-                className="text-sm font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white/90 backdrop-blur-sm rounded-md px-2 py-0.5"
+                className="text-xs font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white/90 backdrop-blur-sm rounded-md px-2 py-0.5"
                 title={isCopied ? "Copied!" : "Copy"}
               >
                 {isCopied ? "Copied!" : "Copy"}
