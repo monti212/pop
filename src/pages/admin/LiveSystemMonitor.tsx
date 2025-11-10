@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
-import { Activity, Users, Database, AlertTriangle, Zap, TrendingUp, Clock } from 'lucide-react';
+import { Activity, Users, Database, AlertTriangle, Zap, TrendingUp, Clock, ArrowLeft } from 'lucide-react';
 
 interface SystemMetric {
   metric_type: string;
@@ -241,9 +242,17 @@ export default function LiveSystemMonitor() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Live System Monitor</h1>
-          <p className="text-gray-600 mt-1">Real-time monitoring for 500 concurrent teachers</p>
+        <div className="flex items-center space-x-4">
+          <Link
+            to="/supa-admin"
+            className="p-2 rounded-lg bg-white hover:bg-gray-100 transition-colors shadow-sm border border-gray-200"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Live System Monitor</h1>
+            <p className="text-gray-600 mt-1">Real-time monitoring for 500 concurrent teachers</p>
+          </div>
         </div>
         <div className="flex items-center space-x-4">
           <div className="text-right">

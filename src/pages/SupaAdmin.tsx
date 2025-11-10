@@ -103,6 +103,13 @@ export default function SupaAdmin() {
                 Live System Monitor
               </Link>
               <Link
+                to="/supa-admin/performance"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              >
+                <TrendingUp className="w-5 h-5" />
+                Performance Analytics
+              </Link>
+              <Link
                 to="/supa-admin/live"
                 className="px-6 py-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
               >
