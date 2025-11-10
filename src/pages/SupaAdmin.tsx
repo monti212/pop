@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../services/authService';
-import { Users, Activity, Zap, TrendingUp, Clock, MessageSquare, FileText, BarChart3 } from 'lucide-react';
+import { Users, Activity, Zap, TrendingUp, Clock, MessageSquare, FileText, BarChart3, DollarSign } from 'lucide-react';
 
 interface UserMetric {
   user_email: string;
@@ -94,7 +94,7 @@ export default function SupaAdmin() {
               <h1 className="text-4xl font-bold text-white mb-2">Supa Admin Dashboard</h1>
               <p className="text-slate-400">Optimus Prime - Complete System Metrics</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <Link
                 to="/supa-admin/monitor"
                 className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
@@ -108,6 +108,13 @@ export default function SupaAdmin() {
               >
                 <TrendingUp className="w-5 h-5" />
                 Performance Analytics
+              </Link>
+              <Link
+                to="/supa-admin/token-cost"
+                className="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-lg font-medium hover:from-yellow-700 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              >
+                <DollarSign className="w-5 h-5" />
+                Token Cost Tracking
               </Link>
               <Link
                 to="/supa-admin/live"

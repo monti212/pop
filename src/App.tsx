@@ -47,6 +47,7 @@ const SupaAdmin = lazy(() => import('./pages/SupaAdmin'));
 const EnhancedSupaAdmin = lazy(() => import('./pages/EnhancedSupaAdmin'));
 const LiveSystemMonitor = lazy(() => import('./pages/admin/LiveSystemMonitor'));
 const PerformanceMetrics = lazy(() => import('./pages/admin/PerformanceMetrics'));
+const TokenCostBreakdown = lazy(() => import('./pages/admin/TokenCostBreakdown'));
 
 function App() {
   return (
@@ -316,6 +317,7 @@ const AppContentInner: React.FC = () => {
           <Route path="/supa-admin/live" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><EnhancedSupaAdmin /></Suspense>} />
           <Route path="/supa-admin/monitor" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><LiveSystemMonitor /></Suspense>} />
           <Route path="/supa-admin/performance" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><PerformanceMetrics /></Suspense>} />
+          <Route path="/supa-admin/token-cost" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TokenCostBreakdown /></Suspense>} />
         </Route>
         
         <Route path="/*" element={
