@@ -17,61 +17,103 @@ function getRandomUhuruIntro() {
 // GreyEd line (only shown on follow-up identity questions)
 const GREYED_LINE = "Built by GreyEd to support teachers with a curated knowledge base and privacy-first controls.";
 
-// Smart knowledge base fetcher with relevance filtering and token budget
+// Smart knowledge base fetcher with chunk-based retrieval
 async function fetchRelevantKnowledgeBase(
   supabaseClient: any,
   userQuery: string,
   messageCount: number,
   useStandardSummaries: boolean = false
-): Promise<{ content: string; documentIds: string[] }> {
+): Promise<{ content: string; documentIds: string[]; chunkIds: string[] }> {
   try {
     // Calculate token budget based on conversation depth
-    // First message: use micro summaries with tight budget
-    // Follow-up messages: expand budget if needed
-    const maxTokenBudget = messageCount <= 2 ? 800 : 1500;
+    // First message: tight budget for quick responses
+    // Follow-up messages: expand budget for deeper context
+    const maxTokenBudget = messageCount <= 2 ? 2000 : 4000;
+    const maxChunks = messageCount <= 2 ? 3 : 5;
 
-    console.log(`📊 Knowledge base fetch: query="${userQuery.substring(0, 50)}...", messages=${messageCount}, budget=${maxTokenBudget}`);
+    console.log(`📊 Chunk-based retrieval: query="${userQuery.substring(0, 50)}...", messages=${messageCount}, budget=${maxTokenBudget}, maxChunks=${maxChunks}`);
 
-    // Use the smart relevance-based function
-    const { data, error } = await supabaseClient.rpc('get_relevant_knowledge_base', {
-      query_text: userQuery,
-      max_token_budget: maxTokenBudget,
-      use_standard_summaries: useStandardSummaries
-    });
+    // Try hybrid search first (vector + keywords) - preferred method
+    let data = null;
+    let error = null;
 
-    if (error || !data || data.length === 0) {
-      console.log('⚠️ No relevant knowledge base documents found');
-      return { content: '', documentIds: [] };
+    try {
+      const result = await supabaseClient.rpc('get_relevant_chunks_hybrid', {
+        query_text: userQuery,
+        query_embedding: null, // Will use keyword matching primarily
+        p_document_ids: null,
+        p_max_chunks: maxChunks,
+        p_max_tokens: maxTokenBudget
+      });
+      data = result.data;
+      error = result.error;
+    } catch (chunkError) {
+      console.log('⚠️ Chunk-based retrieval not available, falling back to document summaries');
+      // Fall back to old method if chunks table doesn't exist yet
+      const fallbackResult = await supabaseClient.rpc('get_relevant_knowledge_base', {
+        query_text: userQuery,
+        max_token_budget: maxTokenBudget,
+        use_standard_summaries: useStandardSummaries
+      });
+
+      if (!fallbackResult.error && fallbackResult.data && fallbackResult.data.length > 0) {
+        // Convert document-level data to chunk-like format
+        const legacyData = fallbackResult.data.map((doc: any) => ({
+          chunk_id: doc.document_id,
+          document_id: doc.document_id,
+          document_title: doc.document_title,
+          content: doc.summary_content,
+          heading: null,
+          relevance_score: doc.relevance_score,
+          token_count: doc.token_count,
+          section_path: null
+        }));
+
+        return formatLegacyKnowledgeBase(legacyData);
+      }
     }
 
-    console.log(`✅ Found ${data.length} relevant documents (total ${data.reduce((sum: number, d: any) => sum + (d.token_count || 0), 0)} tokens)`);
+    if (error || !data || data.length === 0) {
+      console.log('⚠️ No relevant chunks found');
+      return { content: '', documentIds: [], chunkIds: [] };
+    }
+
+    console.log(`✅ Retrieved ${data.length} relevant chunks (total ${data.reduce((sum: number, d: any) => sum + (d.token_count || 0), 0)} tokens)`);
 
     let knowledgeSection = '\n\n# GREYED KNOWLEDGE BASE\n\n';
     knowledgeSection += 'Relevant curated knowledge from GreyEd. Use this information when applicable:\n\n';
 
     const documentIds: string[] = [];
+    const chunkIds: string[] = [];
+    const documentMap = new Map<string, any[]>();
 
-    for (const doc of data) {
-      documentIds.push(doc.document_id);
-
-      knowledgeSection += `## ${doc.document_title}\n`;
-      knowledgeSection += `**Type:** ${doc.document_type}`;
-
-      if (doc.grade_level && doc.grade_level !== 'All') {
-        knowledgeSection += ` | **Grade:** ${doc.grade_level}`;
+    // Group chunks by document
+    for (const chunk of data) {
+      if (!documentMap.has(chunk.document_id)) {
+        documentMap.set(chunk.document_id, []);
+        documentIds.push(chunk.document_id);
       }
+      documentMap.get(chunk.document_id)!.push(chunk);
+      chunkIds.push(chunk.chunk_id);
+    }
 
-      if (doc.subject && doc.subject !== 'All') {
-        knowledgeSection += ` | **Subject:** ${doc.subject}`;
-      }
+    // Format chunks grouped by document
+    for (const [docId, chunks] of documentMap.entries()) {
+      const firstChunk = chunks[0];
+      knowledgeSection += `## ${firstChunk.document_title}\n`;
 
-      knowledgeSection += '\n\n' + doc.summary_content + '\n\n';
+      // Add document metadata if available
+      knowledgeSection += `**Source:** Knowledge Base Document\n\n`;
 
-      // Only include key concepts for high-relevance documents (score > 50)
-      if (doc.relevance_score > 50 && doc.key_concepts && Array.isArray(doc.key_concepts) && doc.key_concepts.length > 0) {
-        knowledgeSection += '**Key Concepts:** ';
-        const topConcepts = doc.key_concepts.slice(0, 3); // Limit to top 3 concepts
-        knowledgeSection += topConcepts.map((c: any) => c.concept).join(', ') + '\n\n';
+      // Add each chunk with its heading if available
+      for (const chunk of chunks) {
+        if (chunk.heading) {
+          knowledgeSection += `### ${chunk.heading}\n`;
+        }
+        if (chunk.section_path && chunk.section_path !== chunk.heading) {
+          knowledgeSection += `*${chunk.section_path}*\n\n`;
+        }
+        knowledgeSection += chunk.content + '\n\n';
       }
 
       knowledgeSection += '---\n\n';
@@ -79,11 +121,39 @@ async function fetchRelevantKnowledgeBase(
 
     knowledgeSection += '**Note:** Apply this knowledge naturally without citing sources.\n\n';
 
-    return { content: knowledgeSection, documentIds };
+    // Update chunk usage statistics
+    if (chunkIds.length > 0) {
+      supabaseClient.rpc('update_chunk_usage_stats', {
+        p_chunk_ids: chunkIds
+      }).catch((err: any) => {
+        console.warn('Failed to update chunk usage stats:', err);
+      });
+    }
+
+    return { content: knowledgeSection, documentIds, chunkIds };
   } catch (error) {
-    console.error('❌ Error fetching relevant knowledge base:', error);
-    return { content: '', documentIds: [] };
+    console.error('❌ Error fetching relevant knowledge chunks:', error);
+    return { content: '', documentIds: [], chunkIds: [] };
   }
+}
+
+// Helper function to format legacy document-based knowledge base
+function formatLegacyKnowledgeBase(data: any[]): { content: string; documentIds: string[]; chunkIds: string[] } {
+  let knowledgeSection = '\n\n# GREYED KNOWLEDGE BASE\n\n';
+  knowledgeSection += 'Relevant curated knowledge from GreyEd. Use this information when applicable:\n\n';
+
+  const documentIds: string[] = [];
+
+  for (const doc of data) {
+    documentIds.push(doc.document_id);
+    knowledgeSection += `## ${doc.document_title}\n\n`;
+    knowledgeSection += doc.content + '\n\n';
+    knowledgeSection += '---\n\n';
+  }
+
+  knowledgeSection += '**Note:** Apply this knowledge naturally without citing sources.\n\n';
+
+  return { content: knowledgeSection, documentIds, chunkIds: [] };
 }
 
 // Legacy function for backward compatibility - now uses smart fetching
@@ -682,6 +752,65 @@ Deno.serve(async (req) => {
     }
   }
 
+  // --- Embedding Generation Path ---
+  if (body?.mode === 'embedding.generate') {
+    const { text, model = 'text-embedding-3-small' } = body;
+
+    if (!text || typeof text !== 'string') {
+      return j({ error: 'Text is required for embedding generation' }, 400, origin);
+    }
+
+    try {
+      console.log(`🔢 [EMBEDDING] Generating embedding for text (${text.length} chars) using model: ${model}`);
+
+      // Call OpenAI embeddings API
+      const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          model,
+          input: text,
+        }),
+      });
+
+      if (!embeddingResponse.ok) {
+        const errorText = await embeddingResponse.text();
+        console.error('❌ [EMBEDDING] API error:', {
+          status: embeddingResponse.status,
+          body: errorText,
+        });
+        return j({
+          error: 'Failed to generate embedding',
+          details: `Status ${embeddingResponse.status}`,
+        }, embeddingResponse.status >= 500 ? 503 : 400, origin);
+      }
+
+      const embeddingData = await embeddingResponse.json();
+
+      if (!embeddingData.data || !embeddingData.data[0] || !embeddingData.data[0].embedding) {
+        console.error('❌ [EMBEDDING] Invalid response format:', embeddingData);
+        return j({ error: 'Invalid embedding response format' }, 500, origin);
+      }
+
+      const embedding = embeddingData.data[0].embedding;
+      console.log(`✅ [EMBEDDING] Generated embedding with ${embedding.length} dimensions`);
+
+      return j({ embedding }, 200, origin);
+    } catch (error: any) {
+      console.error('❌ [EMBEDDING] Exception:', {
+        message: error.message,
+        stack: error.stack,
+      });
+      return j({
+        error: 'Embedding generation failed',
+        details: error.message,
+      }, 500, origin);
+    }
+  }
+
   // --- LLM Response Path ---
   const { messages = [], language = "english", region = "global", modelVersion = "2.0", verbosity = "low", displayName } = body;
 
@@ -720,17 +849,18 @@ Deno.serve(async (req) => {
     useStandardSummaries
   });
 
-  const { content: knowledgeBase, documentIds } = await fetchRelevantKnowledgeBase(
+  const { content: knowledgeBase, documentIds, chunkIds } = await fetchRelevantKnowledgeBase(
     supabase,
     latestUserQuery,
     messageCount,
     useStandardSummaries
   );
 
-  console.log('📚 [EDGE] Knowledge base fetched:', {
+  console.log('📚 [EDGE] Knowledge base fetched (chunk-based):', {
     hasKnowledge: !!knowledgeBase,
     knowledgeLength: knowledgeBase.length,
     documentsUsed: documentIds.length,
+    chunksRetrieved: chunkIds?.length || 0,
     estimatedTokens: Math.ceil(knowledgeBase.length / 4)
   });
 

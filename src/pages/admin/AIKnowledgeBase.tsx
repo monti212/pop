@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, CheckCircle, XCircle, Loader, Eye, Trash2, RefreshCw, AlertCircle, X as XIcon, Search, Filter, Download, Archive, TrendingUp, Database, DollarSign, Clock, Zap } from 'lucide-react';
 import { supabase } from '../../services/authService';
 import AdminSidebar from '../../components/AdminSidebar';
+import { processAndChunkDocument, getDocumentChunkingStats } from '../../services/knowledgeBaseChunkingService';
 
 const Brand = {
   sand: '#F7F5F2',
@@ -49,10 +50,14 @@ interface KnowledgeDocument {
 interface UploadingFile {
   id: string;
   file: File;
-  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'uploading' | 'processing' | 'chunking' | 'completed' | 'failed';
   progress: number;
   error?: string;
   documentId?: string;
+  chunkingInfo?: {
+    totalChunks: number;
+    totalTokens: number;
+  };
 }
 
 type SortField = 'title' | 'created_at' | 'file_size' | 'word_count' | 'processing_status';
@@ -280,6 +285,51 @@ const AIKnowledgeBase: React.FC = () => {
         if (!processResponse.ok) {
           const errorData = await processResponse.json();
           throw new Error(errorData.error || 'Failed to process document');
+        }
+
+        // After document processing, chunk it
+        setUploadingFiles(prev =>
+          prev.map(f => f.id === uploadFile.id ? { ...f, status: 'chunking', progress: 80 } : f)
+        );
+
+        console.log(`🔨 Chunking document: ${docData.id}`);
+
+        try {
+          const chunkingResult = await processAndChunkDocument(
+            uploadFile.file,
+            docData.id,
+            docData.title,
+            {
+              generateEmbeddings: true,
+              chunkConfig: {
+                targetTokens: 800,
+                maxTokens: 1500,
+                minTokens: 500,
+                overlapTokens: 150,
+                respectParagraphs: true,
+                respectSections: true,
+              },
+            }
+          );
+
+          if (!chunkingResult.success) {
+            console.warn(`⚠️ Chunking failed: ${chunkingResult.error}`);
+            // Continue even if chunking fails - document is still processed
+          } else {
+            console.log(`✅ Chunked into ${chunkingResult.totalChunks} chunks (${chunkingResult.totalTokens} tokens)`);
+            setUploadingFiles(prev =>
+              prev.map(f => f.id === uploadFile.id ? {
+                ...f,
+                chunkingInfo: {
+                  totalChunks: chunkingResult.totalChunks || 0,
+                  totalTokens: chunkingResult.totalTokens || 0,
+                }
+              } : f)
+            );
+          }
+        } catch (chunkError: any) {
+          console.error('Error during chunking:', chunkError);
+          // Continue even if chunking fails
         }
 
         setUploadingFiles(prev =>
