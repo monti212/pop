@@ -391,7 +391,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
             >
               <motion.button
                 onClick={() => {
-                  navigate('/uhuru-files');
+                  navigate('/u-class');
                   if (onClose) onClose();
                 }}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-12 border border-[#E5E7EB] hover:bg-[#EFEFED] hover:shadow-md hover:text-[#19324A] hover:scale-[1.01] transition-all duration-150 ease-out"

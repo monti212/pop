@@ -161,14 +161,14 @@ const UhuruFilesPage: React.FC = () => {
               <School className="w-7 h-7 text-teal" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {viewMode === 'classes' && 'Class Attendance'}
+                  {viewMode === 'classes' && 'U Class'}
                   {viewMode === 'students' && `${selectedClass?.class_name} - Students`}
                   {viewMode === 'attendance' && `${selectedClass?.class_name} - Take Attendance`}
                   {viewMode === 'analytics' && `${selectedClass?.class_name} - Analytics`}
                   {viewMode === 'documents' && `${selectedClass?.class_name} - Documents`}
                 </h1>
                 <p className="text-sm text-gray-600">
-                  {viewMode === 'classes' && `${classCount} of 5 classes created`}
+                  {viewMode === 'classes' && `Manage your classes and students • ${classCount} of 5 classes`}
                   {viewMode === 'students' && `${students.length} of 35 students`}
                   {viewMode === 'attendance' && 'Record daily attendance'}
                   {viewMode === 'analytics' && 'View attendance statistics'}

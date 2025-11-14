@@ -1141,7 +1141,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 {lessonPlanSaved && (
                   <>
                     <button
-                      onClick={() => navigate('/uhuru-files')}
+                      onClick={() => navigate('/u-class')}
                       className="px-3 py-1.5 text-xs bg-orange/10 text-orange rounded-lg hover:bg-orange/20 transition-colors duration-200 font-medium"
                     >
                       View in U Class
