@@ -717,7 +717,7 @@ export const generateResponse = async ({
 
   return new Promise((resolve, reject) => {
     streamResponse({
-      conversation: messages,
+      conversation: conversation,
       language,
       region,
       modelVersion,
