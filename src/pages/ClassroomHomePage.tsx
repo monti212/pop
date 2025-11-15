@@ -550,8 +550,8 @@ const ClassroomHomePage: React.FC = () => {
         <LessonPlanGeneratorModal
           isOpen={showLessonPlanModal}
           onClose={() => setShowLessonPlanModal(false)}
-          onSuccess={(lessonPlan: string) => {
-            console.log('Generated lesson plan:', lessonPlan);
+          onSuccess={(lessonPlan: string, documentId?: string) => {
+            console.log('Generated lesson plan saved with document ID:', documentId);
             handleModalSuccess();
             setShowLessonPlanModal(false);
           }}

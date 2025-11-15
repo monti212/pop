@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { X, Sparkles, Users, Book, Clock, Target, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Sparkles, Users, Book, Clock, Target, CheckCircle, AlertCircle, FileText } from 'lucide-react';
 import { Student } from '../types/attendance';
 import { CreateLessonPlanRequestData } from '../types/studentProfile';
-import { createLessonPlanRequest } from '../services/studentProfileService';
+import { createLessonPlanRequest, updateLessonPlanRequest } from '../services/studentProfileService';
 import { getEnhancedStudentProfile } from '../services/studentProfileService';
 import { useAuth } from '../context/AuthContext';
+import { generateResponse } from '../services/chatService';
+import { autoSaveLessonPlan } from '../services/lessonPlanService';
+import StreamMarkdown from './StreamMarkdown';
 
 interface LessonPlanGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (lessonPlan: string) => void;
+  onSuccess: (lessonPlan: string, documentId?: string) => void;
   classId: string;
   className: string;
   students: Student[];
@@ -35,8 +38,13 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
     focus_areas: [] as string[]
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedDocumentId, setSavedDocumentId] = useState<string | null>(null);
+  const [lessonPlanRequestId, setLessonPlanRequestId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [generationStatus, setGenerationStatus] = useState<string>('');
 
   const handleStudentToggle = (studentId: string) => {
     setSelectedStudents(prev =>
@@ -73,8 +81,11 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
 
     setIsGenerating(true);
     setError(null);
+    setGenerationStatus('Preparing lesson plan...');
 
     try {
+      // Step 1: Fetch student profiles
+      setGenerationStatus('Loading student profiles...');
       const studentProfiles = await Promise.all(
         selectedStudents.map(id => getEnhancedStudentProfile(id))
       );
@@ -83,8 +94,11 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
         .filter(result => result.success && result.data)
         .map(result => result.data!);
 
+      // Step 2: Build prompt
       const prompt = buildLessonPlanPrompt(validProfiles);
 
+      // Step 3: Save request to database
+      setGenerationStatus('Creating lesson plan request...');
       const requestData: CreateLessonPlanRequestData = {
         teacher_id: user.id,
         class_id: classId,
@@ -98,18 +112,98 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
         focus_areas: formData.focus_areas
       };
 
-      const result = await createLessonPlanRequest(requestData);
+      const requestResult = await createLessonPlanRequest(requestData);
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to create lesson plan request');
+      if (!requestResult.success || !requestResult.data) {
+        throw new Error(requestResult.error || 'Failed to create lesson plan request');
       }
 
-      onSuccess(prompt);
-      onClose();
+      // Store the request ID for later update
+      const requestId = requestResult.data.id;
+      setLessonPlanRequestId(requestId);
+
+      // Update request status to 'generating'
+      await updateLessonPlanRequest(requestId, {
+        status: 'generating' as any
+      });
+
+      // Step 4: Generate lesson plan using AI
+      setGenerationStatus('Generating personalized lesson plan with Uhuru AI...');
+      setStep(3);
+
+      const aiResponse = await generateResponse({
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert educational AI assistant specializing in creating personalized, differentiated lesson plans. Create comprehensive, practical lesson plans that address individual student needs.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        language: 'english',
+        region: 'global',
+        modelVersion: '2.0',
+        onStatusUpdate: (status) => {
+          setGenerationStatus(status);
+        }
+      });
+
+      setGeneratedContent(aiResponse);
+      setIsGenerating(false);
+
+      // Step 5: Auto-save the lesson plan
+      setIsSaving(true);
+      setGenerationStatus('Saving lesson plan...');
+
+      const saveResult = await autoSaveLessonPlan(
+        aiResponse,
+        user.id,
+        undefined, // No conversation ID since this is from generator
+        undefined  // No message ID
+      );
+
+      if (saveResult.success && saveResult.documentId) {
+        setSavedDocumentId(saveResult.documentId);
+        setGenerationStatus('Lesson plan saved successfully!');
+
+        // Update the lesson plan request with the document ID and status
+        if (requestId) {
+          await updateLessonPlanRequest(requestId, {
+            document_id: saveResult.documentId,
+            status: 'completed' as any,
+            generated_at: new Date().toISOString()
+          });
+        }
+
+        // Notify parent component
+        onSuccess(aiResponse, saveResult.documentId);
+      } else {
+        setError(saveResult.error || 'Failed to save lesson plan');
+
+        // Update request status to failed if save failed
+        if (requestId) {
+          await updateLessonPlanRequest(requestId, {
+            status: 'failed' as any,
+            error_message: saveResult.error || 'Failed to save lesson plan'
+          });
+        }
+      }
+
+      setIsSaving(false);
     } catch (err: any) {
       setError(err.message || 'Failed to generate lesson plan');
-    } finally {
       setIsGenerating(false);
+      setIsSaving(false);
+
+      // Update request status to failed if there was an error
+      if (lessonPlanRequestId) {
+        await updateLessonPlanRequest(lessonPlanRequestId, {
+          status: 'failed' as any,
+          error_message: err.message || 'Failed to generate lesson plan'
+        });
+      }
     }
   };
 
@@ -191,16 +285,23 @@ Include:
           <div className="flex items-center space-x-4">
             <div className={`flex items-center space-x-2 ${step >= 1 ? 'text-teal-600' : 'text-gray-400'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-teal-100' : 'bg-gray-100'}`}>
-                1
+                {step > 1 ? <CheckCircle className="w-5 h-5" /> : '1'}
               </div>
               <span className="text-sm font-medium">Select Students</span>
             </div>
             <div className="flex-1 h-0.5 bg-gray-200" />
             <div className={`flex items-center space-x-2 ${step >= 2 ? 'text-teal-600' : 'text-gray-400'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-teal-100' : 'bg-gray-100'}`}>
-                2
+                {step > 2 ? <CheckCircle className="w-5 h-5" /> : '2'}
               </div>
               <span className="text-sm font-medium">Lesson Details</span>
+            </div>
+            <div className="flex-1 h-0.5 bg-gray-200" />
+            <div className={`flex items-center space-x-2 ${step >= 3 ? 'text-teal-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-teal-100' : 'bg-gray-100'}`}>
+                {savedDocumentId ? <CheckCircle className="w-5 h-5" /> : '3'}
+              </div>
+              <span className="text-sm font-medium">Generate & Save</span>
             </div>
           </div>
         </div>
@@ -389,63 +490,122 @@ Include:
               </label>
             </div>
           )}
+
+          {step === 3 && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center space-x-2">
+                  <Sparkles className="w-5 h-5 text-yellow-500" />
+                  <span>Generated Lesson Plan</span>
+                </h3>
+                {generationStatus && (
+                  <div className="flex items-center space-x-2 text-sm text-teal-600 mb-4">
+                    <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span>{generationStatus}</span>
+                  </div>
+                )}
+              </div>
+
+              {isGenerating && !generatedContent && (
+                <div className="text-center py-12">
+                  <Sparkles className="w-12 h-12 text-yellow-500 mx-auto mb-4 animate-pulse" />
+                  <p className="text-gray-600">Creating your personalized lesson plan...</p>
+                  <p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+                </div>
+              )}
+
+              {generatedContent && (
+                <div className="bg-gray-50 rounded-lg p-6 max-h-[500px] overflow-y-auto">
+                  <div className="prose prose-sm max-w-none">
+                    <StreamMarkdown content={generatedContent} />
+                  </div>
+                </div>
+              )}
+
+              {savedDocumentId && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-900">Lesson Plan Saved Successfully!</p>
+                    <p className="text-xs text-green-700 mt-1">
+                      Your personalized lesson plan has been saved to your documents and is ready to use.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-            disabled={isGenerating}
-          >
-            Cancel
-          </button>
+          {step === 3 && savedDocumentId ? (
+            <div className="w-full flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center space-x-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>Done</span>
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                disabled={isGenerating || isSaving}
+              >
+                Cancel
+              </button>
 
-          <div className="flex items-center space-x-3">
-            {step === 2 && (
-              <button
-                onClick={() => setStep(1)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                disabled={isGenerating}
-              >
-                Back
-              </button>
-            )}
-            {step === 1 && (
-              <button
-                onClick={() => {
-                  if (selectedStudents.length === 0) {
-                    setError('Please select at least one student');
-                    return;
-                  }
-                  setError(null);
-                  setStep(2);
-                }}
-                className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={selectedStudents.length === 0}
-              >
-                Next
-              </button>
-            )}
-            {step === 2 && (
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating || !formData.topic}
-                className="px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isGenerating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Generating...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Generate Lesson Plan</span>
-                  </>
+              <div className="flex items-center space-x-3">
+                {step === 2 && (
+                  <button
+                    onClick={() => setStep(1)}
+                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    disabled={isGenerating || isSaving}
+                  >
+                    Back
+                  </button>
                 )}
-              </button>
-            )}
-          </div>
+                {step === 1 && (
+                  <button
+                    onClick={() => {
+                      if (selectedStudents.length === 0) {
+                        setError('Please select at least one student');
+                        return;
+                      }
+                      setError(null);
+                      setStep(2);
+                    }}
+                    className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={selectedStudents.length === 0}
+                  >
+                    Next
+                  </button>
+                )}
+                {step === 2 && (
+                  <button
+                    onClick={handleGenerate}
+                    disabled={isGenerating || isSaving || !formData.topic}
+                    className="px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGenerating || isSaving ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>{isSaving ? 'Saving...' : 'Generating...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>Generate Lesson Plan</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
