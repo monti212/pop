@@ -272,62 +272,62 @@ const ClassroomHomePage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="bg-white rounded-lg border border-greyed-beige/20 p-6"
+                className="bg-white rounded-lg border border-greyed-beige/20 p-6 max-w-2xl"
               >
                 <h3 className="text-lg font-bold text-greyed-navy mb-4">Feature Access</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <button
                     onClick={() => setActiveView('students')}
-                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
-                    <Users className="w-6 h-6 text-greyed-navy mb-2" />
+                    <Users className="w-5 h-5 text-greyed-navy mb-1.5" />
                     <h4 className="font-semibold text-greyed-navy text-sm">Students</h4>
-                    <p className="text-xs text-greyed-black/60 mt-1">Manage roster</p>
+                    <p className="text-xs text-greyed-black/60 mt-0.5">Manage roster</p>
                   </button>
 
                   <button
                     onClick={() => setShowGradesModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
-                    <Award className="w-6 h-6 text-greyed-navy mb-2" />
+                    <Award className="w-5 h-5 text-greyed-navy mb-1.5" />
                     <h4 className="font-semibold text-greyed-navy text-sm">Grades</h4>
-                    <p className="text-xs text-greyed-black/60 mt-1">Manage grades</p>
+                    <p className="text-xs text-greyed-black/60 mt-0.5">Manage grades</p>
                   </button>
 
                   <button
                     onClick={() => setShowBehaviorModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
-                    <Activity className="w-6 h-6 text-greyed-navy mb-2" />
+                    <Activity className="w-5 h-5 text-greyed-navy mb-1.5" />
                     <h4 className="font-semibold text-greyed-navy text-sm">Behavior</h4>
-                    <p className="text-xs text-greyed-black/60 mt-1">{overview.behaviorLogCount} logs</p>
+                    <p className="text-xs text-greyed-black/60 mt-0.5">{overview.behaviorLogCount} logs</p>
                   </button>
 
                   <button
                     onClick={() => setShowAnalyticsModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
-                    <BarChart3 className="w-6 h-6 text-greyed-navy mb-2" />
+                    <BarChart3 className="w-5 h-5 text-greyed-navy mb-1.5" />
                     <h4 className="font-semibold text-greyed-navy text-sm">Analytics</h4>
-                    <p className="text-xs text-greyed-black/60 mt-1">View insights</p>
+                    <p className="text-xs text-greyed-black/60 mt-0.5">View insights</p>
                   </button>
 
                   <button
                     onClick={() => setActiveView('documents')}
-                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
-                    <FolderOpen className="w-6 h-6 text-greyed-navy mb-2" />
+                    <FolderOpen className="w-5 h-5 text-greyed-navy mb-1.5" />
                     <h4 className="font-semibold text-greyed-navy text-sm">Documents</h4>
-                    <p className="text-xs text-greyed-black/60 mt-1">Class files</p>
+                    <p className="text-xs text-greyed-black/60 mt-0.5">Class files</p>
                   </button>
 
                   <button
                     onClick={() => setShowLessonPlanModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
-                    <Sparkles className="w-6 h-6 text-greyed-navy mb-2" />
+                    <Sparkles className="w-5 h-5 text-greyed-navy mb-1.5" />
                     <h4 className="font-semibold text-greyed-navy text-sm">AI Lesson Plan</h4>
-                    <p className="text-xs text-greyed-black/60 mt-1">Generate plan</p>
+                    <p className="text-xs text-greyed-black/60 mt-0.5">Generate plan</p>
                   </button>
                 </div>
               </motion.div>
