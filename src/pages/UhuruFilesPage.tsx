@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Loader, AlertTriangle, X, Users, ClipboardCheck,
-  Calendar, Edit, Trash2, UserPlus, BarChart3, School, Archive, FolderOpen
+  Calendar, Edit, Trash2, UserPlus, BarChart3, School, Archive, FolderOpen,
+  Award, Activity, Sparkles, Brain, TrendingUp
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +17,10 @@ import EditStudentModal from '../components/EditStudentModal';
 import AttendanceModal from '../components/AttendanceModal';
 import AnalyticsModal from '../components/AnalyticsModal';
 import ClassDocumentsView from '../components/ClassDocumentsView';
+import GradesManagementModal from '../components/GradesManagementModal';
+import BehaviorLogModal from '../components/BehaviorLogModal';
+import LessonPlanGeneratorModal from '../components/LessonPlanGeneratorModal';
+import StudentPersonalityModal from '../components/StudentPersonalityModal';
 
 type ViewMode = 'classes' | 'students' | 'attendance' | 'analytics' | 'documents';
 
@@ -37,6 +42,10 @@ const UhuruFilesPage: React.FC = () => {
   const [showEditStudentModal, setShowEditStudentModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+  const [showGradesModal, setShowGradesModal] = useState(false);
+  const [showBehaviorModal, setShowBehaviorModal] = useState(false);
+  const [showLessonPlanModal, setShowLessonPlanModal] = useState(false);
+  const [showPersonalityModal, setShowPersonalityModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   useEffect(() => {
@@ -314,6 +323,30 @@ const UhuruFilesPage: React.FC = () => {
                           Students
                         </button>
                         <button
+                          onClick={async () => {
+                            setSelectedClass(classItem);
+                            await loadStudents(classItem.id);
+                            setShowGradesModal(true);
+                          }}
+                          className="px-2 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
+                        >
+                          <Award className="w-3 h-3" />
+                          Grades
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setSelectedClass(classItem);
+                            await loadStudents(classItem.id);
+                            setShowBehaviorModal(true);
+                          }}
+                          className="px-2 py-1.5 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
+                        >
+                          <Activity className="w-3 h-3" />
+                          Behavior
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
                           onClick={() => {
                             setSelectedClass(classItem);
                             setViewMode('documents');
@@ -329,6 +362,17 @@ const UhuruFilesPage: React.FC = () => {
                         >
                           <BarChart3 className="w-3 h-3" />
                           Analytics
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setSelectedClass(classItem);
+                            await loadStudents(classItem.id);
+                            setShowLessonPlanModal(true);
+                          }}
+                          className="px-2 py-1.5 bg-pink-50 text-pink-700 rounded-lg hover:bg-pink-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          AI Plan
                         </button>
                       </div>
                     </div>
@@ -402,15 +446,35 @@ const UhuruFilesPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <button
-                            onClick={() => {
-                              setSelectedStudent(student);
-                              setShowEditStudentModal(true);
-                            }}
-                            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-teal transition-colors"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => navigate(`/u-class/student/${student.id}`)}
+                              className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
+                              title="View Profile"
+                            >
+                              <TrendingUp className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedStudent(student);
+                                setShowPersonalityModal(true);
+                              }}
+                              className="p-2 rounded-lg hover:bg-purple-100 text-purple-600 transition-colors"
+                              title="Personality Profile"
+                            >
+                              <Brain className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedStudent(student);
+                                setShowEditStudentModal(true);
+                              }}
+                              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-teal transition-colors"
+                              title="Edit Student"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -475,24 +539,82 @@ const UhuruFilesPage: React.FC = () => {
       )}
 
       {selectedStudent && (
-        <EditStudentModal
-          isOpen={showEditStudentModal}
-          onClose={() => {
-            setShowEditStudentModal(false);
-            setSelectedStudent(null);
-          }}
-          onSuccess={handleModalSuccess}
-          studentData={{
-            id: selectedStudent.id,
-            class_id: selectedStudent.class_id || selectedClass?.id || '',
-            student_name: selectedStudent.student_name,
-            student_identifier: selectedStudent.student_identifier,
-            neurodivergence_type: selectedStudent.neurodivergence_type,
-            accommodations: null,
-            learning_notes: null,
-            active_status: selectedStudent.active_status
-          }}
-        />
+        <>
+          <EditStudentModal
+            isOpen={showEditStudentModal}
+            onClose={() => {
+              setShowEditStudentModal(false);
+              setSelectedStudent(null);
+            }}
+            onSuccess={handleModalSuccess}
+            studentData={{
+              id: selectedStudent.id,
+              class_id: selectedStudent.class_id || selectedClass?.id || '',
+              student_name: selectedStudent.student_name,
+              student_identifier: selectedStudent.student_identifier,
+              neurodivergence_type: selectedStudent.neurodivergence_type,
+              accommodations: null,
+              learning_notes: null,
+              active_status: selectedStudent.active_status
+            }}
+          />
+
+          <StudentPersonalityModal
+            isOpen={showPersonalityModal}
+            onClose={() => {
+              setShowPersonalityModal(false);
+              setSelectedStudent(null);
+            }}
+            onSuccess={() => {
+              handleModalSuccess();
+              setShowPersonalityModal(false);
+              setSelectedStudent(null);
+            }}
+            studentId={selectedStudent.id}
+            studentName={selectedStudent.student_name}
+          />
+        </>
+      )}
+
+      {selectedClass && (
+        <>
+          <GradesManagementModal
+            isOpen={showGradesModal}
+            onClose={() => {
+              setShowGradesModal(false);
+            }}
+            onSuccess={handleModalSuccess}
+            classId={selectedClass.id}
+            className={selectedClass.class_name}
+            students={students}
+          />
+
+          <BehaviorLogModal
+            isOpen={showBehaviorModal}
+            onClose={() => {
+              setShowBehaviorModal(false);
+            }}
+            onSuccess={handleModalSuccess}
+            classId={selectedClass.id}
+            className={selectedClass.class_name}
+            students={students}
+          />
+
+          <LessonPlanGeneratorModal
+            isOpen={showLessonPlanModal}
+            onClose={() => {
+              setShowLessonPlanModal(false);
+            }}
+            onSuccess={(lessonPlan: string) => {
+              console.log('Generated lesson plan:', lessonPlan);
+              handleModalSuccess();
+              setShowLessonPlanModal(false);
+            }}
+            classId={selectedClass.id}
+            className={selectedClass.class_name}
+            students={students}
+          />
+        </>
       )}
     </div>
   );
