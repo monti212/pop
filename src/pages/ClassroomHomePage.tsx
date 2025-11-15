@@ -28,6 +28,8 @@ const ClassroomHomePage: React.FC = () => {
   const [overview, setOverview] = useState<ClassroomOverview | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [studentsLoading, setStudentsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'overview' | 'students' | 'documents'>('overview');
 
@@ -49,22 +51,35 @@ const ClassroomHomePage: React.FC = () => {
     if (!classId) return;
 
     setIsLoading(true);
+    setOverviewLoading(true);
+    setStudentsLoading(true);
     setError(null);
 
     try {
-      const overviewResult = await getClassroomOverview(classId);
+      // Fetch both overview and students in parallel for faster loading
+      const [overviewResult, studentsResult] = await Promise.all([
+        getClassroomOverview(classId),
+        getClassStudents(classId)
+      ]);
+
       if (overviewResult.success && overviewResult.data) {
         setOverview(overviewResult.data);
+        setOverviewLoading(false);
       } else {
         setError(overviewResult.error || 'Failed to load classroom data');
+        setOverviewLoading(false);
       }
 
-      const studentsResult = await getClassStudents(classId);
       if (studentsResult.success && studentsResult.data) {
         setStudents(studentsResult.data);
+        setStudentsLoading(false);
+      } else {
+        setStudentsLoading(false);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load classroom data');
+      setOverviewLoading(false);
+      setStudentsLoading(false);
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +89,7 @@ const ClassroomHomePage: React.FC = () => {
     loadData();
   };
 
-  if (isLoading) {
+  if (isLoading && !overview) {
     return (
       <div className="h-screen bg-greyed-white flex items-center justify-center">
         <div className="text-center">

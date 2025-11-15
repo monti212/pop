@@ -359,7 +359,29 @@ export const getClassroomOverview = async (
       };
     }
 
-    const classResult = await getClassById(classId);
+    // Fetch all data in parallel for maximum performance
+    const [
+      classResult,
+      assignmentCountResult,
+      behaviorLogCountResult,
+      avgGradeDataResult,
+      attendanceDatesResult,
+      rateDataResult,
+      recentAttendanceResult,
+      recentGradesResult,
+      recentBehaviorResult
+    ] = await Promise.all([
+      getClassById(classId),
+      supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('class_id', classId),
+      supabase.from('student_behavior_logs').select('*', { count: 'exact', head: true }).eq('class_id', classId),
+      supabase.from('student_grades').select('percentage_grade').eq('class_id', classId),
+      supabase.from('attendance_records').select('attendance_date').eq('class_id', classId).order('attendance_date', { ascending: false }).limit(1),
+      supabase.rpc('calculate_class_attendance_rate', { p_class_id: classId, p_start_date: null, p_end_date: null }),
+      supabase.from('attendance_records').select('attendance_date, recorded_at').eq('class_id', classId).order('recorded_at', { ascending: false }).limit(3),
+      supabase.from('student_grades').select('created_at, assignments(assignment_name)').eq('class_id', classId).order('created_at', { ascending: false }).limit(2),
+      supabase.from('student_behavior_logs').select('created_at, behavior_type').eq('class_id', classId).order('created_at', { ascending: false }).limit(2)
+    ]);
+
     if (!classResult.success || !classResult.data) {
       return {
         success: false,
@@ -368,52 +390,24 @@ export const getClassroomOverview = async (
     }
 
     const classData = classResult.data;
-
-    const { count: assignmentCount } = await supabase
-      .from('assignments')
-      .select('*', { count: 'exact', head: true })
-      .eq('class_id', classId);
-
-    const { count: behaviorLogCount } = await supabase
-      .from('student_behavior_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('class_id', classId);
-
-    const { data: avgGradeData } = await supabase
-      .from('student_grades')
-      .select('percentage_grade')
-      .eq('class_id', classId);
+    const { count: assignmentCount } = assignmentCountResult;
+    const { count: behaviorLogCount } = behaviorLogCountResult;
+    const { data: avgGradeData } = avgGradeDataResult;
+    const { data: attendanceDates } = attendanceDatesResult;
+    const { data: rateData } = rateDataResult;
+    const { data: recentAttendance } = recentAttendanceResult;
+    const { data: recentGrades } = recentGradesResult;
+    const { data: recentBehavior } = recentBehaviorResult;
 
     const averageGrade = avgGradeData && avgGradeData.length > 0
       ? avgGradeData.reduce((sum, g) => sum + (g.percentage_grade || 0), 0) / avgGradeData.length
       : 0;
 
-    const { data: attendanceDates } = await supabase
-      .from('attendance_records')
-      .select('attendance_date')
-      .eq('class_id', classId)
-      .order('attendance_date', { ascending: false })
-      .limit(1);
-
     const lastAttendanceDate = attendanceDates && attendanceDates.length > 0
       ? attendanceDates[0].attendance_date
       : null;
 
-    const { data: rateData } = await supabase
-      .rpc('calculate_class_attendance_rate', {
-        p_class_id: classId,
-        p_start_date: null,
-        p_end_date: null
-      });
-
     const recentActivity: RecentActivity[] = [];
-
-    const { data: recentAttendance } = await supabase
-      .from('attendance_records')
-      .select('attendance_date, recorded_at')
-      .eq('class_id', classId)
-      .order('recorded_at', { ascending: false })
-      .limit(3);
 
     if (recentAttendance) {
       const uniqueDates = [...new Set(recentAttendance.map(r => r.attendance_date))];
@@ -431,13 +425,6 @@ export const getClassroomOverview = async (
       });
     }
 
-    const { data: recentGrades } = await supabase
-      .from('student_grades')
-      .select('created_at, assignments(assignment_name)')
-      .eq('class_id', classId)
-      .order('created_at', { ascending: false })
-      .limit(2);
-
     if (recentGrades) {
       recentGrades.forEach(grade => {
         recentActivity.push({
@@ -449,13 +436,6 @@ export const getClassroomOverview = async (
         });
       });
     }
-
-    const { data: recentBehavior } = await supabase
-      .from('student_behavior_logs')
-      .select('created_at, behavior_type')
-      .eq('class_id', classId)
-      .order('created_at', { ascending: false })
-      .limit(2);
 
     if (recentBehavior) {
       recentBehavior.forEach(behavior => {
