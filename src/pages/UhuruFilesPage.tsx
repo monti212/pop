@@ -275,34 +275,32 @@ const UhuruFilesPage: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={() => handleClassSelect(classItem)}
-                  className="bg-white rounded-lg border border-greyed-beige/20 shadow-sm hover:shadow-lg hover:border-greyed-blue/30 transition-all duration-200 overflow-hidden cursor-pointer group"
+                  className="bg-white rounded-lg border border-greyed-beige/20 shadow-sm hover:shadow-lg hover:border-greyed-blue/30 transition-all duration-200 overflow-hidden cursor-pointer group relative"
                 >
                   <div className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-greyed-navy group-hover:text-greyed-blue transition-colors mb-0.5">
-                          {classItem.class_name}
-                        </h3>
-                        {classItem.subject && (
-                          <p className="text-xs text-greyed-black/60 mb-0.5">{classItem.subject}</p>
-                        )}
-                        {classItem.grade_level && (
-                          <p className="text-xs text-greyed-black/50">Grade {classItem.grade_level}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedClass(classItem);
-                          setShowEditClassModal(true);
-                        }}
-                        className="p-1.5 rounded-lg hover:bg-greyed-navy/10 text-greyed-black/60 hover:text-greyed-navy transition-colors"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedClass(classItem);
+                        setShowEditClassModal(true);
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-greyed-navy/10 text-greyed-black/60 hover:text-greyed-navy transition-colors absolute top-2 right-2"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="text-center mb-3">
+                      <h3 className="text-lg font-bold text-greyed-navy group-hover:text-greyed-blue transition-colors mb-0.5">
+                        {classItem.class_name}
+                      </h3>
+                      {classItem.subject && (
+                        <p className="text-xs text-greyed-black/60 mb-0.5">{classItem.subject}</p>
+                      )}
+                      {classItem.grade_level && (
+                        <p className="text-xs text-greyed-black/50">Grade {classItem.grade_level}</p>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-1.5 mb-3 text-xs text-greyed-black">
+                    <div className="flex items-center justify-center gap-1.5 mb-3 text-xs text-greyed-black">
                       <Users className="w-3.5 h-3.5 text-greyed-blue" />
                       <span className="font-medium">{classItem.student_count} students</span>
                     </div>
