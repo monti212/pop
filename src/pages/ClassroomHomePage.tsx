@@ -267,107 +267,105 @@ const ClassroomHomePage: React.FC = () => {
               </motion.div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-white rounded-lg border border-greyed-beige/20 p-6 max-w-2xl"
-              >
-                <h3 className="text-lg font-bold text-greyed-navy mb-4">Feature Access</h3>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    onClick={() => setActiveView('students')}
-                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
-                  >
-                    <Users className="w-5 h-5 text-greyed-navy mb-1.5" />
-                    <h4 className="font-semibold text-greyed-navy text-sm">Students</h4>
-                    <p className="text-xs text-greyed-black/60 mt-0.5">Manage roster</p>
-                  </button>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-white rounded-lg border border-greyed-beige/20 p-6"
+            >
+              <h3 className="text-lg font-bold text-greyed-navy mb-4">Feature Access</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                <button
+                  onClick={() => setActiveView('students')}
+                  className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                >
+                  <Users className="w-5 h-5 text-greyed-navy mb-1.5" />
+                  <h4 className="font-semibold text-greyed-navy text-sm">Students</h4>
+                  <p className="text-xs text-greyed-black/60 mt-0.5">Manage roster</p>
+                </button>
 
-                  <button
-                    onClick={() => setShowGradesModal(true)}
-                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
-                  >
-                    <Award className="w-5 h-5 text-greyed-navy mb-1.5" />
-                    <h4 className="font-semibold text-greyed-navy text-sm">Grades</h4>
-                    <p className="text-xs text-greyed-black/60 mt-0.5">Manage grades</p>
-                  </button>
+                <button
+                  onClick={() => setShowGradesModal(true)}
+                  className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                >
+                  <Award className="w-5 h-5 text-greyed-navy mb-1.5" />
+                  <h4 className="font-semibold text-greyed-navy text-sm">Grades</h4>
+                  <p className="text-xs text-greyed-black/60 mt-0.5">Manage grades</p>
+                </button>
 
-                  <button
-                    onClick={() => setShowBehaviorModal(true)}
-                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
-                  >
-                    <Activity className="w-5 h-5 text-greyed-navy mb-1.5" />
-                    <h4 className="font-semibold text-greyed-navy text-sm">Behavior</h4>
-                    <p className="text-xs text-greyed-black/60 mt-0.5">{overview.behaviorLogCount} logs</p>
-                  </button>
+                <button
+                  onClick={() => setShowBehaviorModal(true)}
+                  className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                >
+                  <Activity className="w-5 h-5 text-greyed-navy mb-1.5" />
+                  <h4 className="font-semibold text-greyed-navy text-sm">Behavior</h4>
+                  <p className="text-xs text-greyed-black/60 mt-0.5">{overview.behaviorLogCount} logs</p>
+                </button>
 
-                  <button
-                    onClick={() => setShowAnalyticsModal(true)}
-                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
-                  >
-                    <BarChart3 className="w-5 h-5 text-greyed-navy mb-1.5" />
-                    <h4 className="font-semibold text-greyed-navy text-sm">Analytics</h4>
-                    <p className="text-xs text-greyed-black/60 mt-0.5">View insights</p>
-                  </button>
+                <button
+                  onClick={() => setShowAnalyticsModal(true)}
+                  className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                >
+                  <BarChart3 className="w-5 h-5 text-greyed-navy mb-1.5" />
+                  <h4 className="font-semibold text-greyed-navy text-sm">Analytics</h4>
+                  <p className="text-xs text-greyed-black/60 mt-0.5">View insights</p>
+                </button>
 
-                  <button
-                    onClick={() => setActiveView('documents')}
-                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
-                  >
-                    <FolderOpen className="w-5 h-5 text-greyed-navy mb-1.5" />
-                    <h4 className="font-semibold text-greyed-navy text-sm">Documents</h4>
-                    <p className="text-xs text-greyed-black/60 mt-0.5">Class files</p>
-                  </button>
+                <button
+                  onClick={() => setActiveView('documents')}
+                  className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                >
+                  <FolderOpen className="w-5 h-5 text-greyed-navy mb-1.5" />
+                  <h4 className="font-semibold text-greyed-navy text-sm">Documents</h4>
+                  <p className="text-xs text-greyed-black/60 mt-0.5">Class files</p>
+                </button>
 
-                  <button
-                    onClick={() => setShowLessonPlanModal(true)}
-                    className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
-                  >
-                    <Sparkles className="w-5 h-5 text-greyed-navy mb-1.5" />
-                    <h4 className="font-semibold text-greyed-navy text-sm">AI Lesson Plan</h4>
-                    <p className="text-xs text-greyed-black/60 mt-0.5">Generate plan</p>
-                  </button>
-                </div>
-              </motion.div>
+                <button
+                  onClick={() => setShowLessonPlanModal(true)}
+                  className="p-3 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                >
+                  <Sparkles className="w-5 h-5 text-greyed-navy mb-1.5" />
+                  <h4 className="font-semibold text-greyed-navy text-sm">AI Lesson Plan</h4>
+                  <p className="text-xs text-greyed-black/60 mt-0.5">Generate plan</p>
+                </button>
+              </div>
+            </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="bg-white rounded-lg border border-greyed-beige/20 p-6"
-              >
-                <h3 className="text-lg font-bold text-greyed-navy mb-4">Recent Activity</h3>
-                {overview.recentActivity.length > 0 ? (
-                  <div className="space-y-3">
-                    {overview.recentActivity.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="flex items-start gap-3 p-3 rounded-lg bg-greyed-white border border-greyed-beige/20"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-white border border-greyed-beige/20 flex items-center justify-center flex-shrink-0">
-                          {activity.icon === 'ClipboardCheck' && <ClipboardCheck className="w-4 h-4 text-greyed-navy" />}
-                          {activity.icon === 'Award' && <Award className="w-4 h-4 text-greyed-navy" />}
-                          {activity.icon === 'Activity' && <Activity className="w-4 h-4 text-greyed-navy" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-greyed-navy">{activity.description}</p>
-                          <p className="text-xs text-greyed-black/60 mt-1">
-                            {format(parseISO(activity.timestamp), 'MMM d, yyyy h:mm a')}
-                          </p>
-                        </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white rounded-lg border border-greyed-beige/20 p-6"
+            >
+              <h3 className="text-lg font-bold text-greyed-navy mb-4">Recent Activity</h3>
+              {overview.recentActivity.length > 0 ? (
+                <div className="space-y-3">
+                  {overview.recentActivity.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-greyed-white border border-greyed-beige/20"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-white border border-greyed-beige/20 flex items-center justify-center flex-shrink-0">
+                        {activity.icon === 'ClipboardCheck' && <ClipboardCheck className="w-4 h-4 text-greyed-navy" />}
+                        {activity.icon === 'Award' && <Award className="w-4 h-4 text-greyed-navy" />}
+                        {activity.icon === 'Activity' && <Activity className="w-4 h-4 text-greyed-navy" />}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Calendar className="w-12 h-12 text-greyed-beige mx-auto mb-3" />
-                    <p className="text-sm text-greyed-black/60">No recent activity</p>
-                  </div>
-                )}
-              </motion.div>
-            </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-greyed-navy">{activity.description}</p>
+                        <p className="text-xs text-greyed-black/60 mt-1">
+                          {format(parseISO(activity.timestamp), 'MMM d, yyyy h:mm a')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 text-greyed-beige mx-auto mb-3" />
+                  <p className="text-sm text-greyed-black/60">No recent activity</p>
+                </div>
+              )}
+            </motion.div>
 
             {overview.lastAttendanceDate && (
               <motion.div
