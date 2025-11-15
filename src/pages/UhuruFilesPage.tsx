@@ -113,8 +113,7 @@ const UhuruFilesPage: React.FC = () => {
   };
 
   const handleClassSelect = (classItem: Class) => {
-    setSelectedClass(classItem);
-    setViewMode('students');
+    navigate(`/u-class/classroom/${classItem.id}`);
   };
 
   const handleBackToClasses = () => {
@@ -275,12 +274,13 @@ const UhuruFilesPage: React.FC = () => {
                   key={classItem.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                  onClick={() => handleClassSelect(classItem)}
+                  className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-lg hover:border-teal transition-all duration-200 overflow-hidden cursor-pointer group"
                 >
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 mb-0.5">
+                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-teal transition-colors mb-0.5">
                           {classItem.class_name}
                         </h3>
                         {classItem.subject && (
@@ -291,7 +291,8 @@ const UhuruFilesPage: React.FC = () => {
                         )}
                       </div>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedClass(classItem);
                           setShowEditClassModal(true);
                         }}
@@ -306,75 +307,21 @@ const UhuruFilesPage: React.FC = () => {
                       <span className="font-medium">{classItem.student_count} students</span>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                        <School className="w-4 h-4 text-teal" />
+                        <span className="text-xs font-medium text-gray-700">Click to open classroom</span>
+                      </div>
                       <button
-                        onClick={() => handleTakeAttendance(classItem)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTakeAttendance(classItem);
+                        }}
                         className="w-full px-3 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors text-sm font-semibold flex items-center justify-center gap-1.5"
                       >
                         <ClipboardCheck className="w-3.5 h-3.5" />
-                        Take Attendance
+                        Quick Attendance
                       </button>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        <button
-                          onClick={() => handleClassSelect(classItem)}
-                          className="px-2 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
-                        >
-                          <Users className="w-3 h-3" />
-                          Students
-                        </button>
-                        <button
-                          onClick={async () => {
-                            setSelectedClass(classItem);
-                            await loadStudents(classItem.id);
-                            setShowGradesModal(true);
-                          }}
-                          className="px-2 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
-                        >
-                          <Award className="w-3 h-3" />
-                          Grades
-                        </button>
-                        <button
-                          onClick={async () => {
-                            setSelectedClass(classItem);
-                            await loadStudents(classItem.id);
-                            setShowBehaviorModal(true);
-                          }}
-                          className="px-2 py-1.5 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
-                        >
-                          <Activity className="w-3 h-3" />
-                          Behavior
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        <button
-                          onClick={() => {
-                            setSelectedClass(classItem);
-                            setViewMode('documents');
-                          }}
-                          className="px-2 py-1.5 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
-                        >
-                          <FolderOpen className="w-3 h-3" />
-                          Docs
-                        </button>
-                        <button
-                          onClick={() => handleViewAnalytics(classItem)}
-                          className="px-2 py-1.5 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
-                        >
-                          <BarChart3 className="w-3 h-3" />
-                          Analytics
-                        </button>
-                        <button
-                          onClick={async () => {
-                            setSelectedClass(classItem);
-                            await loadStudents(classItem.id);
-                            setShowLessonPlanModal(true);
-                          }}
-                          className="px-2 py-1.5 bg-pink-50 text-pink-700 rounded-lg hover:bg-pink-100 transition-colors text-xs font-medium flex items-center justify-center gap-1"
-                        >
-                          <Sparkles className="w-3 h-3" />
-                          AI Plan
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </motion.div>

@@ -42,6 +42,7 @@ const TokenUsage = lazy(() => import('./pages/admin/TokenUsage'));
 const UhuruDocsPage = lazy(() => import('./pages/UhuruOfficePage'));
 const UhuruSheetsPage = lazy(() => import('./pages/UhuruSheetsPage'));
 const UClassPage = lazy(() => import('./pages/UhuruFilesPage'));
+const ClassroomHomePage = lazy(() => import('./pages/ClassroomHomePage'));
 const StudentProfilePage = lazy(() => import('./pages/StudentProfilePage'));
 const TechnicalDocumentationSystem = lazy(() => import('./pages/TechnicalDocumentationSystem'));
 const SupaAdmin = lazy(() => import('./pages/SupaAdmin'));
@@ -301,6 +302,7 @@ const AppContentInner: React.FC = () => {
         <Route path="/uhuru-sheets" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><UhuruSheetsPage /></Suspense>} />
         <Route path="/u-class" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><UClassPage /></Suspense>} />
         <Route path="/uhuru-files" element={<Navigate to="/u-class" replace />} />
+        <Route path="/u-class/classroom/:classId" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><ClassroomHomePage /></Suspense>} />
         <Route path="/u-class/student/:studentId" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><StudentProfilePage /></Suspense>} />
         <Route path="/technical-docs" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TechnicalDocumentationSystem /></Suspense>} />
         <Route path="/technical-docs/:pageId" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TechnicalDocumentationSystem /></Suspense>} />

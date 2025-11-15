@@ -328,3 +328,167 @@ export const getActiveClassCount = async (
     };
   }
 };
+
+export interface ClassroomOverview {
+  class: Class;
+  studentCount: number;
+  attendanceRate: number;
+  averageGrade: number;
+  assignmentCount: number;
+  behaviorLogCount: number;
+  lastAttendanceDate: string | null;
+  recentActivity: RecentActivity[];
+}
+
+export interface RecentActivity {
+  id: string;
+  type: 'attendance' | 'grade' | 'behavior' | 'document' | 'lesson_plan';
+  description: string;
+  timestamp: string;
+  icon: string;
+}
+
+export const getClassroomOverview = async (
+  classId: string
+): Promise<ServiceResponse<ClassroomOverview>> => {
+  try {
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Service temporarily unavailable'
+      };
+    }
+
+    const classResult = await getClassById(classId);
+    if (!classResult.success || !classResult.data) {
+      return {
+        success: false,
+        error: classResult.error || 'Class not found'
+      };
+    }
+
+    const classData = classResult.data;
+
+    const { count: assignmentCount } = await supabase
+      .from('assignments')
+      .select('*', { count: 'exact', head: true })
+      .eq('class_id', classId);
+
+    const { count: behaviorLogCount } = await supabase
+      .from('student_behavior_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('class_id', classId);
+
+    const { data: avgGradeData } = await supabase
+      .from('student_grades')
+      .select('percentage_grade')
+      .eq('class_id', classId);
+
+    const averageGrade = avgGradeData && avgGradeData.length > 0
+      ? avgGradeData.reduce((sum, g) => sum + (g.percentage_grade || 0), 0) / avgGradeData.length
+      : 0;
+
+    const { data: attendanceDates } = await supabase
+      .from('attendance_records')
+      .select('attendance_date')
+      .eq('class_id', classId)
+      .order('attendance_date', { ascending: false })
+      .limit(1);
+
+    const lastAttendanceDate = attendanceDates && attendanceDates.length > 0
+      ? attendanceDates[0].attendance_date
+      : null;
+
+    const { data: rateData } = await supabase
+      .rpc('calculate_class_attendance_rate', {
+        p_class_id: classId,
+        p_start_date: null,
+        p_end_date: null
+      });
+
+    const recentActivity: RecentActivity[] = [];
+
+    const { data: recentAttendance } = await supabase
+      .from('attendance_records')
+      .select('attendance_date, recorded_at')
+      .eq('class_id', classId)
+      .order('recorded_at', { ascending: false })
+      .limit(3);
+
+    if (recentAttendance) {
+      const uniqueDates = [...new Set(recentAttendance.map(r => r.attendance_date))];
+      uniqueDates.slice(0, 3).forEach(date => {
+        const record = recentAttendance.find(r => r.attendance_date === date);
+        if (record) {
+          recentActivity.push({
+            id: `attendance-${date}`,
+            type: 'attendance',
+            description: `Attendance taken for ${date}`,
+            timestamp: record.recorded_at,
+            icon: 'ClipboardCheck'
+          });
+        }
+      });
+    }
+
+    const { data: recentGrades } = await supabase
+      .from('student_grades')
+      .select('created_at, assignments(assignment_name)')
+      .eq('class_id', classId)
+      .order('created_at', { ascending: false })
+      .limit(2);
+
+    if (recentGrades) {
+      recentGrades.forEach(grade => {
+        recentActivity.push({
+          id: `grade-${grade.created_at}`,
+          type: 'grade',
+          description: `Grades entered for ${(grade.assignments as any)?.assignment_name || 'assignment'}`,
+          timestamp: grade.created_at,
+          icon: 'Award'
+        });
+      });
+    }
+
+    const { data: recentBehavior } = await supabase
+      .from('student_behavior_logs')
+      .select('created_at, behavior_type')
+      .eq('class_id', classId)
+      .order('created_at', { ascending: false })
+      .limit(2);
+
+    if (recentBehavior) {
+      recentBehavior.forEach(behavior => {
+        recentActivity.push({
+          id: `behavior-${behavior.created_at}`,
+          type: 'behavior',
+          description: `Behavior log: ${behavior.behavior_type}`,
+          timestamp: behavior.created_at,
+          icon: 'Activity'
+        });
+      });
+    }
+
+    recentActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return {
+      success: true,
+      data: {
+        class: classData,
+        studentCount: classData.student_count,
+        attendanceRate: rateData || 0,
+        averageGrade: Math.round(averageGrade * 10) / 10,
+        assignmentCount: assignmentCount || 0,
+        behaviorLogCount: behaviorLogCount || 0,
+        lastAttendanceDate,
+        recentActivity: recentActivity.slice(0, 5)
+      }
+    };
+  } catch (error: any) {
+    console.error('Error fetching classroom overview:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch classroom overview'
+    };
+  }
+};
