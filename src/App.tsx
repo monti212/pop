@@ -99,13 +99,13 @@ const AppContentInner: React.FC = () => {
   const isSupaAdminPage = location.pathname.startsWith('/supa-admin');
   const isChatPage = location.pathname === '/chat';
 
-  // U Pages detection
-  const isUFilesPage = location.pathname === '/uhuru-files' || location.pathname === '/u-class';
+  // GreyEd Pages detection
+  const isGreyEdClassPage = location.pathname === '/uhuru-files' || location.pathname === '/greyed-class' || location.pathname === '/u-class';
   const isUOfficePage = location.pathname === '/uhuru-office';
   const isUSheetsPage = location.pathname === '/uhuru-sheets';
-  const isUClassPage = location.pathname.startsWith('/u-class');
+  const isClassPage = location.pathname.startsWith('/greyed-class') || location.pathname.startsWith('/u-class');
   const isTechnicalDocsPage = location.pathname.startsWith('/technical-docs');
-  const isUPage = isUFilesPage || isUOfficePage || isUSheetsPage || isUClassPage || isTechnicalDocsPage;
+  const isUPage = isGreyEdClassPage || isUOfficePage || isUSheetsPage || isClassPage || isTechnicalDocsPage;
 
   // Restore chat state from session storage on mount
   useEffect(() => {
@@ -297,13 +297,16 @@ const AppContentInner: React.FC = () => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/api-docs" element={<ApiDocumentation />} />
-        {/* U Pages Routes */}
+        {/* GreyEd Pages Routes */}
         <Route path="/uhuru-office" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><UhuruDocsPage /></Suspense>} />
         <Route path="/uhuru-sheets" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><UhuruSheetsPage /></Suspense>} />
-        <Route path="/u-class" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><UClassPage /></Suspense>} />
-        <Route path="/uhuru-files" element={<Navigate to="/u-class" replace />} />
-        <Route path="/u-class/classroom/:classId" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><ClassroomHomePage /></Suspense>} />
-        <Route path="/u-class/student/:studentId" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><StudentProfilePage /></Suspense>} />
+        <Route path="/greyed-class" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><UClassPage /></Suspense>} />
+        <Route path="/u-class" element={<Navigate to="/greyed-class" replace />} />
+        <Route path="/uhuru-files" element={<Navigate to="/greyed-class" replace />} />
+        <Route path="/greyed-class/classroom/:classId" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><ClassroomHomePage /></Suspense>} />
+        <Route path="/greyed-class/student/:studentId" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><StudentProfilePage /></Suspense>} />
+        <Route path="/u-class/classroom/:classId" element={<Navigate to="/greyed-class/classroom/:classId" replace />} />
+        <Route path="/u-class/student/:studentId" element={<Navigate to="/greyed-class/student/:studentId" replace />} />
         <Route path="/technical-docs" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TechnicalDocumentationSystem /></Suspense>} />
         <Route path="/technical-docs/:pageId" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TechnicalDocumentationSystem /></Suspense>} />
         <Route path="/admin/login" element={<AdminLogin />} />

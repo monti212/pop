@@ -113,7 +113,7 @@ const UhuruFilesPage: React.FC = () => {
   };
 
   const handleClassSelect = (classItem: Class) => {
-    navigate(`/u-class/classroom/${classItem.id}`);
+    navigate(`/greyed-class/classroom/${classItem.id}`);
   };
 
   const handleBackToClasses = () => {
@@ -166,10 +166,10 @@ const UhuruFilesPage: React.FC = () => {
             <div className="h-6 w-px bg-gray-300"></div>
 
             <div className="flex items-center gap-3">
-              <School className="w-7 h-7 text-teal" />
+              <img src="/src/assets/Logo PNG.png" alt="GreyEd" className="w-7 h-7" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {viewMode === 'classes' && 'U Class'}
+                  {viewMode === 'classes' && 'GreyEd Class'}
                   {viewMode === 'students' && `${selectedClass?.class_name} - Students`}
                   {viewMode === 'attendance' && `${selectedClass?.class_name} - Take Attendance`}
                   {viewMode === 'analytics' && `${selectedClass?.class_name} - Analytics`}
@@ -395,7 +395,7 @@ const UhuruFilesPage: React.FC = () => {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => navigate(`/u-class/student/${student.id}`)}
+                              onClick={() => navigate(`/greyed-class/student/${student.id}`)}
                               className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
                               title="View Profile"
                             >

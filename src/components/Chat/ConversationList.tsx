@@ -391,7 +391,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
             >
               <motion.button
                 onClick={() => {
-                  navigate('/u-class');
+                  navigate('/greyed-class');
                   if (onClose) onClose();
                 }}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-12 border border-[#E5E7EB] hover:bg-[#EFEFED] hover:shadow-md hover:text-[#19324A] hover:scale-[1.01] transition-all duration-150 ease-out"
@@ -399,8 +399,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.05 }}
               >
-                <FolderOpen className="w-4 h-4 text-[#0096B3]" />
-                <span className="text-sm font-medium">U Class</span>
+                <img src="/src/assets/Logo PNG.png" alt="GreyEd" className="w-4 h-4" />
+                <span className="text-sm font-medium">GreyEd Class</span>
               </motion.button>
 
               <motion.button

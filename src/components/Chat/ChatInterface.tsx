@@ -519,10 +519,10 @@ export default function ChatInterface({
     }
   };
 
-  // Handle opening U Class page (class management and attendance)
+  // Handle opening GreyEd Class page (class management and attendance)
   const handleOpenFilesPage = () => {
-    console.log('🔍 [DEBUG] handleOpenFilesPage called - navigating to U Class.');
-    navigate('/u-class');
+    console.log('🔍 [DEBUG] handleOpenFilesPage called - navigating to GreyEd Class.');
+    navigate('/greyed-class');
   };
 
   // Store abort controller in a ref to avoid cleanup on every change

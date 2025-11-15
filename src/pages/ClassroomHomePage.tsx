@@ -93,7 +93,7 @@ const ClassroomHomePage: React.FC = () => {
           <h3 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Classroom</h3>
           <p className="text-gray-600 mb-6">{error || 'Classroom not found'}</p>
           <button
-            onClick={() => navigate('/u-class')}
+            onClick={() => navigate('/greyed-class')}
             className="px-6 py-3 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors"
           >
             Back to Classes
@@ -111,7 +111,7 @@ const ClassroomHomePage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/u-class')}
+              onClick={() => navigate('/greyed-class')}
               className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-teal transition-colors flex items-center gap-2"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -464,7 +464,7 @@ const ClassroomHomePage: React.FC = () => {
                           </td>
                           <td className="px-6 py-4">
                             <button
-                              onClick={() => navigate(`/u-class/student/${student.id}`)}
+                              onClick={() => navigate(`/greyed-class/student/${student.id}`)}
                               className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium flex items-center gap-1"
                             >
                               <TrendingUp className="w-4 h-4" />
