@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Edit, Users, Award, Activity, BarChart3, FolderOpen,
   Sparkles, ClipboardCheck, UserPlus, TrendingUp, AlertCircle,
-  Calendar, BookOpen, Brain, Loader, X, RefreshCw
+  Calendar, BookOpen, Brain, Loader, X, RefreshCw, GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getClassroomOverview, ClassroomOverview } from '../services/classService';
@@ -134,9 +134,12 @@ const ClassroomHomePage: React.FC = () => {
             </button>
           </div>
 
-          {/* Centered GreyEd Logo */}
+          {/* Centered GreyEd Teach Icon */}
           <div className="absolute left-1/2 transform -translate-x-1/2">
-            <img src="/src/assets/Logo PNG.png" alt="GreyEd Teach" className="h-10" />
+            <div className="flex items-center gap-2">
+              <GraduationCap className="w-8 h-8 text-greyed-navy" />
+              <span className="text-xl font-bold text-greyed-navy">GreyEd Teach</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

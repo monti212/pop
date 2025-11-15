@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PenSquare, Search, Trash2, Crown, X, LogOut, LayoutGrid, Layout, Check, FileEdit as Edit3, FileText, Grid2x2 as Grid, Building, ChevronDown, MessageSquare, BookOpen, FolderOpen, Settings, MoreVertical, Shield } from 'lucide-react';
+import { PenSquare, Search, Trash2, Crown, X, LogOut, LayoutGrid, Layout, Check, FileEdit as Edit3, FileText, Grid2x2 as Grid, Building, ChevronDown, MessageSquare, BookOpen, FolderOpen, Settings, MoreVertical, Shield, GraduationCap } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useConversations } from '../../context/ConversationContext';
 import { updateConversationTitle } from '../../services/chatService';
@@ -399,7 +399,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.05 }}
               >
-                <img src="/src/assets/Logo PNG.png" alt="GreyEd" className="w-4 h-4" />
+                <GraduationCap className="w-4 h-4" />
                 <span className="text-sm font-medium">GreyEd Teach</span>
               </motion.button>
 

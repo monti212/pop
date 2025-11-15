@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Loader, AlertTriangle, X, Users, ClipboardCheck,
   Calendar, Edit, Trash2, UserPlus, BarChart3, School, Archive, FolderOpen,
-  Award, Activity, Sparkles, Brain, TrendingUp
+  Award, Activity, Sparkles, Brain, TrendingUp, GraduationCap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -166,7 +166,7 @@ const UhuruFilesPage: React.FC = () => {
             <div className="h-6 w-px bg-white/10"></div>
 
             <div className="flex items-center gap-3">
-              <img src="/src/assets/Logo PNG.png" alt="GreyEd" className="w-7 h-7" />
+              <GraduationCap className="w-7 h-7 text-white" />
               <div>
                 <h1 className="text-2xl font-headline font-bold text-white">
                   {viewMode === 'classes' && 'GreyEd Teach'}
