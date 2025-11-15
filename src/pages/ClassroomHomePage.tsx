@@ -122,12 +122,12 @@ const ClassroomHomePage: React.FC = () => {
 
   return (
     <div className="h-screen bg-greyed-white flex flex-col overflow-hidden">
-      <header className="bg-greyed-navy shadow-sm border-b border-greyed-navy/20 px-6 py-4 flex-shrink-0">
+      <header className="bg-white shadow-sm border-b border-greyed-beige/20 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between relative">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/greyed-class')}
-              className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors flex items-center gap-2"
+              className="p-2 rounded-lg hover:bg-greyed-blue/10 text-greyed-navy hover:text-greyed-navy transition-colors flex items-center gap-2"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="font-medium">Back to Classes</span>
@@ -142,7 +142,7 @@ const ClassroomHomePage: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={loadData}
-              className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+              className="p-2 rounded-lg hover:bg-greyed-blue/10 text-greyed-navy hover:text-greyed-navy transition-colors"
               title="Refresh"
             >
               <RefreshCw className="w-5 h-5" />
@@ -159,7 +159,7 @@ const ClassroomHomePage: React.FC = () => {
               disabled={students.length >= 35}
               className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 border-2 ${
                 students.length >= 35
-                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed border-greyed-beige/20'
+                  ? 'bg-greyed-beige/20 text-greyed-black/40 cursor-not-allowed border-greyed-beige/20'
                   : 'bg-greyed-blue text-greyed-navy hover:bg-greyed-white border-greyed-blue'
               }`}
             >
@@ -278,7 +278,7 @@ const ClassroomHomePage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setActiveView('students')}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
                     <Users className="w-6 h-6 text-greyed-navy mb-2" />
                     <h4 className="font-semibold text-greyed-navy text-sm">Students</h4>
@@ -287,7 +287,7 @@ const ClassroomHomePage: React.FC = () => {
 
                   <button
                     onClick={() => setShowGradesModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
                     <Award className="w-6 h-6 text-greyed-navy mb-2" />
                     <h4 className="font-semibold text-greyed-navy text-sm">Grades</h4>
@@ -296,7 +296,7 @@ const ClassroomHomePage: React.FC = () => {
 
                   <button
                     onClick={() => setShowBehaviorModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
                     <Activity className="w-6 h-6 text-greyed-navy mb-2" />
                     <h4 className="font-semibold text-greyed-navy text-sm">Behavior</h4>
@@ -305,7 +305,7 @@ const ClassroomHomePage: React.FC = () => {
 
                   <button
                     onClick={() => setShowAnalyticsModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
                     <BarChart3 className="w-6 h-6 text-greyed-navy mb-2" />
                     <h4 className="font-semibold text-greyed-navy text-sm">Analytics</h4>
@@ -314,7 +314,7 @@ const ClassroomHomePage: React.FC = () => {
 
                   <button
                     onClick={() => setActiveView('documents')}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
                     <FolderOpen className="w-6 h-6 text-greyed-navy mb-2" />
                     <h4 className="font-semibold text-greyed-navy text-sm">Documents</h4>
@@ -323,7 +323,7 @@ const ClassroomHomePage: React.FC = () => {
 
                   <button
                     onClick={() => setShowLessonPlanModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-navy hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
                     <Sparkles className="w-6 h-6 text-greyed-navy mb-2" />
                     <h4 className="font-semibold text-greyed-navy text-sm">AI Lesson Plan</h4>
