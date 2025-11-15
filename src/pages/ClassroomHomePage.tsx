@@ -109,7 +109,7 @@ const ClassroomHomePage: React.FC = () => {
           <p className="text-black/60 mb-6">{error || 'Classroom not found'}</p>
           <button
             onClick={() => navigate('/greyed-class')}
-            className="px-6 py-3 bg-greyed-navy text-white rounded-lg hover:bg-greyed-navy/90 transition-colors"
+            className="px-6 py-3 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-white transition-colors font-medium"
           >
             Back to Classes
           </button>
@@ -149,7 +149,7 @@ const ClassroomHomePage: React.FC = () => {
             </button>
             <button
               onClick={() => setShowAttendanceModal(true)}
-              className="px-4 py-2 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-blue/90 transition-colors flex items-center gap-2 font-medium"
+              className="px-4 py-2 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-white transition-colors flex items-center gap-2 font-medium border-2 border-greyed-blue"
             >
               <ClipboardCheck className="w-4 h-4" />
               Take Attendance
@@ -157,10 +157,10 @@ const ClassroomHomePage: React.FC = () => {
             <button
               onClick={() => setShowAddStudentModal(true)}
               disabled={students.length >= 35}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 border-2 ${
                 students.length >= 35
-                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed'
-                  : 'bg-white text-greyed-navy hover:bg-white/90'
+                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed border-greyed-beige/20'
+                  : 'bg-greyed-blue text-greyed-navy hover:bg-greyed-white border-greyed-blue'
               }`}
             >
               <UserPlus className="w-4 h-4" />
@@ -214,10 +214,10 @@ const ClassroomHomePage: React.FC = () => {
               >
                 <div className="flex items-center justify-between mb-2">
                   <Users className="w-8 h-8 text-greyed-navy" />
-                  <span className="text-sm text-black/60">of 35</span>
+                  <span className="text-sm text-greyed-black/60">of 35</span>
                 </div>
-                <h3 className="text-3xl font-bold text-greyed-black mb-1">{overview.studentCount}</h3>
-                <p className="text-sm text-black/60">Students</p>
+                <h3 className="text-3xl font-bold text-greyed-navy mb-1">{overview.studentCount}</h3>
+                <p className="text-sm text-greyed-black/60">Students</p>
               </motion.div>
 
               <motion.div
@@ -227,13 +227,13 @@ const ClassroomHomePage: React.FC = () => {
                 className="bg-white rounded-lg border border-greyed-beige/20 p-6"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <ClipboardCheck className="w-8 h-8 text-greyed-blue" />
-                  <span className="text-sm text-black/60">rate</span>
+                  <ClipboardCheck className="w-8 h-8 text-greyed-navy" />
+                  <span className="text-sm text-greyed-black/60">rate</span>
                 </div>
-                <h3 className="text-3xl font-bold text-greyed-black mb-1">
+                <h3 className="text-3xl font-bold text-greyed-navy mb-1">
                   {Math.round(overview.attendanceRate)}%
                 </h3>
-                <p className="text-sm text-black/60">Attendance</p>
+                <p className="text-sm text-greyed-black/60">Attendance</p>
               </motion.div>
 
               <motion.div
@@ -243,13 +243,13 @@ const ClassroomHomePage: React.FC = () => {
                 className="bg-white rounded-lg border border-greyed-beige/20 p-6"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <Award className="w-8 h-8 text-orange" />
-                  <span className="text-sm text-black/60">average</span>
+                  <Award className="w-8 h-8 text-greyed-navy" />
+                  <span className="text-sm text-greyed-black/60">average</span>
                 </div>
-                <h3 className="text-3xl font-bold text-greyed-black mb-1">
+                <h3 className="text-3xl font-bold text-greyed-navy mb-1">
                   {overview.averageGrade > 0 ? `${overview.averageGrade}%` : '—'}
                 </h3>
-                <p className="text-sm text-black/60">Class Grade</p>
+                <p className="text-sm text-greyed-black/60">Class Grade</p>
               </motion.div>
 
               <motion.div
@@ -260,10 +260,10 @@ const ClassroomHomePage: React.FC = () => {
               >
                 <div className="flex items-center justify-between mb-2">
                   <BookOpen className="w-8 h-8 text-greyed-navy" />
-                  <span className="text-sm text-black/60">active</span>
+                  <span className="text-sm text-greyed-black/60">active</span>
                 </div>
-                <h3 className="text-3xl font-bold text-greyed-black mb-1">{overview.assignmentCount}</h3>
-                <p className="text-sm text-black/60">Assignments</p>
+                <h3 className="text-3xl font-bold text-greyed-navy mb-1">{overview.assignmentCount}</h3>
+                <p className="text-sm text-greyed-black/60">Assignments</p>
               </motion.div>
             </div>
 
@@ -274,60 +274,60 @@ const ClassroomHomePage: React.FC = () => {
                 transition={{ delay: 0.4 }}
                 className="bg-white rounded-lg border border-greyed-beige/20 p-6"
               >
-                <h3 className="text-lg font-bold text-greyed-black mb-4">Feature Access</h3>
+                <h3 className="text-lg font-bold text-greyed-navy mb-4">Feature Access</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setActiveView('students')}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/10 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
                     <Users className="w-6 h-6 text-greyed-navy mb-2" />
-                    <h4 className="font-semibold text-greyed-black text-sm">Students</h4>
-                    <p className="text-xs text-black/60 mt-1">Manage roster</p>
+                    <h4 className="font-semibold text-greyed-navy text-sm">Students</h4>
+                    <p className="text-xs text-greyed-black/60 mt-1">Manage roster</p>
                   </button>
 
                   <button
                     onClick={() => setShowGradesModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-orange hover:bg-orange/10 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
-                    <Award className="w-6 h-6 text-orange mb-2" />
-                    <h4 className="font-semibold text-greyed-black text-sm">Grades</h4>
-                    <p className="text-xs text-black/60 mt-1">Manage grades</p>
+                    <Award className="w-6 h-6 text-greyed-navy mb-2" />
+                    <h4 className="font-semibold text-greyed-navy text-sm">Grades</h4>
+                    <p className="text-xs text-greyed-black/60 mt-1">Manage grades</p>
                   </button>
 
                   <button
                     onClick={() => setShowBehaviorModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-orange hover:bg-orange/10 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
-                    <Activity className="w-6 h-6 text-orange mb-2" />
-                    <h4 className="font-semibold text-greyed-black text-sm">Behavior</h4>
-                    <p className="text-xs text-black/60 mt-1">{overview.behaviorLogCount} logs</p>
+                    <Activity className="w-6 h-6 text-greyed-navy mb-2" />
+                    <h4 className="font-semibold text-greyed-navy text-sm">Behavior</h4>
+                    <p className="text-xs text-greyed-black/60 mt-1">{overview.behaviorLogCount} logs</p>
                   </button>
 
                   <button
                     onClick={() => setShowAnalyticsModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-navy hover:bg-greyed-navy/10 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
                     <BarChart3 className="w-6 h-6 text-greyed-navy mb-2" />
-                    <h4 className="font-semibold text-greyed-black text-sm">Analytics</h4>
-                    <p className="text-xs text-black/60 mt-1">View insights</p>
+                    <h4 className="font-semibold text-greyed-navy text-sm">Analytics</h4>
+                    <p className="text-xs text-greyed-black/60 mt-1">View insights</p>
                   </button>
 
                   <button
                     onClick={() => setActiveView('documents')}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/10 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
-                    <FolderOpen className="w-6 h-6 text-greyed-blue mb-2" />
-                    <h4 className="font-semibold text-greyed-black text-sm">Documents</h4>
-                    <p className="text-xs text-black/60 mt-1">Class files</p>
+                    <FolderOpen className="w-6 h-6 text-greyed-navy mb-2" />
+                    <h4 className="font-semibold text-greyed-navy text-sm">Documents</h4>
+                    <p className="text-xs text-greyed-black/60 mt-1">Class files</p>
                   </button>
 
                   <button
                     onClick={() => setShowLessonPlanModal(true)}
-                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-navy hover:bg-greyed-navy/10 transition-all text-left group"
+                    className="p-4 rounded-lg border-2 border-greyed-beige/20 hover:border-greyed-blue hover:bg-greyed-blue/5 transition-all text-left group"
                   >
                     <Sparkles className="w-6 h-6 text-greyed-navy mb-2" />
-                    <h4 className="font-semibold text-greyed-black text-sm">AI Lesson Plan</h4>
-                    <p className="text-xs text-black/60 mt-1">Generate plan</p>
+                    <h4 className="font-semibold text-greyed-navy text-sm">AI Lesson Plan</h4>
+                    <p className="text-xs text-greyed-black/60 mt-1">Generate plan</p>
                   </button>
                 </div>
               </motion.div>
@@ -338,7 +338,7 @@ const ClassroomHomePage: React.FC = () => {
                 transition={{ delay: 0.5 }}
                 className="bg-white rounded-lg border border-greyed-beige/20 p-6"
               >
-                <h3 className="text-lg font-bold text-greyed-black mb-4">Recent Activity</h3>
+                <h3 className="text-lg font-bold text-greyed-navy mb-4">Recent Activity</h3>
                 {overview.recentActivity.length > 0 ? (
                   <div className="space-y-3">
                     {overview.recentActivity.map((activity) => (
@@ -347,13 +347,13 @@ const ClassroomHomePage: React.FC = () => {
                         className="flex items-start gap-3 p-3 rounded-lg bg-greyed-white border border-greyed-beige/20"
                       >
                         <div className="w-8 h-8 rounded-lg bg-white border border-greyed-beige/20 flex items-center justify-center flex-shrink-0">
-                          {activity.icon === 'ClipboardCheck' && <ClipboardCheck className="w-4 h-4 text-greyed-blue" />}
-                          {activity.icon === 'Award' && <Award className="w-4 h-4 text-orange" />}
-                          {activity.icon === 'Activity' && <Activity className="w-4 h-4 text-orange" />}
+                          {activity.icon === 'ClipboardCheck' && <ClipboardCheck className="w-4 h-4 text-greyed-navy" />}
+                          {activity.icon === 'Award' && <Award className="w-4 h-4 text-greyed-navy" />}
+                          {activity.icon === 'Activity' && <Activity className="w-4 h-4 text-greyed-navy" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-greyed-black">{activity.description}</p>
-                          <p className="text-xs text-black/60 mt-1">
+                          <p className="text-sm font-medium text-greyed-navy">{activity.description}</p>
+                          <p className="text-xs text-greyed-black/60 mt-1">
                             {format(parseISO(activity.timestamp), 'MMM d, yyyy h:mm a')}
                           </p>
                         </div>
@@ -363,7 +363,7 @@ const ClassroomHomePage: React.FC = () => {
                 ) : (
                   <div className="text-center py-8">
                     <Calendar className="w-12 h-12 text-greyed-beige mx-auto mb-3" />
-                    <p className="text-sm text-black/60">No recent activity</p>
+                    <p className="text-sm text-greyed-black/60">No recent activity</p>
                   </div>
                 )}
               </motion.div>
@@ -402,7 +402,7 @@ const ClassroomHomePage: React.FC = () => {
                   </p>
                   <button
                     onClick={() => setShowAddStudentModal(true)}
-                    className="px-8 py-4 bg-greyed-navy text-white rounded-lg hover:bg-greyed-navy/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
+                    className="px-8 py-4 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-white transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md border-2 border-greyed-blue"
                   >
                     <UserPlus className="w-5 h-5" />
                     Add Your First Student
@@ -456,7 +456,7 @@ const ClassroomHomePage: React.FC = () => {
                           <td className="px-6 py-4">
                             <button
                               onClick={() => navigate(`/greyed-class/student/${student.id}`)}
-                              className="px-3 py-1.5 rounded-lg bg-greyed-blue/10 text-greyed-navy hover:bg-greyed-blue/20 transition-colors text-sm font-medium flex items-center gap-1"
+                              className="px-3 py-1.5 rounded-lg bg-greyed-blue text-greyed-navy hover:bg-greyed-white transition-colors text-sm font-medium flex items-center gap-1 border border-greyed-blue"
                             >
                               <TrendingUp className="w-4 h-4" />
                               View Profile

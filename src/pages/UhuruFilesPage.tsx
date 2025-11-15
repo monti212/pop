@@ -190,10 +190,10 @@ const UhuruFilesPage: React.FC = () => {
             <motion.button
               onClick={() => setShowCreateClassModal(true)}
               disabled={classCount >= 5}
-              className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 ${
+              className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 border-2 ${
                 classCount >= 5
-                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed'
-                  : 'bg-greyed-blue text-greyed-navy hover:bg-greyed-blue/90'
+                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed border-greyed-beige/20'
+                  : 'bg-greyed-blue text-greyed-navy hover:bg-greyed-white border-greyed-blue'
               }`}
               whileHover={classCount < 5 ? { scale: 1.02 } : {}}
               whileTap={classCount < 5 ? { scale: 0.98 } : {}}
@@ -207,10 +207,10 @@ const UhuruFilesPage: React.FC = () => {
             <motion.button
               onClick={() => setShowAddStudentModal(true)}
               disabled={students.length >= 35}
-              className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 ${
+              className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 border-2 ${
                 students.length >= 35
-                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed'
-                  : 'bg-greyed-blue text-greyed-navy hover:bg-greyed-blue/90'
+                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed border-greyed-beige/20'
+                  : 'bg-greyed-blue text-greyed-navy hover:bg-greyed-white border-greyed-blue'
               }`}
               whileHover={students.length < 35 ? { scale: 1.02 } : {}}
               whileTap={students.length < 35 ? { scale: 0.98 } : {}}
@@ -244,7 +244,7 @@ const UhuruFilesPage: React.FC = () => {
             <div className="text-center">
               <Loader className="w-12 h-12 text-greyed-blue animate-spin mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-greyed-black mb-2">Loading...</h3>
-              <p className="text-black/60">Getting everything ready</p>
+              <p className="text-greyed-black/60">Getting everything ready</p>
             </div>
           </div>
         ) : viewMode === 'classes' ? (
@@ -253,12 +253,12 @@ const UhuruFilesPage: React.FC = () => {
               <div className="text-center max-w-md">
                 <School className="w-24 h-24 text-greyed-beige mx-auto mb-6" />
                 <h3 className="text-2xl font-bold text-greyed-black mb-3">No Classes Yet</h3>
-                <p className="text-black/60 text-lg mb-8">
+                <p className="text-greyed-black/60 text-lg mb-8">
                   Create your first class to start tracking attendance
                 </p>
                 <motion.button
                   onClick={() => setShowCreateClassModal(true)}
-                  className="px-8 py-4 bg-greyed-navy text-white rounded-lg hover:bg-greyed-navy/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
+                  className="px-8 py-4 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-white border-2 border-greyed-blue transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -280,14 +280,14 @@ const UhuruFilesPage: React.FC = () => {
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-greyed-black group-hover:text-greyed-navy transition-colors mb-0.5">
+                        <h3 className="text-lg font-bold text-greyed-navy group-hover:text-greyed-blue transition-colors mb-0.5">
                           {classItem.class_name}
                         </h3>
                         {classItem.subject && (
-                          <p className="text-xs text-black/60 mb-0.5">{classItem.subject}</p>
+                          <p className="text-xs text-greyed-black/60 mb-0.5">{classItem.subject}</p>
                         )}
                         {classItem.grade_level && (
-                          <p className="text-xs text-black/50">Grade {classItem.grade_level}</p>
+                          <p className="text-xs text-greyed-black/50">Grade {classItem.grade_level}</p>
                         )}
                       </div>
                       <button
@@ -296,7 +296,7 @@ const UhuruFilesPage: React.FC = () => {
                           setSelectedClass(classItem);
                           setShowEditClassModal(true);
                         }}
-                        className="p-1.5 rounded-lg hover:bg-greyed-navy/10 text-black/60 hover:text-greyed-navy transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-greyed-navy/10 text-greyed-black/60 hover:text-greyed-navy transition-colors"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
@@ -317,7 +317,7 @@ const UhuruFilesPage: React.FC = () => {
                           e.stopPropagation();
                           handleTakeAttendance(classItem);
                         }}
-                        className="w-full px-3 py-2 bg-greyed-navy text-white rounded-lg hover:bg-greyed-navy/90 transition-colors text-sm font-semibold flex items-center justify-center gap-1.5"
+                        className="w-full px-3 py-2 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-white border-2 border-greyed-blue transition-colors text-sm font-semibold flex items-center justify-center gap-1.5"
                       >
                         <ClipboardCheck className="w-3.5 h-3.5" />
                         Quick Attendance
@@ -334,12 +334,12 @@ const UhuruFilesPage: React.FC = () => {
               <div className="text-center max-w-md">
                 <Users className="w-24 h-24 text-greyed-beige mx-auto mb-6" />
                 <h3 className="text-2xl font-bold text-greyed-black mb-3">No Students Yet</h3>
-                <p className="text-black/60 text-lg mb-8">
+                <p className="text-greyed-black/60 text-lg mb-8">
                   Add students to this class to start tracking attendance
                 </p>
                 <motion.button
                   onClick={() => setShowAddStudentModal(true)}
-                  className="px-8 py-4 bg-greyed-navy text-white rounded-lg hover:bg-greyed-navy/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
+                  className="px-8 py-4 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-white border-2 border-greyed-blue transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -380,7 +380,7 @@ const UhuruFilesPage: React.FC = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-black/60">
+                        <td className="px-6 py-4 text-sm text-greyed-black/60">
                           {student.student_identifier || '—'}
                         </td>
                         <td className="px-6 py-4">
@@ -416,7 +416,7 @@ const UhuruFilesPage: React.FC = () => {
                                 setSelectedStudent(student);
                                 setShowEditStudentModal(true);
                               }}
-                              className="p-2 rounded-lg hover:bg-greyed-navy/10 text-black/60 hover:text-greyed-navy transition-colors"
+                              className="p-2 rounded-lg hover:bg-greyed-navy/10 text-greyed-black/60 hover:text-greyed-navy transition-colors"
                               title="Edit Student"
                             >
                               <Edit className="w-4 h-4" />
