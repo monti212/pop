@@ -400,7 +400,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.05 }}
               >
                 <img src="/src/assets/Logo PNG.png" alt="GreyEd" className="w-4 h-4" />
-                <span className="text-sm font-medium">GreyEd Class</span>
+                <span className="text-sm font-medium">GreyEd Teach</span>
               </motion.button>
 
               <motion.button

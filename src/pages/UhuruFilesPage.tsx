@@ -140,15 +140,15 @@ const UhuruFilesPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+    <div className="h-screen bg-greyed-white flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex-shrink-0">
+      <header className="bg-greyed-navy shadow-sm border-b border-greyed-navy/20 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {viewMode !== 'classes' ? (
               <button
                 onClick={handleBackToClasses}
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-teal transition-colors flex items-center gap-2"
+                className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors flex items-center gap-2"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span className="font-medium">Back to Classes</span>
@@ -156,26 +156,26 @@ const UhuruFilesPage: React.FC = () => {
             ) : (
               <button
                 onClick={() => navigate('/')}
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-teal transition-colors flex items-center gap-2"
+                className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors flex items-center gap-2"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span className="font-medium">Back to Chat</span>
               </button>
             )}
 
-            <div className="h-6 w-px bg-gray-300"></div>
+            <div className="h-6 w-px bg-white/10"></div>
 
             <div className="flex items-center gap-3">
               <img src="/src/assets/Logo PNG.png" alt="GreyEd" className="w-7 h-7" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {viewMode === 'classes' && 'GreyEd Class'}
+                <h1 className="text-2xl font-headline font-bold text-white">
+                  {viewMode === 'classes' && 'GreyEd Teach'}
                   {viewMode === 'students' && `${selectedClass?.class_name} - Students`}
                   {viewMode === 'attendance' && `${selectedClass?.class_name} - Take Attendance`}
                   {viewMode === 'analytics' && `${selectedClass?.class_name} - Analytics`}
                   {viewMode === 'documents' && `${selectedClass?.class_name} - Documents`}
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-white/80">
                   {viewMode === 'classes' && `Manage your classes and students • ${classCount} of 5 classes`}
                   {viewMode === 'students' && `${students.length} of 35 students`}
                   {viewMode === 'attendance' && 'Record daily attendance'}
@@ -192,8 +192,8 @@ const UhuruFilesPage: React.FC = () => {
               disabled={classCount >= 5}
               className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 ${
                 classCount >= 5
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-teal text-white hover:bg-teal/90'
+                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed'
+                  : 'bg-greyed-blue text-greyed-navy hover:bg-greyed-blue/90'
               }`}
               whileHover={classCount < 5 ? { scale: 1.02 } : {}}
               whileTap={classCount < 5 ? { scale: 0.98 } : {}}
@@ -209,8 +209,8 @@ const UhuruFilesPage: React.FC = () => {
               disabled={students.length >= 35}
               className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 ${
                 students.length >= 35
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-teal text-white hover:bg-teal/90'
+                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed'
+                  : 'bg-greyed-blue text-greyed-navy hover:bg-greyed-blue/90'
               }`}
               whileHover={students.length < 35 ? { scale: 1.02 } : {}}
               whileTap={students.length < 35 ? { scale: 0.98 } : {}}
@@ -242,23 +242,23 @@ const UhuruFilesPage: React.FC = () => {
         {isLoading ? (
           <div className="flex items-center justify-center min-h-[500px]">
             <div className="text-center">
-              <Loader className="w-12 h-12 text-teal animate-spin mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading...</h3>
-              <p className="text-gray-600">Getting everything ready</p>
+              <Loader className="w-12 h-12 text-greyed-blue animate-spin mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-greyed-black mb-2">Loading...</h3>
+              <p className="text-black/60">Getting everything ready</p>
             </div>
           </div>
         ) : viewMode === 'classes' ? (
           classes.length === 0 ? (
             <div className="flex items-center justify-center min-h-[500px]">
               <div className="text-center max-w-md">
-                <School className="w-24 h-24 text-gray-300 mx-auto mb-6" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">No Classes Yet</h3>
-                <p className="text-gray-600 text-lg mb-8">
+                <School className="w-24 h-24 text-greyed-beige mx-auto mb-6" />
+                <h3 className="text-2xl font-bold text-greyed-black mb-3">No Classes Yet</h3>
+                <p className="text-black/60 text-lg mb-8">
                   Create your first class to start tracking attendance
                 </p>
                 <motion.button
                   onClick={() => setShowCreateClassModal(true)}
-                  className="px-8 py-4 bg-teal text-white rounded-lg hover:bg-teal/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
+                  className="px-8 py-4 bg-greyed-navy text-white rounded-lg hover:bg-greyed-navy/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -275,19 +275,19 @@ const UhuruFilesPage: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={() => handleClassSelect(classItem)}
-                  className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-lg hover:border-teal transition-all duration-200 overflow-hidden cursor-pointer group"
+                  className="bg-white rounded-lg border border-greyed-beige/20 shadow-sm hover:shadow-lg hover:border-greyed-blue/30 transition-all duration-200 overflow-hidden cursor-pointer group"
                 >
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-teal transition-colors mb-0.5">
+                        <h3 className="text-lg font-bold text-greyed-black group-hover:text-greyed-navy transition-colors mb-0.5">
                           {classItem.class_name}
                         </h3>
                         {classItem.subject && (
-                          <p className="text-xs text-gray-600 mb-0.5">{classItem.subject}</p>
+                          <p className="text-xs text-black/60 mb-0.5">{classItem.subject}</p>
                         )}
                         {classItem.grade_level && (
-                          <p className="text-xs text-gray-500">Grade {classItem.grade_level}</p>
+                          <p className="text-xs text-black/50">Grade {classItem.grade_level}</p>
                         )}
                       </div>
                       <button
@@ -296,28 +296,28 @@ const UhuruFilesPage: React.FC = () => {
                           setSelectedClass(classItem);
                           setShowEditClassModal(true);
                         }}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-teal transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-greyed-navy/10 text-black/60 hover:text-greyed-navy transition-colors"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-1.5 mb-3 text-xs text-gray-700">
-                      <Users className="w-3.5 h-3.5 text-teal" />
+                    <div className="flex items-center gap-1.5 mb-3 text-xs text-greyed-black">
+                      <Users className="w-3.5 h-3.5 text-greyed-blue" />
                       <span className="font-medium">{classItem.student_count} students</span>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                        <School className="w-4 h-4 text-teal" />
-                        <span className="text-xs font-medium text-gray-700">Click to open classroom</span>
+                      <div className="flex items-center justify-center gap-2 p-2 bg-greyed-beige/10 rounded-lg border border-greyed-beige/20">
+                        <School className="w-4 h-4 text-greyed-blue" />
+                        <span className="text-xs font-medium text-greyed-black">Click to open classroom</span>
                       </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleTakeAttendance(classItem);
                         }}
-                        className="w-full px-3 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors text-sm font-semibold flex items-center justify-center gap-1.5"
+                        className="w-full px-3 py-2 bg-greyed-navy text-white rounded-lg hover:bg-greyed-navy/90 transition-colors text-sm font-semibold flex items-center justify-center gap-1.5"
                       >
                         <ClipboardCheck className="w-3.5 h-3.5" />
                         Quick Attendance
@@ -332,14 +332,14 @@ const UhuruFilesPage: React.FC = () => {
           students.length === 0 ? (
             <div className="flex items-center justify-center min-h-[500px]">
               <div className="text-center max-w-md">
-                <Users className="w-24 h-24 text-gray-300 mx-auto mb-6" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">No Students Yet</h3>
-                <p className="text-gray-600 text-lg mb-8">
+                <Users className="w-24 h-24 text-greyed-beige mx-auto mb-6" />
+                <h3 className="text-2xl font-bold text-greyed-black mb-3">No Students Yet</h3>
+                <p className="text-black/60 text-lg mb-8">
                   Add students to this class to start tracking attendance
                 </p>
                 <motion.button
                   onClick={() => setShowAddStudentModal(true)}
-                  className="px-8 py-4 bg-teal text-white rounded-lg hover:bg-teal/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
+                  className="px-8 py-4 bg-greyed-navy text-white rounded-lg hover:bg-greyed-navy/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -349,29 +349,29 @@ const UhuruFilesPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-greyed-beige/20 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-greyed-beige/10 border-b border-greyed-beige/20">
                     <tr>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Student Name</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">ID</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Actions</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-black">Student Name</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-black">ID</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-black">Status</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-black">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {students.map((student) => (
-                      <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={student.id} className="hover:bg-greyed-beige/10 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-teal/10 flex items-center justify-center">
-                              <span className="text-teal font-semibold text-sm">
+                            <div className="w-10 h-10 rounded-full bg-greyed-blue/20 flex items-center justify-center">
+                              <span className="text-greyed-blue font-semibold text-sm">
                                 {student.student_name.charAt(0).toUpperCase()}
                               </span>
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900">{student.student_name}</p>
+                              <p className="font-medium text-greyed-black">{student.student_name}</p>
                               {student.has_neurodivergence && student.neurodivergence_type && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
                                   {student.neurodivergence_type}
@@ -380,7 +380,7 @@ const UhuruFilesPage: React.FC = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
+                        <td className="px-6 py-4 text-sm text-black/60">
                           {student.student_identifier || '—'}
                         </td>
                         <td className="px-6 py-4">
@@ -416,7 +416,7 @@ const UhuruFilesPage: React.FC = () => {
                                 setSelectedStudent(student);
                                 setShowEditStudentModal(true);
                               }}
-                              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-teal transition-colors"
+                              className="p-2 rounded-lg hover:bg-greyed-navy/10 text-black/60 hover:text-greyed-navy transition-colors"
                               title="Edit Student"
                             >
                               <Edit className="w-4 h-4" />

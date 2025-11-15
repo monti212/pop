@@ -519,9 +519,9 @@ export default function ChatInterface({
     }
   };
 
-  // Handle opening GreyEd Class page (class management and attendance)
+  // Handle opening GreyEd Teach page (class management and attendance)
   const handleOpenFilesPage = () => {
-    console.log('🔍 [DEBUG] handleOpenFilesPage called - navigating to GreyEd Class.');
+    console.log('🔍 [DEBUG] handleOpenFilesPage called - navigating to GreyEd Teach.');
     navigate('/greyed-class');
   };
 

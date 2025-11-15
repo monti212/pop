@@ -16,6 +16,14 @@ export default {
         'golden-yellow': '#f5b233',
         'deep-navy': '#002F4B',
         'off-white': '#F8F9FA',
+        // GreyEd brand colors
+        greyed: {
+          navy: '#212754',
+          blue: '#bbd7eb',
+          black: '#292828',
+          white: '#efeae4',
+          beige: '#dedbc2',
+        },
         sand: {
           50: '#FEFEFE',
           100: '#F9F9F8',

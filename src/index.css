@@ -2,10 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-greyed-navy: #212754;
+  --color-greyed-blue: #bbd7eb;
+  --color-greyed-black: #292828;
+  --color-greyed-white: #efeae4;
+  --color-greyed-beige: #dedbc2;
+}
+
 @layer base {
   html {
     @apply scroll-smooth;
-    -webkit-tap-highlight-color: transparent;
+    -webkit-tap-highlight-color: rgba(187, 215, 235, 0.3);
   }
 
   body {

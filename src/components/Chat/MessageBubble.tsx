@@ -1144,7 +1144,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                       onClick={() => navigate('/greyed-class')}
                       className="px-3 py-1.5 text-xs bg-orange/10 text-orange rounded-lg hover:bg-orange/20 transition-colors duration-200 font-medium"
                     >
-                      View in GreyEd Class
+                      View in GreyEd Teach
                     </button>
                     <button
                       onClick={() => {
