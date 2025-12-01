@@ -427,11 +427,6 @@ const UhuruDocsPage: React.FC = () => {
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       <div className="h-screen bg-sand-200 flex flex-col overflow-hidden">
       <header className="bg-white shadow-card border-b border-borders px-6 py-4 flex-shrink-0">
-        {error && (
-          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-12 shadow-card z-50 max-w-md">
-            <p className="text-sm">{error}</p>
-          </div>
-        )}
         <div className="flex items-center justify-between">
           {/* Left side - Back button */}
           <button
