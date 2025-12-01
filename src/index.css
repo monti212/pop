@@ -935,18 +935,68 @@ body {
   .ql-toolbar {
     display: none !important;
   }
-  
+
   .ql-container {
     border: none !important;
   }
-  
+
   .ql-editor {
     padding: 0 !important;
   }
-  
+
   @page {
     size: A4;
     margin: 20mm;
   }
+}
+
+/* DOCX Preview Styles */
+.docx-preview {
+  @apply text-gray-900;
+  line-height: 1.6;
+}
+
+.docx-preview p {
+  @apply mb-4;
+}
+
+.docx-preview h1 {
+  @apply text-3xl font-bold mb-4 mt-6;
+}
+
+.docx-preview h2 {
+  @apply text-2xl font-bold mb-3 mt-5;
+}
+
+.docx-preview h3 {
+  @apply text-xl font-bold mb-2 mt-4;
+}
+
+.docx-preview ul, .docx-preview ol {
+  @apply mb-4 ml-6;
+}
+
+.docx-preview li {
+  @apply mb-2;
+}
+
+.docx-preview strong {
+  @apply font-semibold;
+}
+
+.docx-preview em {
+  @apply italic;
+}
+
+.docx-preview table {
+  @apply w-full border-collapse mb-4;
+}
+
+.docx-preview th, .docx-preview td {
+  @apply border border-gray-300 px-3 py-2;
+}
+
+.docx-preview th {
+  @apply bg-gray-100 font-semibold;
 }
 

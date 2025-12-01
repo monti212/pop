@@ -487,6 +487,24 @@ export const updateDocument = async (
   }
 };
 
+export const getDocumentById = async (documentId: string): Promise<ServiceResponse<ClassDocument>> => {
+  try {
+    const { data, error } = await supabase
+      .from('class_documents')
+      .select('*')
+      .eq('id', documentId)
+      .is('deleted_at', null)
+      .single();
+
+    if (error) throw error;
+
+    return { success: true, data };
+  } catch (error: any) {
+    console.error('Error fetching document:', error);
+    return { success: false, error: error.message || 'Failed to fetch document' };
+  }
+};
+
 export const deleteDocument = async (documentId: string, softDelete: boolean = true): Promise<ServiceResponse<void>> => {
   try {
     if (softDelete) {

@@ -43,24 +43,69 @@ const UhuruDocsPage: React.FC = () => {
   const { user, profile } = useAuth();
   const quillRef = useRef<ReactQuill>(null);
 
-  // Get initial content from navigation state
+  // Get initial content from navigation state or URL parameters
   useEffect(() => {
-    const initialContent = location.state?.content;
-    const initialTitle = location.state?.title;
-    
-    if (initialContent) {
-      convertMarkdownToHtml(initialContent).then(htmlContent => {
-        setContent(htmlContent);
-      });
-    }
-    
-    if (initialTitle) {
-      setTitle(initialTitle);
-    }
-    
-    // Load saved documents
+    const loadInitialDocument = async () => {
+      const params = new URLSearchParams(location.search);
+      const documentId = params.get('documentId');
+      const documentTitle = params.get('documentTitle');
+
+      if (documentId) {
+        // Load document from database
+        try {
+          const { getDocumentById } = await import('../services/classDocumentService');
+          const result = await getDocumentById(documentId);
+
+          if (result.success && result.data) {
+            setTitle(result.data.title);
+            if (result.data.content) {
+              setContent(result.data.content);
+            } else if (result.data.storage_path) {
+              // Load content from storage if it's a text document
+              const { supabase } = await import('../services/authService');
+              const { data: fileData } = await supabase.storage
+                .from('user-files')
+                .download(result.data.storage_path);
+
+              if (fileData) {
+                const text = await fileData.text();
+                setContent(text);
+              }
+            }
+            setCurrentDocument({
+              id: result.data.id,
+              title: result.data.title,
+              content: result.data.content || '',
+              created_at: result.data.created_at,
+              updated_at: result.data.updated_at,
+              source: 'class_documents'
+            });
+          }
+        } catch (error) {
+          console.error('Error loading document:', error);
+        }
+      } else if (documentTitle) {
+        setTitle(documentTitle);
+      }
+
+      // Fallback to navigation state
+      const initialContent = location.state?.content;
+      const initialTitle = location.state?.title;
+
+      if (initialContent && !documentId) {
+        convertMarkdownToHtml(initialContent).then(htmlContent => {
+          setContent(htmlContent);
+        });
+      }
+
+      if (initialTitle && !documentTitle) {
+        setTitle(initialTitle);
+      }
+    };
+
+    loadInitialDocument();
     loadSavedDocuments();
-  }, [location.state]);
+  }, [location.state, location.search]);
 
   const formats = [
     'header', 'font', 'size',

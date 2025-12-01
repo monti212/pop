@@ -18,6 +18,7 @@ import {
 } from '../services/classDocumentService';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/authService';
+import mammoth from 'mammoth';
 
 interface ClassDocumentsViewProps {
   classId: string;
@@ -43,6 +44,7 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [docxHtmlContent, setDocxHtmlContent] = useState<string | null>(null);
 
   useEffect(() => {
     loadFoldersAndDocuments();
@@ -171,14 +173,31 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
     setShowPreviewModal(true);
     setIsLoadingPreview(true);
     setPreviewUrl(null);
+    setDocxHtmlContent(null);
 
     try {
       // If there's a storage path, get the file from storage
       if (doc.storage_path) {
-        const { data: { publicUrl } } = supabase.storage
-          .from('user-files')
-          .getPublicUrl(doc.storage_path);
-        setPreviewUrl(publicUrl);
+        const isDocx = doc.storage_path.toLowerCase().match(/\.(docx)$/i);
+
+        if (isDocx) {
+          // Load and convert DOCX to HTML
+          const { data: fileData } = await supabase.storage
+            .from('user-files')
+            .download(doc.storage_path);
+
+          if (fileData) {
+            const arrayBuffer = await fileData.arrayBuffer();
+            const result = await mammoth.convertToHtml({ arrayBuffer });
+            setDocxHtmlContent(result.value);
+          }
+        } else {
+          // For other files, just get the public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('user-files')
+            .getPublicUrl(doc.storage_path);
+          setPreviewUrl(publicUrl);
+        }
       }
     } catch (error: any) {
       setError('Failed to load document preview');
@@ -645,6 +664,7 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
                     setShowPreviewModal(false);
                     setPreviewDocument(null);
                     setPreviewUrl(null);
+                    setDocxHtmlContent(null);
                   }}
                   className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
                 >
@@ -658,6 +678,15 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
                     <div className="text-center">
                       <Loader className="w-12 h-12 text-teal animate-spin mx-auto mb-4" />
                       <p className="text-gray-600">Loading preview...</p>
+                    </div>
+                  </div>
+                ) : docxHtmlContent ? (
+                  <div className="prose max-w-none">
+                    <div className="bg-white rounded-lg p-8 border border-gray-200">
+                      <div
+                        dangerouslySetInnerHTML={{ __html: docxHtmlContent }}
+                        className="docx-preview"
+                      />
                     </div>
                   </div>
                 ) : previewUrl ? (
