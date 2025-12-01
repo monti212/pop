@@ -17,6 +17,7 @@ import {
   UploadProgress
 } from '../services/classDocumentService';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../services/authService';
 
 interface ClassDocumentsViewProps {
   classId: string;
@@ -159,6 +160,48 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
   const handleShowAllDocuments = () => {
     setSelectedFolder(null);
     loadFoldersAndDocuments();
+  };
+
+  const handleViewDocument = (doc: DocumentWithFolder) => {
+    // If there's a storage path, open the file from storage
+    if (doc.storage_path) {
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-files')
+        .getPublicUrl(doc.storage_path);
+      window.open(publicUrl, '_blank');
+    } else if (doc.content) {
+      // If no storage path but has content, show content in a modal
+      // For now, just alert - you could implement a modal here
+      alert('Document content preview not yet implemented for text documents');
+    }
+  };
+
+  const handleEditDocument = (doc: DocumentWithFolder) => {
+    // TODO: Implement edit modal
+    alert('Edit functionality coming soon');
+  };
+
+  const handleDeleteDocument = async (doc: DocumentWithFolder) => {
+    if (!confirm(`Are you sure you want to delete "${doc.title}"?`)) {
+      return;
+    }
+
+    try {
+      const result = await deleteDocument(doc.id);
+      if (result.success) {
+        // Refresh documents list
+        if (selectedFolder) {
+          await handleFolderClick(selectedFolder);
+        } else {
+          await loadFoldersAndDocuments();
+        }
+        await loadStorageInfo();
+      } else {
+        setError(result.error || 'Failed to delete document');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to delete document');
+    }
   };
 
   const getFilteredDocuments = () => {
@@ -421,18 +464,21 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => handleViewDocument(doc)}
                       className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
                       title="View document"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
+                      onClick={() => handleEditDocument(doc)}
                       className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
                       title="Edit document"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
+                      onClick={() => handleDeleteDocument(doc)}
                       className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
                       title="Delete document"
                     >
