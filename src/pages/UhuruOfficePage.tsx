@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, Save, Download, FileText, File, ArrowLeft, Plus, Folder, Trash2, Copy, Check } from 'lucide-react';
+import { X, Save, Download, FileText, File, ArrowLeft, Plus, Folder, Trash2, Copy, Check, Sparkles } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import ReactQuill from 'react-quill';
@@ -37,6 +37,7 @@ const UhuruDocsPage: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [showAutoSavedOnly, setShowAutoSavedOnly] = useState(false);
+  const [documentFilter, setDocumentFilter] = useState<'all' | 'office' | 'lesson-plans'>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -49,6 +50,12 @@ const UhuruDocsPage: React.FC = () => {
       const params = new URLSearchParams(location.search);
       const documentId = params.get('documentId');
       const documentTitle = params.get('documentTitle');
+      const filter = params.get('filter');
+
+      if (filter === 'lesson-plans') {
+        setDocumentFilter('lesson-plans');
+        setShowDocuments(true);
+      }
 
       if (documentId) {
         // Load document from database
@@ -130,7 +137,6 @@ const UhuruDocsPage: React.FC = () => {
     setIsLoading(true);
     try {
       const result = await getUserDocuments(user.id, {
-        documentType: 'office',
         limit: 100
       });
 
@@ -596,37 +602,64 @@ const UhuruDocsPage: React.FC = () => {
                 <div className="divide-y divide-borders">
                   {/* Filter buttons */}
                   <div className="p-4 border-b border-borders">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => setShowAutoSavedOnly(false)}
+                        onClick={() => setDocumentFilter('all')}
                         className={`px-3 py-1 rounded-12 text-sm ${
-                          !showAutoSavedOnly 
-                            ? 'bg-teal text-white' 
+                          documentFilter === 'all'
+                            ? 'bg-teal text-white'
                             : 'bg-white text-navy hover:bg-sand-200 border border-borders'
                         }`}
                       >
                         All Documents
                       </button>
                       <button
-                        onClick={() => setShowAutoSavedOnly(true)}
-                        className={`px-3 py-1 rounded-12 text-sm ${
-                          showAutoSavedOnly 
-                            ? 'bg-teal text-white' 
+                        onClick={() => setDocumentFilter('lesson-plans')}
+                        className={`px-3 py-1 rounded-12 text-sm flex items-center gap-1.5 ${
+                          documentFilter === 'lesson-plans'
+                            ? 'bg-teal text-white'
                             : 'bg-white text-navy hover:bg-sand-200 border border-borders'
                         }`}
                       >
-                        Auto-saved from Chat
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Lesson Plans
+                      </button>
+                      <button
+                        onClick={() => setDocumentFilter('office')}
+                        className={`px-3 py-1 rounded-12 text-sm ${
+                          documentFilter === 'office'
+                            ? 'bg-teal text-white'
+                            : 'bg-white text-navy hover:bg-sand-200 border border-borders'
+                        }`}
+                      >
+                        My Documents
                       </button>
                     </div>
                   </div>
-                  
-                  {savedDocuments.filter(doc => showAutoSavedOnly ? doc.isAutoSaved : true).map(doc => (
+
+                  {savedDocuments.filter(doc => {
+                    if (documentFilter === 'lesson-plans') {
+                      return doc.source === 'lesson-plan' || doc.title.toLowerCase().includes('lesson plan');
+                    }
+                    if (documentFilter === 'office') {
+                      return doc.source === 'manual' || doc.source === 'office' || !doc.source;
+                    }
+                    return true;
+                  }).map(doc => (
                     <div key={doc.id} className="p-4 hover:bg-sand-200/50">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 mr-4">
                           <div className="flex items-center gap-2">
+                            {doc.source === 'lesson-plan' && (
+                              <Sparkles className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                            )}
                             <h4 className="font-medium text-navy">{doc.title}</h4>
-                            {doc.isAutoSaved && (
+                            {doc.source === 'lesson-plan' && (
+                              <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+                                Lesson Plan
+                              </span>
+                            )}
+                            {doc.isAutoSaved && doc.source !== 'lesson-plan' && (
                               <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
                                 Auto-saved
                               </span>
@@ -635,11 +668,6 @@ const UhuruDocsPage: React.FC = () => {
                           <p className="text-sm text-navy/70 mt-0.5">
                             Last edited: {new Date(doc.updated_at).toLocaleDateString()}
                           </p>
-                          {doc.source && (
-                            <p className="text-xs text-navy/50 mt-0.5">
-                              Source: {doc.source}
-                            </p>
-                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <button

@@ -528,8 +528,18 @@ Include:
                   <div className="flex-1">
                     <p className="text-sm font-medium text-green-900">Lesson Plan Saved Successfully!</p>
                     <p className="text-xs text-green-700 mt-1">
-                      Your personalized lesson plan has been saved to your documents and is ready to use.
+                      Your personalized lesson plan has been saved to U Docs and is ready to use.
                     </p>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        window.location.href = '/u-office?filter=lesson-plans';
+                      }}
+                      className="mt-3 px-4 py-2 bg-white border border-green-600 text-green-700 rounded-lg hover:bg-green-50 transition-colors text-sm font-medium flex items-center space-x-2"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>View in U Docs</span>
+                    </button>
                   </div>
                 </div>
               )}

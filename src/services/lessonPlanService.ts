@@ -71,7 +71,9 @@ export const autoSaveLessonPlan = async (
         conversation_id: conversationId || null,
         message_id: messageId || null,
         auto_saved: true,
-        date_folder: dateFolderPath
+        date_folder: dateFolderPath,
+        source: 'lesson-plan',
+        content: lessonPlan.formattedContent
       })
       .select('id')
       .single();
