@@ -39,6 +39,10 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
   const [storageInfo, setStorageInfo] = useState<{ used: number; total: number }>({ used: 0, total: 1024 * 1024 * 1024 });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<DocumentWithFolder | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
   useEffect(() => {
     loadFoldersAndDocuments();
@@ -162,23 +166,38 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
     loadFoldersAndDocuments();
   };
 
-  const handleViewDocument = (doc: DocumentWithFolder) => {
-    // If there's a storage path, open the file from storage
-    if (doc.storage_path) {
-      const { data: { publicUrl } } = supabase.storage
-        .from('user-files')
-        .getPublicUrl(doc.storage_path);
-      window.open(publicUrl, '_blank');
-    } else if (doc.content) {
-      // If no storage path but has content, show content in a modal
-      // For now, just alert - you could implement a modal here
-      alert('Document content preview not yet implemented for text documents');
+  const handleViewDocument = async (doc: DocumentWithFolder) => {
+    setPreviewDocument(doc);
+    setShowPreviewModal(true);
+    setIsLoadingPreview(true);
+    setPreviewUrl(null);
+
+    try {
+      // If there's a storage path, get the file from storage
+      if (doc.storage_path) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('user-files')
+          .getPublicUrl(doc.storage_path);
+        setPreviewUrl(publicUrl);
+      }
+    } catch (error: any) {
+      setError('Failed to load document preview');
+    } finally {
+      setIsLoadingPreview(false);
     }
   };
 
   const handleEditDocument = (doc: DocumentWithFolder) => {
-    // TODO: Implement edit modal
-    alert('Edit functionality coming soon');
+    // Navigate to U Docs with the document
+    const params = new URLSearchParams({
+      documentId: doc.id,
+      documentTitle: doc.title,
+      classId: classId,
+      className: className
+    });
+
+    // Open U Docs in the same window
+    window.location.href = `/uhuru-office?${params.toString()}`;
   };
 
   const handleDeleteDocument = async (doc: DocumentWithFolder) => {
@@ -593,6 +612,137 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
                     </>
                   )}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Document Preview Modal */}
+      <AnimatePresence>
+        {showPreviewModal && previewDocument && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col"
+            >
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{getDocumentIcon(previewDocument.document_type)}</span>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">{previewDocument.title}</h3>
+                    <p className="text-sm text-gray-600">
+                      {previewDocument.folder_name && `${previewDocument.folder_name} • `}
+                      {formatDate(previewDocument.created_at)}
+                      {previewDocument.file_size && ` • ${formatFileSize(previewDocument.file_size)}`}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowPreviewModal(false);
+                    setPreviewDocument(null);
+                    setPreviewUrl(null);
+                  }}
+                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-auto p-6">
+                {isLoadingPreview ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Loader className="w-12 h-12 text-teal animate-spin mx-auto mb-4" />
+                      <p className="text-gray-600">Loading preview...</p>
+                    </div>
+                  </div>
+                ) : previewUrl ? (
+                  <div className="h-full">
+                    {/* Check file type for appropriate preview */}
+                    {previewDocument.storage_path?.toLowerCase().endsWith('.pdf') ? (
+                      <iframe
+                        src={previewUrl}
+                        className="w-full h-full min-h-[600px] rounded-lg border border-gray-200"
+                        title={previewDocument.title}
+                      />
+                    ) : previewDocument.storage_path?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                      <img
+                        src={previewUrl}
+                        alt={previewDocument.title}
+                        className="max-w-full max-h-full mx-auto rounded-lg"
+                      />
+                    ) : (
+                      <div className="text-center p-12">
+                        <FileText className="w-24 h-24 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-600 mb-4">Preview not available for this file type</p>
+                        <a
+                          href={previewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors"
+                        >
+                          <Download className="w-5 h-5" />
+                          Download File
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ) : previewDocument.content ? (
+                  <div className="prose max-w-none">
+                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                      <pre className="whitespace-pre-wrap font-sans text-gray-800">
+                        {previewDocument.content}
+                      </pre>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center p-12">
+                    <FileText className="w-24 h-24 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">No preview available for this document</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {previewDocument.tags && previewDocument.tags.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-gray-600" />
+                      {previewDocument.tags.slice(0, 3).map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {previewUrl && (
+                    <a
+                      href={previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </a>
+                  )}
+                  <button
+                    onClick={() => handleEditDocument(previewDocument)}
+                    className="px-4 py-2 rounded-lg bg-teal text-white hover:bg-teal/90 transition-colors flex items-center gap-2"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Edit in U Docs
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
