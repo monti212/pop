@@ -579,12 +579,21 @@ export async function streamResponse({
         }
       });
 
+      // Check for specific error messages first
+      if (errorDetails?.error === 'Gateway not configured') {
+        throw new Error('AI service is not configured yet. Please contact your administrator to set up the required API credentials.');
+      }
+
       // Provide more specific error messages based on status code
       if (res.status === 404) {
         throw new Error('Service endpoint not found. Please check your configuration.');
       } else if (res.status === 401 || res.status === 403) {
         throw new Error('Authentication failed. Please sign in again.');
       } else if (res.status === 500) {
+        // Check if we have more specific error information
+        if (errorDetails?.error) {
+          throw new Error(`Server error: ${errorDetails.error}`);
+        }
         throw new Error('Server error. Please try again in a moment.');
       } else {
         throw new Error(`Request failed with status ${res.status}. Please try again.`);
