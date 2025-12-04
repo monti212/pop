@@ -1207,19 +1207,6 @@ export default function ChatInterface({
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-[#F8F9FA] via-white to-[#FEF7E8] z-50 flex flex-col overflow-hidden">
-      {/* Sidebar collapse/expand button */}
-      <button
-        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        className="fixed top-4 z-50 text-[#0170b9] hover:text-[#f5b233] transition-all duration-700 ease-in-out hidden md:block"
-        style={{ left: `${sidebarWidth - 4}px` }}
-        title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        <PanelLeft
-          className={`w-5 h-5 transition-all duration-1000 ease-out ${isSidebarCollapsed ? 'rotate-180 scale-110' : 'scale-100'}`}
-          style={{ stroke: '#0170b9' }}
-        />
-      </button>
-
       {/* Mobile menu button - only visible on mobile when sidebar is hidden */}
       {!showSidebar && (
         <button
@@ -1229,7 +1216,6 @@ export default function ChatInterface({
           <Menu className="w-5 h-5" />
         </button>
       )}
-
 
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
@@ -1242,6 +1228,7 @@ export default function ChatInterface({
             onSignOut={onClose}
             isCollapsed={isSidebarCollapsed}
             onOpenSettings={() => setShowSettings(true)}
+            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           />
         </div>
 

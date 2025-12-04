@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PenSquare, Search, Trash2, Crown, X, LogOut, LayoutGrid, Layout, Check, FileEdit as Edit3, FileText, Grid2x2 as Grid, Building, ChevronDown, MessageSquare, BookOpen, FolderOpen, Settings, MoreVertical, Shield, GraduationCap } from 'lucide-react';
+import { PenSquare, Search, Trash2, Crown, X, LogOut, LayoutGrid, Layout, Check, FileEdit as Edit3, FileText, Grid2x2 as Grid, Building, ChevronDown, MessageSquare, BookOpen, FolderOpen, Settings, MoreVertical, Shield, GraduationCap, PanelLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useConversations } from '../../context/ConversationContext';
 import { updateConversationTitle } from '../../services/chatService';
@@ -16,16 +16,18 @@ interface ConversationListProps {
   onShowAgentGallery?: () => void;
   onOpenPlansModal?: () => void;
   onOpenSettings?: () => void;
+  onToggleCollapse?: () => void;
 }
 
-const ConversationList: React.FC<ConversationListProps> = ({ 
-  onClose, 
+const ConversationList: React.FC<ConversationListProps> = ({
+  onClose,
   darkMode = true,
   isCollapsed = false,
   onSignOut,
   onShowAgentGallery,
   onOpenPlansModal,
-  onOpenSettings
+  onOpenSettings,
+  onToggleCollapse
 }) => {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const navigate = useNavigate();
@@ -295,12 +297,26 @@ const ConversationList: React.FC<ConversationListProps> = ({
       <div className={`flex flex-col h-full bg-[#F9F9F8] text-[#1A1A1A] overflow-auto scrollbar-hide transition-all duration-700 ease-in-out ${
         isCollapsed ? 'w-16' : 'w-full'
       }`}>
-        {/* Pencils of Promise Logo - at the top */}
-        {!isCollapsed && (
-          <div className="px-5 pt-3 pb-1">
+        {/* Top bar with logo and collapse button */}
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-5 pt-3 pb-1`}>
+          {/* Pencils of Promise Logo */}
+          {!isCollapsed && (
             <Logo className="h-10 w-auto" />
-          </div>
-        )}
+          )}
+
+          {/* Collapse/Expand button - desktop only */}
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="hidden md:block p-2 rounded-lg text-[#0170b9] hover:text-[#f5b233] hover:bg-[#F7F5F2] transition-all duration-300"
+              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <PanelLeft
+                className={`w-5 h-5 transition-all duration-500 ${isCollapsed ? 'rotate-180' : ''}`}
+              />
+            </button>
+          )}
+        </div>
 
         {/* Mobile close button */}
         {onClose && !isCollapsed && (
