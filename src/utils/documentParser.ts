@@ -136,24 +136,45 @@ const parsePdfDocument = async (file: File): Promise<string> => {
     const pdfjsLib = await loadPDFJS();
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    
+
     let fullText = '';
     const maxPages = pdf.numPages;
-    
+
     // Only process up to first 50 pages to avoid memory issues
     const pagesToProcess = Math.min(maxPages, 50);
-    
+
     for (let i = 1; i <= pagesToProcess; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      fullText += `Page ${i}:\n${pageText}\n\n`;
+
+      // Preserve structure by maintaining line breaks and spacing
+      let pageText = '';
+      let lastY = -1;
+
+      textContent.items.forEach((item: any, index: number) => {
+        const currentY = item.transform[5];
+
+        // Add line break if Y position changed significantly (new line)
+        if (lastY !== -1 && Math.abs(currentY - lastY) > 5) {
+          pageText += '\n';
+        }
+
+        // Add space if items are on same line but separated
+        if (index > 0 && Math.abs(currentY - lastY) <= 5) {
+          pageText += ' ';
+        }
+
+        pageText += item.str;
+        lastY = currentY;
+      });
+
+      fullText += pageText.trim() + '\n\n';
     }
-    
+
     if (maxPages > pagesToProcess) {
       fullText += `[Note: Document contains ${maxPages} pages. Only the first ${pagesToProcess} pages were processed.]`;
     }
-    
+
     return fullText || `[No text content found in ${file.name}]`;
   } catch (error: any) {
     console.error('Error parsing PDF document:', error);

@@ -6,6 +6,7 @@ import { jsPDF } from 'jspdf';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { convertMarkdownToHtml } from '../utils/markdownConverter';
+import { smartConvertContent } from '../utils/textToHtmlConverter';
 import { useAuth } from '../context/AuthContext';
 import {
   createDocument,
@@ -66,7 +67,9 @@ const UhuruDocsPage: React.FC = () => {
           if (result.success && result.data) {
             setTitle(result.data.title);
             if (result.data.content) {
-              setContent(result.data.content);
+              // Convert plain text to structured HTML
+              const formattedContent = smartConvertContent(result.data.content);
+              setContent(formattedContent);
             } else if (result.data.storage_path) {
               // Load content from storage if it's a text document
               const { supabase } = await import('../services/authService');
@@ -76,7 +79,9 @@ const UhuruDocsPage: React.FC = () => {
 
               if (fileData) {
                 const text = await fileData.text();
-                setContent(text);
+                // Convert plain text to structured HTML
+                const formattedContent = smartConvertContent(text);
+                setContent(formattedContent);
               }
             }
             setCurrentDocument({
@@ -260,7 +265,9 @@ const UhuruDocsPage: React.FC = () => {
 
   const handleLoadDocument = (doc: UhuruDocument) => {
     setCurrentDocument(doc);
-    setContent(doc.content);
+    // Convert plain text to structured HTML when loading
+    const formattedContent = smartConvertContent(doc.content);
+    setContent(formattedContent);
     setTitle(doc.title);
     setShowDocuments(false);
   };
