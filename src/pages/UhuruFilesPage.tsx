@@ -21,6 +21,7 @@ import GradesManagementModal from '../components/GradesManagementModal';
 import BehaviorLogModal from '../components/BehaviorLogModal';
 import LessonPlanGeneratorModal from '../components/LessonPlanGeneratorModal';
 import StudentPersonalityModal from '../components/StudentPersonalityModal';
+import Logo from '../components/Logo';
 
 type ViewMode = 'classes' | 'students' | 'attendance' | 'analytics' | 'documents';
 
@@ -166,7 +167,7 @@ const UhuruFilesPage: React.FC = () => {
             <div className="h-6 w-px bg-[#e8e6e0]"></div>
 
             <div className="flex items-center gap-3">
-              <GraduationCap className="w-7 h-7 text-greyed-navy" />
+              <Logo className="h-10" />
               <div>
                 <h1 className="text-2xl font-headline font-bold text-greyed-navy">
                   {viewMode === 'classes' && 'GreyEd Teach'}

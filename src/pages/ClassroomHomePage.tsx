@@ -19,6 +19,7 @@ import GradesManagementModal from '../components/GradesManagementModal';
 import BehaviorLogModal from '../components/BehaviorLogModal';
 import LessonPlanGeneratorModal from '../components/LessonPlanGeneratorModal';
 import ClassDocumentsView from '../components/ClassDocumentsView';
+import Logo from '../components/Logo';
 
 const ClassroomHomePage: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
@@ -134,12 +135,9 @@ const ClassroomHomePage: React.FC = () => {
             </button>
           </div>
 
-          {/* Centered GreyEd Teach Icon */}
+          {/* Centered Logo */}
           <div className="absolute left-1/2 transform -translate-x-1/2">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="w-8 h-8 text-greyed-navy" />
-              <span className="text-xl font-bold text-greyed-navy">GreyEd Teach</span>
-            </div>
+            <Logo className="h-10" />
           </div>
 
           <div className="flex items-center gap-3">
