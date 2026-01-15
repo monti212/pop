@@ -129,9 +129,9 @@ const ClassroomHomePage: React.FC = () => {
             <button
               onClick={() => navigate('/greyed-class')}
               className="p-2 rounded-lg hover:bg-greyed-blue/20 text-greyed-navy hover:text-greyed-navy transition-all flex items-center gap-2"
+              title="Back to Classes"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to Classes</span>
             </button>
           </div>
 
