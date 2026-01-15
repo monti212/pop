@@ -21,6 +21,7 @@ import GradesManagementModal from '../components/GradesManagementModal';
 import BehaviorLogModal from '../components/BehaviorLogModal';
 import LessonPlanGeneratorModal from '../components/LessonPlanGeneratorModal';
 import StudentPersonalityModal from '../components/StudentPersonalityModal';
+import Logo from '../components/Logo';
 
 type ViewMode = 'classes' | 'students' | 'attendance' | 'analytics' | 'documents';
 
@@ -140,49 +141,50 @@ const UhuruFilesPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-greyed-white flex flex-col overflow-hidden">
+    <div className="h-screen bg-[#f8f8f6] flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-greyed-navy shadow-sm border-b border-greyed-navy/20 px-6 py-4 flex-shrink-0">
+      <header className="bg-white shadow-sm border-b border-[#e8e6e0] px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {viewMode !== 'classes' ? (
               <button
                 onClick={handleBackToClasses}
-                className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors flex items-center gap-2"
+                className="p-2 rounded-lg hover:bg-greyed-blue/20 text-greyed-navy hover:text-greyed-navy transition-all flex items-center gap-2"
+                title="Back to Classes"
               >
                 <ArrowLeft className="w-5 h-5" />
-                <span className="font-medium">Back to Classes</span>
               </button>
             ) : (
               <button
                 onClick={() => navigate('/')}
-                className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors flex items-center gap-2"
+                className="p-2 rounded-lg hover:bg-greyed-blue/20 text-greyed-navy hover:text-greyed-navy transition-all flex items-center gap-2"
+                title="Back to Chat"
               >
                 <ArrowLeft className="w-5 h-5" />
-                <span className="font-medium">Back to Chat</span>
               </button>
             )}
 
-            <div className="h-6 w-px bg-white/10"></div>
+            <div className="h-6 w-px bg-[#e8e6e0]"></div>
 
-            <div className="flex items-center gap-3">
-              <GraduationCap className="w-7 h-7 text-white" />
-              <div>
-                <h1 className="text-2xl font-headline font-bold text-white">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <Logo className="h-10" />
+                <div className="h-6 w-px bg-[#e8e6e0]"></div>
+                <h1 className="text-2xl font-headline font-bold text-greyed-navy">
                   {viewMode === 'classes' && 'GreyEd Teach'}
                   {viewMode === 'students' && `${selectedClass?.class_name} - Students`}
                   {viewMode === 'attendance' && `${selectedClass?.class_name} - Take Attendance`}
                   {viewMode === 'analytics' && `${selectedClass?.class_name} - Analytics`}
                   {viewMode === 'documents' && `${selectedClass?.class_name} - Documents`}
                 </h1>
-                <p className="text-sm text-white/80">
-                  {viewMode === 'classes' && `Manage your classes and students • ${classCount} of 5 classes`}
-                  {viewMode === 'students' && `${students.length} of 35 students`}
-                  {viewMode === 'attendance' && 'Record daily attendance'}
-                  {viewMode === 'analytics' && 'View attendance statistics'}
-                  {viewMode === 'documents' && 'Lesson plans, notes, and reports'}
-                </p>
               </div>
+              <p className="text-sm text-greyed-black/70">
+                {viewMode === 'classes' && `Manage your classes and students • ${classCount} of 5 classes`}
+                {viewMode === 'students' && `${students.length} of 35 students`}
+                {viewMode === 'attendance' && 'Record daily attendance'}
+                {viewMode === 'analytics' && 'View attendance statistics'}
+                {viewMode === 'documents' && 'Lesson plans, notes, and reports'}
+              </p>
             </div>
           </div>
 
@@ -190,10 +192,10 @@ const UhuruFilesPage: React.FC = () => {
             <motion.button
               onClick={() => setShowCreateClassModal(true)}
               disabled={classCount >= 5}
-              className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 border-2 ${
+              className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 ${
                 classCount >= 5
-                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed border-greyed-beige/20'
-                  : 'bg-greyed-blue text-greyed-navy hover:bg-greyed-white border-greyed-blue'
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-greyed-navy text-white hover:bg-greyed-navy/90'
               }`}
               whileHover={classCount < 5 ? { scale: 1.02 } : {}}
               whileTap={classCount < 5 ? { scale: 0.98 } : {}}
@@ -207,10 +209,10 @@ const UhuruFilesPage: React.FC = () => {
             <motion.button
               onClick={() => setShowAddStudentModal(true)}
               disabled={students.length >= 35}
-              className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 border-2 ${
+              className={`px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 ${
                 students.length >= 35
-                  ? 'bg-greyed-beige/20 text-white/50 cursor-not-allowed border-greyed-beige/20'
-                  : 'bg-greyed-blue text-greyed-navy hover:bg-greyed-white border-greyed-blue'
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-greyed-navy text-white hover:bg-greyed-navy/90'
               }`}
               whileHover={students.length < 35 ? { scale: 1.02 } : {}}
               whileTap={students.length < 35 ? { scale: 0.98 } : {}}
@@ -242,23 +244,23 @@ const UhuruFilesPage: React.FC = () => {
         {isLoading ? (
           <div className="flex items-center justify-center min-h-[500px]">
             <div className="text-center">
-              <Loader className="w-12 h-12 text-greyed-blue animate-spin mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-greyed-black mb-2">Loading...</h3>
-              <p className="text-greyed-black/60">Getting everything ready</p>
+              <Loader className="w-12 h-12 text-greyed-navy animate-spin mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-greyed-navy mb-2">Loading...</h3>
+              <p className="text-greyed-black/70">Getting everything ready</p>
             </div>
           </div>
         ) : viewMode === 'classes' ? (
           classes.length === 0 ? (
             <div className="flex items-center justify-center min-h-[500px]">
               <div className="text-center max-w-md">
-                <School className="w-24 h-24 text-greyed-beige mx-auto mb-6" />
-                <h3 className="text-2xl font-bold text-greyed-black mb-3">No Classes Yet</h3>
-                <p className="text-greyed-black/60 text-lg mb-8">
+                <School className="w-24 h-24 text-gray-300 mx-auto mb-6" />
+                <h3 className="text-2xl font-bold text-greyed-navy mb-3">No Classes Yet</h3>
+                <p className="text-greyed-black/70 text-lg mb-8">
                   Create your first class to start tracking attendance
                 </p>
                 <motion.button
                   onClick={() => setShowCreateClassModal(true)}
-                  className="px-8 py-4 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-white border-2 border-greyed-blue transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
+                  className="px-8 py-4 bg-greyed-navy text-white rounded-lg hover:bg-greyed-navy/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -275,7 +277,7 @@ const UhuruFilesPage: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={() => handleClassSelect(classItem)}
-                  className="bg-white rounded-lg border border-greyed-beige/20 shadow-sm hover:shadow-lg hover:border-greyed-blue/30 transition-all duration-200 overflow-hidden cursor-pointer group relative"
+                  className="bg-white rounded-lg border border-[#e8e6e0] shadow-sm hover:shadow-lg hover:border-greyed-navy transition-all duration-200 overflow-hidden cursor-pointer group relative"
                 >
                   <div className="p-4">
                     <button
@@ -284,38 +286,38 @@ const UhuruFilesPage: React.FC = () => {
                         setSelectedClass(classItem);
                         setShowEditClassModal(true);
                       }}
-                      className="p-1.5 rounded-lg hover:bg-greyed-navy/10 text-greyed-black/60 hover:text-greyed-navy transition-colors absolute top-2 right-2"
+                      className="p-1.5 rounded-lg hover:bg-greyed-blue/20 text-greyed-black/70 hover:text-greyed-navy transition-all absolute top-2 right-2"
                     >
                       <Edit className="w-3.5 h-3.5" />
                     </button>
                     <div className="text-center mb-3">
-                      <h3 className="text-lg font-bold text-greyed-navy group-hover:text-greyed-blue transition-colors mb-0.5">
+                      <h3 className="text-lg font-bold text-greyed-navy group-hover:text-greyed-navy transition-colors mb-0.5">
                         {classItem.class_name}
                       </h3>
                       {classItem.subject && (
-                        <p className="text-xs text-greyed-black/60 mb-0.5">{classItem.subject}</p>
+                        <p className="text-xs text-greyed-black/70 mb-0.5">{classItem.subject}</p>
                       )}
                       {classItem.grade_level && (
-                        <p className="text-xs text-greyed-black/50">Grade {classItem.grade_level}</p>
+                        <p className="text-xs text-greyed-black/60">Grade {classItem.grade_level}</p>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-center gap-1.5 mb-3 text-xs text-greyed-black">
-                      <Users className="w-3.5 h-3.5 text-greyed-blue" />
+                    <div className="flex items-center justify-center gap-1.5 mb-3 text-xs text-greyed-navy">
+                      <Users className="w-3.5 h-3.5 text-greyed-navy" />
                       <span className="font-medium">{classItem.student_count} students</span>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-center gap-2 p-2 bg-greyed-beige/10 rounded-lg border border-greyed-beige/20">
-                        <School className="w-4 h-4 text-greyed-blue" />
-                        <span className="text-xs font-medium text-greyed-black">Click to open classroom</span>
+                      <div className="flex items-center justify-center gap-2 p-2 bg-[#f8f8f6] rounded-lg border border-[#e8e6e0]">
+                        <School className="w-4 h-4 text-greyed-navy" />
+                        <span className="text-xs font-medium text-greyed-navy">Click to open classroom</span>
                       </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleTakeAttendance(classItem);
                         }}
-                        className="w-full px-3 py-2 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-white border-2 border-greyed-blue transition-colors text-sm font-semibold flex items-center justify-center gap-1.5"
+                        className="w-full px-3 py-2 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-blue/80 transition-all text-sm font-semibold flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md"
                       >
                         <ClipboardCheck className="w-3.5 h-3.5" />
                         Quick Attendance
@@ -330,14 +332,14 @@ const UhuruFilesPage: React.FC = () => {
           students.length === 0 ? (
             <div className="flex items-center justify-center min-h-[500px]">
               <div className="text-center max-w-md">
-                <Users className="w-24 h-24 text-greyed-beige mx-auto mb-6" />
-                <h3 className="text-2xl font-bold text-greyed-black mb-3">No Students Yet</h3>
-                <p className="text-greyed-black/60 text-lg mb-8">
+                <Users className="w-24 h-24 text-gray-300 mx-auto mb-6" />
+                <h3 className="text-2xl font-bold text-greyed-navy mb-3">No Students Yet</h3>
+                <p className="text-greyed-black/70 text-lg mb-8">
                   Add students to this class to start tracking attendance
                 </p>
                 <motion.button
                   onClick={() => setShowAddStudentModal(true)}
-                  className="px-8 py-4 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-white border-2 border-greyed-blue transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
+                  className="px-8 py-4 bg-greyed-navy text-white rounded-lg hover:bg-greyed-navy/90 transition-all duration-200 flex items-center gap-2 mx-auto font-semibold shadow-sm hover:shadow-md"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -347,45 +349,45 @@ const UhuruFilesPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-greyed-beige/20 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-[#e8e6e0] shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-greyed-beige/10 border-b border-greyed-beige/20">
+                  <thead className="bg-[#f8f8f6] border-b border-[#e8e6e0]">
                     <tr>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-black">Student Name</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-black">ID</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-black">Status</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-black">Actions</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-navy">Student Name</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-navy">ID</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-navy">Status</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-navy">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-[#e8e6e0]">
                     {students.map((student) => (
-                      <tr key={student.id} className="hover:bg-greyed-beige/10 transition-colors">
+                      <tr key={student.id} className="hover:bg-[#f8f8f6] transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-greyed-blue/20 flex items-center justify-center">
-                              <span className="text-greyed-blue font-semibold text-sm">
+                            <div className="w-10 h-10 rounded-full bg-greyed-blue/30 flex items-center justify-center">
+                              <span className="text-greyed-navy font-semibold text-sm">
                                 {student.student_name.charAt(0).toUpperCase()}
                               </span>
                             </div>
                             <div>
-                              <p className="font-medium text-greyed-black">{student.student_name}</p>
+                              <p className="font-medium text-greyed-navy">{student.student_name}</p>
                               {student.has_neurodivergence && student.neurodivergence_type && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-greyed-blue/30 text-greyed-navy mt-1">
                                   {student.neurodivergence_type}
                                 </span>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-greyed-black/60">
+                        <td className="px-6 py-4 text-sm text-greyed-black/70">
                           {student.student_identifier || '—'}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             student.active_status
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-greyed-blue/30 text-greyed-navy'
+                              : 'bg-gray-200 text-gray-600'
                           }`}>
                             {student.active_status ? 'Active' : 'Inactive'}
                           </span>
@@ -394,7 +396,7 @@ const UhuruFilesPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => navigate(`/greyed-class/student/${student.id}`)}
-                              className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
+                              className="p-2 rounded-lg hover:bg-greyed-blue/20 text-greyed-navy transition-all"
                               title="View Profile"
                             >
                               <TrendingUp className="w-4 h-4" />
@@ -404,7 +406,7 @@ const UhuruFilesPage: React.FC = () => {
                                 setSelectedStudent(student);
                                 setShowPersonalityModal(true);
                               }}
-                              className="p-2 rounded-lg hover:bg-purple-100 text-purple-600 transition-colors"
+                              className="p-2 rounded-lg hover:bg-greyed-blue/20 text-greyed-navy transition-all"
                               title="Personality Profile"
                             >
                               <Brain className="w-4 h-4" />
@@ -414,7 +416,7 @@ const UhuruFilesPage: React.FC = () => {
                                 setSelectedStudent(student);
                                 setShowEditStudentModal(true);
                               }}
-                              className="p-2 rounded-lg hover:bg-greyed-navy/10 text-greyed-black/60 hover:text-greyed-navy transition-colors"
+                              className="p-2 rounded-lg hover:bg-greyed-blue/20 text-greyed-navy transition-all"
                               title="Edit Student"
                             >
                               <Edit className="w-4 h-4" />

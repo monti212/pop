@@ -1,5 +1,5 @@
 import React from 'react';
-import logoImage from '../assets/PoPLogo_color-01-01.png';
+import logoImage from '../assets/pencils-of-promise-logo.png';
 
 interface LogoProps {
   className?: string;
