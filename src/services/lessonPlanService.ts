@@ -1,9 +1,11 @@
 import { supabase } from './authService';
 import { detectLessonPlan, generateLessonPlanFilename, LessonPlanData } from '../utils/lessonPlanDetection';
+import { createDocument } from './documentService';
 
 export interface LessonPlanSaveResult {
   success: boolean;
   documentId?: string;
+  uDocsDocumentId?: string;
   error?: string;
 }
 
@@ -134,9 +136,32 @@ export const autoSaveLessonPlan = async (
       .update({ file_url: publicUrl })
       .eq('id', data.id);
 
+    // Also save to U Docs (user_documents) for easy access
+    const uDocsTitle = generateLessonPlanFilename(lessonPlan);
+    const uDocsResult = await createDocument(
+      userId,
+      uDocsTitle,
+      lessonPlan.formattedContent,
+      {
+        documentType: 'office',
+        isAutoSaved: true,
+        source: 'ai-lesson-plan-generator',
+        metadata: {
+          classId,
+          classDocumentId: data.id,
+          subject: lessonPlan.subject,
+          gradeLevel: lessonPlan.gradeLevel,
+          detectionConfidence: lessonPlan.confidence,
+          savedAt: new Date().toISOString(),
+          isLessonPlan: true
+        }
+      }
+    );
+
     return {
       success: true,
-      documentId: data.id
+      documentId: data.id,
+      uDocsDocumentId: uDocsResult.document?.id
     };
   } catch (error: any) {
     console.error('Error in autoSaveLessonPlan:', error);

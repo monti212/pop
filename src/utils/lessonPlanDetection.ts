@@ -221,19 +221,24 @@ const formatLessonPlan = (content: string, title: string): string => {
 
 /**
  * Generate a filename for the lesson plan
+ * Format: YYYY-MM-DD_Title
  */
 export const generateLessonPlanFilename = (lessonPlan: LessonPlanData): string => {
+  // Get current date in YYYY-MM-DD format
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const datePrefix = `${year}-${month}-${day}`;
+
   // Create a safe filename from title
   const safeTitle = lessonPlan.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .substring(0, 50);
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .substring(0, 100);
 
-  // Add timestamp to ensure uniqueness
-  const timestamp = Date.now();
-
-  return `lesson-plan-${safeTitle}-${timestamp}.md`;
+  return `${datePrefix}_${safeTitle}`;
 };
 
 /**

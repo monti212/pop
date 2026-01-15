@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { generateResponse } from '../services/chatService';
 import { autoSaveLessonPlan } from '../services/lessonPlanService';
 import StreamMarkdown from './StreamMarkdown';
+import LessonPlanNotification from './LessonPlanNotification';
 
 interface LessonPlanGeneratorModalProps {
   isOpen: boolean;
@@ -45,6 +46,8 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [generationStatus, setGenerationStatus] = useState<string>('');
+  const [showNotification, setShowNotification] = useState(false);
+  const [savedLessonPlanTitle, setSavedLessonPlanTitle] = useState<string>('');
 
   const handleStudentToggle = (studentId: string) => {
     setSelectedStudents(prev =>
@@ -180,6 +183,18 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
 
         // Notify parent component
         onSuccess(aiResponse, saveResult.documentId);
+
+        // Generate and store the lesson plan title for the notification
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const datePrefix = `${year}-${month}-${day}`;
+        const titleForNotification = `${datePrefix}_${formData.topic}`;
+        setSavedLessonPlanTitle(titleForNotification);
+
+        // Show the notification popup
+        setShowNotification(true);
       } else {
         setError(saveResult.error || 'Failed to save lesson plan');
 
@@ -619,6 +634,17 @@ Include:
           )}
         </div>
       </div>
+
+      <LessonPlanNotification
+        isOpen={showNotification}
+        onClose={() => setShowNotification(false)}
+        onOpenInUDocs={() => {
+          setShowNotification(false);
+          onClose();
+          window.location.href = '/u-office';
+        }}
+        lessonPlanTitle={savedLessonPlanTitle}
+      />
     </div>
   );
 };
