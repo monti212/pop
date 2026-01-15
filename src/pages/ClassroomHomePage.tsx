@@ -146,7 +146,7 @@ const ClassroomHomePage: React.FC = () => {
             </button>
             <button
               onClick={() => setShowAttendanceModal(true)}
-              className="px-4 py-2 bg-greyed-blue text-greyed-navy rounded-lg hover:bg-greyed-blue/80 transition-all flex items-center gap-2 font-medium shadow-sm hover:shadow-md"
+              className="px-4 py-2 border-2 border-greyed-navy text-greyed-navy rounded-lg hover:bg-greyed-navy/10 transition-all flex items-center gap-2 font-medium"
             >
               <ClipboardCheck className="w-4 h-4" />
               Take Attendance
@@ -154,10 +154,10 @@ const ClassroomHomePage: React.FC = () => {
             <button
               onClick={() => setShowAddStudentModal(true)}
               disabled={students.length >= 35}
-              className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm ${
+              className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 border-2 ${
                 students.length >= 35
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-greyed-navy text-white hover:bg-greyed-navy/90 hover:shadow-md'
+                  ? 'border-gray-300 text-gray-400 cursor-not-allowed'
+                  : 'border-greyed-navy text-greyed-navy hover:bg-greyed-navy/10'
               }`}
             >
               <UserPlus className="w-4 h-4" />
