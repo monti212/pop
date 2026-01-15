@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Plus, TrendingUp, Award, Calendar, Trash2 } from 'lucide-react';
+import { X, Save, Plus, TrendingUp, Award, Calendar, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   Assignment,
   StudentGrade,
@@ -13,7 +13,8 @@ import {
   createGrade,
   updateGrade,
   deleteGrade,
-  bulkCreateGrades
+  bulkCreateGrades,
+  getClassGradesWithDetails
 } from '../services/gradeService';
 
 interface GradesManagementModalProps {
@@ -50,11 +51,26 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   const [totalPoints, setTotalPoints] = useState<string>('100');
   const [assessmentDate, setAssessmentDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
+  // History view fields
+  const [historicalGrades, setHistoricalGrades] = useState<any[]>([]);
+  const [filterType, setFilterType] = useState<'all' | 'year' | 'month' | 'custom'>('all');
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString().padStart(2, '0'));
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [expandedAssessments, setExpandedAssessments] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     if (isOpen) {
       loadData();
     }
   }, [isOpen, classId]);
+
+  useEffect(() => {
+    if (isOpen && viewMode === 'history') {
+      loadHistoricalGrades();
+    }
+  }, [isOpen, viewMode, filterType, selectedYear, selectedMonth, startDate, endDate]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -78,6 +94,42 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load grade data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadHistoricalGrades = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      let start: string | undefined;
+      let end: string | undefined;
+
+      if (filterType === 'year') {
+        start = `${selectedYear}-01-01`;
+        end = `${selectedYear}-12-31`;
+      } else if (filterType === 'month') {
+        const year = parseInt(selectedYear);
+        const month = parseInt(selectedMonth);
+        const lastDay = new Date(year, month, 0).getDate();
+        start = `${selectedYear}-${selectedMonth}-01`;
+        end = `${selectedYear}-${selectedMonth}-${lastDay.toString().padStart(2, '0')}`;
+      } else if (filterType === 'custom') {
+        start = startDate;
+        end = endDate;
+      }
+
+      const result = await getClassGradesWithDetails(classId, start, end);
+
+      if (result.success && result.data) {
+        setHistoricalGrades(result.data);
+      } else {
+        setError(result.error || 'Failed to load historical grades');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load historical grades');
     } finally {
       setIsLoading(false);
     }
@@ -177,6 +229,66 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
     if (possible === 0) return 0;
     return (value / possible) * 100;
   };
+
+  const toggleAssessment = (assessmentId: string) => {
+    setExpandedAssessments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(assessmentId)) {
+        newSet.delete(assessmentId);
+      } else {
+        newSet.add(assessmentId);
+      }
+      return newSet;
+    });
+  };
+
+  const groupGradesByAssessment = () => {
+    const grouped: { [key: string]: any } = {};
+
+    historicalGrades.forEach(grade => {
+      const assignment = grade.assignment;
+      if (!assignment) return;
+
+      const key = assignment.id;
+      if (!grouped[key]) {
+        grouped[key] = {
+          assignment: assignment,
+          grades: []
+        };
+      }
+      grouped[key].grades.push(grade);
+    });
+
+    return Object.values(grouped).sort((a, b) => {
+      const dateA = a.assignment.due_date || a.grades[0]?.graded_date || '';
+      const dateB = b.assignment.due_date || b.grades[0]?.graded_date || '';
+      return dateB.localeCompare(dateA);
+    });
+  };
+
+  const getYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear; i >= currentYear - 5; i--) {
+      years.push(i.toString());
+    }
+    return years;
+  };
+
+  const getMonthOptions = () => [
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+  ];
 
   if (!isOpen) return null;
 
@@ -389,9 +501,226 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
           )}
 
           {viewMode === 'history' && (
-            <div className="text-center py-12">
-              <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">Grade history view coming soon</p>
+            <div>
+              {/* Filter Controls */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Filter Grades</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Filter By
+                    </label>
+                    <select
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value as any)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="year">Year</option>
+                      <option value="month">Month</option>
+                      <option value="custom">Custom Range</option>
+                    </select>
+                  </div>
+
+                  {filterType === 'year' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Year
+                      </label>
+                      <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      >
+                        {getYearOptions().map(year => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {filterType === 'month' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Year
+                        </label>
+                        <select
+                          value={selectedYear}
+                          onChange={(e) => setSelectedYear(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        >
+                          {getYearOptions().map(year => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Month
+                        </label>
+                        <select
+                          value={selectedMonth}
+                          onChange={(e) => setSelectedMonth(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        >
+                          {getMonthOptions().map(month => (
+                            <option key={month.value} value={month.value}>{month.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {filterType === 'custom' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Start Date
+                        </label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          End Date
+                        </label>
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Grades List */}
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-gray-600">Loading grades...</p>
+                </div>
+              ) : historicalGrades.length === 0 ? (
+                <div className="text-center py-12">
+                  <Award className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">No grades found for the selected period</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {groupGradesByAssessment().map((group, index) => {
+                    const assignment = group.assignment;
+                    const grades = group.grades;
+                    const isExpanded = expandedAssessments.has(assignment.id);
+                    const averageGrade = grades.reduce((sum: number, g: any) => sum + (g.grade_value || 0), 0) / grades.length;
+                    const averagePercentage = grades.reduce((sum: number, g: any) => sum + calculatePercentage(g.grade_value || 0, g.points_possible || 100), 0) / grades.length;
+
+                    return (
+                      <div key={assignment.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                        <button
+                          onClick={() => toggleAssessment(assignment.id)}
+                          className="w-full px-4 py-3 bg-white hover:bg-gray-50 flex items-center justify-between transition-colors"
+                        >
+                          <div className="flex items-center space-x-3">
+                            {isExpanded ? (
+                              <ChevronDown className="w-5 h-5 text-gray-500" />
+                            ) : (
+                              <ChevronRight className="w-5 h-5 text-gray-500" />
+                            )}
+                            <div className="text-left">
+                              <h4 className="font-semibold text-gray-900">{assignment.title}</h4>
+                              <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                                <span className="capitalize">{assignment.assignment_type}</span>
+                                <span>•</span>
+                                <span>{assignment.points_possible} points</span>
+                                {assignment.due_date && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{new Date(assignment.due_date).toLocaleDateString()}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-600">{grades.length} students</div>
+                            <div className="text-sm font-medium text-gray-900">
+                              Avg: {Math.round(averagePercentage)}%
+                            </div>
+                          </div>
+                        </button>
+
+                        {isExpanded && (
+                          <div className="bg-gray-50 border-t border-gray-200 p-4">
+                            <div className="overflow-x-auto">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="text-left text-sm font-medium text-gray-700 border-b border-gray-200">
+                                    <th className="pb-2 pr-4">Student</th>
+                                    <th className="pb-2 pr-4">Score</th>
+                                    <th className="pb-2 pr-4">Percentage</th>
+                                    <th className="pb-2 pr-4">Letter</th>
+                                    <th className="pb-2">Date</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {grades.map((grade: any) => {
+                                    const percentage = calculatePercentage(grade.grade_value || 0, grade.points_possible || 100);
+                                    const letterGrade = getLetterGrade(percentage);
+
+                                    return (
+                                      <tr key={grade.id} className="text-sm border-b border-gray-100 last:border-0">
+                                        <td className="py-2 pr-4 font-medium text-gray-900">
+                                          {grade.student?.student_name || 'Unknown'}
+                                        </td>
+                                        <td className="py-2 pr-4 text-gray-700">
+                                          {grade.grade_value} / {grade.points_possible}
+                                        </td>
+                                        <td className="py-2 pr-4">
+                                          <span className={`font-medium ${
+                                            percentage >= 90 ? 'text-green-600' :
+                                            percentage >= 80 ? 'text-blue-600' :
+                                            percentage >= 70 ? 'text-yellow-600' :
+                                            percentage >= 60 ? 'text-orange-600' :
+                                            'text-red-600'
+                                          }`}>
+                                            {Math.round(percentage)}%
+                                          </span>
+                                        </td>
+                                        <td className="py-2 pr-4">
+                                          <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+                                            letterGrade === 'A' ? 'bg-green-100 text-green-800' :
+                                            letterGrade === 'B' ? 'bg-blue-100 text-blue-800' :
+                                            letterGrade === 'C' ? 'bg-yellow-100 text-yellow-800' :
+                                            letterGrade === 'D' ? 'bg-orange-100 text-orange-800' :
+                                            'bg-red-100 text-red-800'
+                                          }`}>
+                                            {letterGrade}
+                                          </span>
+                                        </td>
+                                        <td className="py-2 text-gray-600">
+                                          {new Date(grade.graded_date).toLocaleDateString()}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

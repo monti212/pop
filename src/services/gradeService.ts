@@ -292,3 +292,51 @@ export const bulkCreateGrades = async (
     return { success: false, error: error.message || 'Failed to create grades' };
   }
 };
+
+export const getClassGradesWithDetails = async (
+  classId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<ServiceResponse<any[]>> => {
+  try {
+    if (!supabase) {
+      return { success: false, error: 'Service temporarily unavailable' };
+    }
+
+    let query = supabase
+      .from('student_grades')
+      .select(`
+        *,
+        assignment:assignments(
+          id,
+          title,
+          assignment_type,
+          points_possible,
+          due_date
+        ),
+        student:students(
+          id,
+          student_name
+        )
+      `)
+      .eq('class_id', classId)
+      .order('graded_date', { ascending: false });
+
+    if (startDate) {
+      query = query.gte('graded_date', startDate);
+    }
+
+    if (endDate) {
+      query = query.lte('graded_date', endDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw new Error(error.message);
+
+    return { success: true, data: data || [] };
+  } catch (error: any) {
+    console.error('Error fetching class grades with details:', error);
+    return { success: false, error: error.message || 'Failed to fetch grades' };
+  }
+};
