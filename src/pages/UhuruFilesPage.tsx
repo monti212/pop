@@ -166,9 +166,10 @@ const UhuruFilesPage: React.FC = () => {
 
             <div className="h-6 w-px bg-[#e8e6e0]"></div>
 
-            <div className="flex items-center gap-3">
-              <Logo className="h-10" />
-              <div>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <Logo className="h-10" />
+                <div className="h-6 w-px bg-[#e8e6e0]"></div>
                 <h1 className="text-2xl font-headline font-bold text-greyed-navy">
                   {viewMode === 'classes' && 'GreyEd Teach'}
                   {viewMode === 'students' && `${selectedClass?.class_name} - Students`}
@@ -176,14 +177,14 @@ const UhuruFilesPage: React.FC = () => {
                   {viewMode === 'analytics' && `${selectedClass?.class_name} - Analytics`}
                   {viewMode === 'documents' && `${selectedClass?.class_name} - Documents`}
                 </h1>
-                <p className="text-sm text-greyed-black/70">
-                  {viewMode === 'classes' && `Manage your classes and students • ${classCount} of 5 classes`}
-                  {viewMode === 'students' && `${students.length} of 35 students`}
-                  {viewMode === 'attendance' && 'Record daily attendance'}
-                  {viewMode === 'analytics' && 'View attendance statistics'}
-                  {viewMode === 'documents' && 'Lesson plans, notes, and reports'}
-                </p>
               </div>
+              <p className="text-sm text-greyed-black/70">
+                {viewMode === 'classes' && `Manage your classes and students • ${classCount} of 5 classes`}
+                {viewMode === 'students' && `${students.length} of 35 students`}
+                {viewMode === 'attendance' && 'Record daily attendance'}
+                {viewMode === 'analytics' && 'View attendance statistics'}
+                {viewMode === 'documents' && 'Lesson plans, notes, and reports'}
+              </p>
             </div>
           </div>
 
