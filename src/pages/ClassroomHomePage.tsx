@@ -124,7 +124,7 @@ const ClassroomHomePage: React.FC = () => {
   return (
     <div className="h-screen bg-[#f8f8f6] flex flex-col overflow-hidden">
       <header className="bg-white shadow-sm border-b border-[#e8e6e0] px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between relative">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/greyed-class')}
@@ -133,10 +133,6 @@ const ClassroomHomePage: React.FC = () => {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-          </div>
-
-          {/* Centered Logo */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
             <Logo className="h-10" />
           </div>
 
