@@ -134,6 +134,41 @@ export const autoSaveLessonPlan = async (
       .update({ file_url: publicUrl })
       .eq('id', data.id);
 
+    // Also save to U Docs (user_files) for easy access from Uhuru Files page
+    try {
+      const userFileRecord = {
+        user_id: userId,
+        title: lessonPlan.title,
+        file_name: `${filename}.md`,
+        file_type: 'text/markdown',
+        file_size: lessonPlan.formattedContent.length,
+        content_preview: lessonPlan.formattedContent.substring(0, 500) + '...',
+        storage_path: storagePath,
+        tags: ['lesson-plan', 'auto-saved', 'ai-generated'],
+        metadata: {
+          ...metadata,
+          classId: classId,
+          classDocumentId: data.id,
+          originalName: filename,
+          uploadedAt: new Date().toISOString()
+        }
+      };
+
+      const { error: userFileError } = await supabase
+        .from('user_files')
+        .insert(userFileRecord);
+
+      if (userFileError) {
+        console.warn('Failed to save lesson plan to U Docs:', userFileError);
+        // Don't fail the entire operation if U Docs save fails
+      } else {
+        console.log('Lesson plan successfully saved to U Docs');
+      }
+    } catch (userFileError) {
+      console.warn('Error saving to U Docs:', userFileError);
+      // Don't fail the entire operation if U Docs save fails
+    }
+
     return {
       success: true,
       documentId: data.id
