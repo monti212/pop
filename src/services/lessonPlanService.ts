@@ -134,38 +134,37 @@ export const autoSaveLessonPlan = async (
       .update({ file_url: publicUrl })
       .eq('id', data.id);
 
-    // Also save to U Docs (user_files) for easy access from Uhuru Files page
+    // Also save to U Docs (user_documents) for easy access from U Office page
     try {
-      const userFileRecord = {
+      const userDocumentRecord = {
         user_id: userId,
         title: lessonPlan.title,
-        file_name: `${filename}.md`,
-        file_type: 'text/markdown',
-        file_size: lessonPlan.formattedContent.length,
-        content_preview: lessonPlan.formattedContent.substring(0, 500) + '...',
-        storage_path: storagePath,
-        tags: ['lesson-plan', 'auto-saved', 'ai-generated'],
+        content: lessonPlan.formattedContent,
+        document_type: 'office' as const,
+        is_auto_saved: true,
+        source: 'lesson-plan-generator',
         metadata: {
           ...metadata,
           classId: classId,
           classDocumentId: data.id,
-          originalName: filename,
+          storagePath: storagePath,
+          tags: ['lesson-plan', 'auto-saved', 'ai-generated'],
           uploadedAt: new Date().toISOString()
         }
       };
 
-      const { error: userFileError } = await supabase
-        .from('user_files')
-        .insert(userFileRecord);
+      const { error: userDocError } = await supabase
+        .from('user_documents')
+        .insert(userDocumentRecord);
 
-      if (userFileError) {
-        console.warn('Failed to save lesson plan to U Docs:', userFileError);
+      if (userDocError) {
+        console.warn('Failed to save lesson plan to U Docs:', userDocError);
         // Don't fail the entire operation if U Docs save fails
       } else {
         console.log('Lesson plan successfully saved to U Docs');
       }
-    } catch (userFileError) {
-      console.warn('Error saving to U Docs:', userFileError);
+    } catch (userDocError) {
+      console.warn('Error saving to U Docs:', userDocError);
       // Don't fail the entire operation if U Docs save fails
     }
 
