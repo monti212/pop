@@ -160,8 +160,9 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
       const saveResult = await autoSaveLessonPlan(
         aiResponse,
         user.id,
-        undefined, // No conversation ID since this is from generator
-        undefined  // No message ID
+        classId,
+        undefined,
+        undefined
       );
 
       if (saveResult.success && saveResult.documentId) {

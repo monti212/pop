@@ -1,5 +1,5 @@
 import { supabase } from './authService';
-import { detectLessonPlan, generateLessonPlanFilename, getDateFolderPath, LessonPlanData } from '../utils/lessonPlanDetection';
+import { detectLessonPlan, generateLessonPlanFilename, LessonPlanData } from '../utils/lessonPlanDetection';
 
 export interface LessonPlanSaveResult {
   success: boolean;
@@ -7,13 +7,34 @@ export interface LessonPlanSaveResult {
   error?: string;
 }
 
-/**
- * Auto-save a lesson plan to U Files
- * Creates date-based folder structure and saves with proper metadata
- */
+const getLessonPlansFolderId = async (classId: string): Promise<string | null> => {
+  try {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from('class_folders')
+      .select('id')
+      .eq('class_id', classId)
+      .eq('folder_type', 'lesson_plans')
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error finding lesson plans folder:', error);
+      return null;
+    }
+
+    return data?.id || null;
+  } catch (error) {
+    console.error('Error in getLessonPlansFolderId:', error);
+    return null;
+  }
+};
+
 export const autoSaveLessonPlan = async (
   content: string,
   userId: string,
+  classId: string,
   conversationId?: string,
   messageId?: string
 ): Promise<LessonPlanSaveResult> => {
@@ -25,10 +46,15 @@ export const autoSaveLessonPlan = async (
       };
     }
 
-    // Detect and analyze lesson plan
+    if (!classId) {
+      return {
+        success: false,
+        error: 'Class ID is required to save lesson plan'
+      };
+    }
+
     const lessonPlan: LessonPlanData = detectLessonPlan(content);
 
-    // Only save if confidence is high enough
     if (!lessonPlan.isLessonPlan || lessonPlan.confidence < 0.5) {
       return {
         success: false,
@@ -36,13 +62,12 @@ export const autoSaveLessonPlan = async (
       };
     }
 
-    // Get date folder path
-    const dateFolderPath = getDateFolderPath();
-
-    // Generate filename
     const filename = generateLessonPlanFilename(lessonPlan);
+    const timestamp = Date.now();
+    const storagePath = `${userId}/class-documents/${classId}/${timestamp}-${filename}`;
 
-    // Prepare metadata
+    const folderId = await getLessonPlansFolderId(classId);
+
     const metadata = {
       subject: lessonPlan.subject,
       gradeLevel: lessonPlan.gradeLevel,
@@ -52,28 +77,25 @@ export const autoSaveLessonPlan = async (
       savedAt: new Date().toISOString()
     };
 
-    // Save to user_documents table
     const { data, error } = await supabase
-      .from('user_documents')
+      .from('class_documents')
       .insert({
+        class_id: classId,
+        folder_id: folderId,
         user_id: userId,
         title: lessonPlan.title,
-        file_name: filename,
-        file_type: 'text/markdown',
+        document_type: 'lesson_plan',
+        content: lessonPlan.formattedContent,
+        storage_path: storagePath,
         file_size: lessonPlan.formattedContent.length,
-        content_preview: lessonPlan.formattedContent.substring(0, 500),
-        storage_path: `${userId}/lesson-plans/${dateFolderPath}/${filename}`,
-        tags: ['lesson-plan', 'auto-saved'],
         metadata: metadata,
+        tags: ['lesson-plan', 'auto-saved', 'ai-generated'],
         is_lesson_plan: true,
         lesson_plan_confidence: lessonPlan.confidence,
         lesson_plan_metadata: metadata,
         conversation_id: conversationId || null,
         message_id: messageId || null,
-        auto_saved: true,
-        date_folder: dateFolderPath,
-        source: 'lesson-plan',
-        content: lessonPlan.formattedContent
+        auto_saved: true
       })
       .select('id')
       .single();
@@ -83,9 +105,7 @@ export const autoSaveLessonPlan = async (
       throw new Error(`Failed to save lesson plan: ${error.message}`);
     }
 
-    // Save the actual content to Supabase Storage
     const contentBlob = new Blob([lessonPlan.formattedContent], { type: 'text/markdown' });
-    const storagePath = `${userId}/lesson-plans/${dateFolderPath}/${filename}`;
 
     const { error: uploadError } = await supabase.storage
       .from('user-files')
@@ -97,14 +117,22 @@ export const autoSaveLessonPlan = async (
 
     if (uploadError) {
       console.error('Error uploading lesson plan to storage:', uploadError);
-      // Delete the database record if upload fails
       await supabase
-        .from('user_documents')
+        .from('class_documents')
         .delete()
         .eq('id', data.id);
 
       throw new Error(`Failed to upload lesson plan: ${uploadError.message}`);
     }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('user-files')
+      .getPublicUrl(storagePath);
+
+    await supabase
+      .from('class_documents')
+      .update({ file_url: publicUrl })
+      .eq('id', data.id);
 
     return {
       success: true,
@@ -119,11 +147,8 @@ export const autoSaveLessonPlan = async (
   }
 };
 
-/**
- * Get lesson plans for a user, organized by date
- */
-export const getUserLessonPlans = async (
-  userId: string,
+export const getClassLessonPlans = async (
+  classId: string,
   limit?: number
 ): Promise<{ success: boolean; lessonPlans?: any[]; error?: string }> => {
   try {
@@ -135,10 +160,11 @@ export const getUserLessonPlans = async (
     }
 
     let query = supabase
-      .from('user_documents')
+      .from('class_documents')
       .select('*')
-      .eq('user_id', userId)
+      .eq('class_id', classId)
       .eq('is_lesson_plan', true)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (limit) {
@@ -164,9 +190,49 @@ export const getUserLessonPlans = async (
   }
 };
 
-/**
- * Get lesson plans grouped by date folder
- */
+export const getUserLessonPlans = async (
+  userId: string,
+  limit?: number
+): Promise<{ success: boolean; lessonPlans?: any[]; error?: string }> => {
+  try {
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Database connection unavailable'
+      };
+    }
+
+    let query = supabase
+      .from('class_documents')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_lesson_plan', true)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch lesson plans: ${error.message}`);
+    }
+
+    return {
+      success: true,
+      lessonPlans: data
+    };
+  } catch (error: any) {
+    console.error('Error fetching lesson plans:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch lesson plans'
+    };
+  }
+};
+
 export const getLessonPlansByDate = async (
   userId: string
 ): Promise<{ success: boolean; groupedLessonPlans?: Record<string, any[]>; error?: string }> => {
@@ -177,15 +243,18 @@ export const getLessonPlansByDate = async (
       return result;
     }
 
-    // Group by date folder
     const grouped: Record<string, any[]> = {};
 
     for (const plan of result.lessonPlans) {
-      const dateFolder = plan.date_folder || 'Other';
-      if (!grouped[dateFolder]) {
-        grouped[dateFolder] = [];
+      const dateKey = new Date(plan.created_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
       }
-      grouped[dateFolder].push(plan);
+      grouped[dateKey].push(plan);
     }
 
     return {
@@ -201,9 +270,6 @@ export const getLessonPlansByDate = async (
   }
 };
 
-/**
- * Download a lesson plan as markdown file
- */
 export const downloadLessonPlan = async (
   documentId: string,
   userId: string
@@ -216,35 +282,41 @@ export const downloadLessonPlan = async (
       };
     }
 
-    // Get document metadata
     const { data: doc, error: docError } = await supabase
-      .from('user_documents')
+      .from('class_documents')
       .select('*')
       .eq('id', documentId)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (docError || !doc) {
       throw new Error('Lesson plan not found');
     }
 
-    // Download content from storage
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from('user-files')
-      .download(doc.storage_path);
+    if (doc.storage_path) {
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('user-files')
+        .download(doc.storage_path);
 
-    if (downloadError) {
-      throw new Error(`Failed to download lesson plan: ${downloadError.message}`);
+      if (!downloadError && fileData) {
+        const content = await fileData.text();
+        return {
+          success: true,
+          content,
+          filename: `${doc.title}.md`
+        };
+      }
     }
 
-    // Convert blob to text
-    const content = await fileData.text();
+    if (doc.content) {
+      return {
+        success: true,
+        content: doc.content,
+        filename: `${doc.title}.md`
+      };
+    }
 
-    return {
-      success: true,
-      content,
-      filename: doc.file_name
-    };
+    throw new Error('No content available for this lesson plan');
   } catch (error: any) {
     console.error('Error downloading lesson plan:', error);
     return {
