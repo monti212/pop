@@ -44,6 +44,12 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // New assessment entry fields
+  const [assessmentType, setAssessmentType] = useState<string>('quiz');
+  const [assessmentTitle, setAssessmentTitle] = useState<string>('');
+  const [totalPoints, setTotalPoints] = useState<string>('100');
+  const [assessmentDate, setAssessmentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
   useEffect(() => {
     if (isOpen) {
       loadData();
@@ -82,8 +88,15 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   };
 
   const handleSaveGrades = async () => {
-    if (!selectedAssignment) {
-      setError('Please select an assignment');
+    // Validation
+    if (!assessmentTitle.trim()) {
+      setError('Please enter an assessment title');
+      return;
+    }
+
+    const pointsValue = parseFloat(totalPoints);
+    if (isNaN(pointsValue) || pointsValue <= 0) {
+      setError('Please enter a valid total points value');
       return;
     }
 
@@ -92,16 +105,34 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
     setSuccessMessage(null);
 
     try {
+      // First, create the assignment
+      const { createAssignment } = await import('../services/gradeService');
+
+      const assignmentResult = await createAssignment({
+        class_id: classId,
+        title: assessmentTitle,
+        description: `${assessmentType.charAt(0).toUpperCase() + assessmentType.slice(1)} assessment`,
+        assignment_type: assessmentType,
+        points_possible: pointsValue,
+        due_date: assessmentDate
+      });
+
+      if (!assignmentResult.success || !assignmentResult.data) {
+        throw new Error(assignmentResult.error || 'Failed to create assessment');
+      }
+
+      const assignmentId = assignmentResult.data.id;
+
+      // Create grades for students who have entries
       const gradesToCreate: CreateGradeData[] = Object.entries(gradeEntries)
         .filter(([_, value]) => value && value.trim() !== '')
         .map(([studentId, value]) => ({
           student_id: studentId,
-          assignment_id: selectedAssignment.id,
+          assignment_id: assignmentId,
           class_id: classId,
-          category_id: selectedAssignment.category_id || undefined,
           grade_value: parseFloat(value),
-          points_possible: selectedAssignment.points_possible,
-          graded_date: new Date().toISOString().split('T')[0]
+          points_possible: pointsValue,
+          graded_date: assessmentDate
         }));
 
       if (gradesToCreate.length === 0) {
@@ -115,8 +146,15 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
         throw new Error(result.error || 'Failed to save grades');
       }
 
-      setSuccessMessage(`Successfully saved ${gradesToCreate.length} grades!`);
+      setSuccessMessage(`Successfully saved ${gradesToCreate.length} grades for ${assessmentTitle}!`);
+
+      // Reset form
       setGradeEntries({});
+      setAssessmentTitle('');
+      setTotalPoints('100');
+      setAssessmentType('quiz');
+      setAssessmentDate(new Date().toISOString().split('T')[0]);
+
       setTimeout(() => {
         onSuccess();
       }, 1500);
@@ -208,37 +246,82 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
 
           {viewMode === 'entry' && (
             <div>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Assignment
-                </label>
-                {assignments.length > 0 ? (
-                  <select
-                    value={selectedAssignment?.id || ''}
-                    onChange={(e) => {
-                      const assignment = assignments.find(a => a.id === e.target.value);
-                      setSelectedAssignment(assignment || null);
-                      setGradeEntries({});
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    {assignments.map(assignment => (
-                      <option key={assignment.id} value={assignment.id}>
-                        {assignment.title} ({assignment.points_possible} points)
-                        {assignment.due_date && ` - Due: ${new Date(assignment.due_date).toLocaleDateString()}`}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-sm text-gray-600">No assignments found. Create assignments first.</p>
-                )}
+              {/* Assessment Details Form */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Assessment Details</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Assessment Type *
+                    </label>
+                    <select
+                      value={assessmentType}
+                      onChange={(e) => setAssessmentType(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    >
+                      <option value="quiz">Quiz</option>
+                      <option value="test">Test</option>
+                      <option value="exam">Exam</option>
+                      <option value="assignment">Assignment</option>
+                      <option value="homework">Homework</option>
+                      <option value="classwork">Class Exercise</option>
+                      <option value="project">Project</option>
+                      <option value="participation">Participation</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Title/Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={assessmentTitle}
+                      onChange={(e) => setAssessmentTitle(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      placeholder="e.g., Chapter 5 Quiz, Midterm Exam"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Total Points *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={totalPoints}
+                      onChange={(e) => setTotalPoints(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      placeholder="100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={assessmentDate}
+                      onChange={(e) => setAssessmentDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {selectedAssignment && students.length > 0 && (
+              {/* Grade Entry Table */}
+              {students.length > 0 && (
                 <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Enter Student Grades</h3>
+
                   <div className="grid grid-cols-12 gap-4 font-medium text-sm text-gray-700 border-b border-gray-200 pb-2">
                     <div className="col-span-5">Student Name</div>
-                    <div className="col-span-3">Grade (out of {selectedAssignment.points_possible})</div>
+                    <div className="col-span-3">Grade (out of {totalPoints || '—'})</div>
                     <div className="col-span-2">Percentage</div>
                     <div className="col-span-2">Letter Grade</div>
                   </div>
@@ -246,7 +329,8 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                   {students.map(student => {
                     const gradeValue = gradeEntries[student.id] || '';
                     const numericValue = parseFloat(gradeValue) || 0;
-                    const percentage = calculatePercentage(numericValue, selectedAssignment.points_possible);
+                    const pointsValue = parseFloat(totalPoints) || 100;
+                    const percentage = calculatePercentage(numericValue, pointsValue);
                     const letterGrade = gradeValue ? getLetterGrade(percentage) : '-';
 
                     return (
@@ -258,7 +342,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                           <input
                             type="number"
                             min="0"
-                            max={selectedAssignment.points_possible}
+                            max={pointsValue}
                             step="0.5"
                             value={gradeValue}
                             onChange={(e) => handleGradeChange(student.id, e.target.value)}
@@ -330,7 +414,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
           {viewMode === 'entry' && (
             <button
               onClick={handleSaveGrades}
-              disabled={isLoading || !selectedAssignment || Object.keys(gradeEntries).length === 0}
+              disabled={isLoading || !assessmentTitle.trim() || Object.keys(gradeEntries).length === 0}
               className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
