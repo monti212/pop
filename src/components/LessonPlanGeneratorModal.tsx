@@ -5,7 +5,7 @@ import { CreateLessonPlanRequestData } from '../types/studentProfile';
 import { createLessonPlanRequest, updateLessonPlanRequest } from '../services/studentProfileService';
 import { getEnhancedStudentProfile } from '../services/studentProfileService';
 import { useAuth } from '../context/AuthContext';
-import { generateResponse } from '../services/chatService';
+import { streamResponse } from '../services/chatService';
 import { autoSaveLessonPlan } from '../services/lessonPlanService';
 import StreamMarkdown from './StreamMarkdown';
 import LessonPlanNotification from './LessonPlanNotification';
@@ -130,12 +130,14 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
         status: 'generating' as any
       });
 
-      // Step 4: Generate lesson plan using AI
+      // Step 4: Generate lesson plan using AI with streaming
       setGenerationStatus('Generating personalized lesson plan with Uhuru AI...');
       setStep(3);
 
-      const aiResponse = await generateResponse({
-        messages: [
+      let fullContent = '';
+
+      await streamResponse({
+        conversation: [
           {
             role: 'system',
             content: 'You are an expert educational AI assistant specializing in creating personalized, differentiated lesson plans. Create comprehensive, practical lesson plans that address individual student needs.'
@@ -148,12 +150,19 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
         language: 'english',
         region: 'global',
         modelVersion: '2.0',
-        onStatusUpdate: (status) => {
-          setGenerationStatus(status);
+        onEvent: (event, payload) => {
+          if (event === 'message.delta') {
+            const delta = payload.textDelta ?? payload.delta ?? '';
+            fullContent += delta;
+            setGeneratedContent(fullContent);
+          } else if (event === 'run.status' || event === 'web.status') {
+            setGenerationStatus(payload.status || payload.label || 'Generating...');
+          } else if (event === 'error') {
+            throw new Error(payload.message || 'Failed to generate lesson plan');
+          }
         }
       });
 
-      setGeneratedContent(aiResponse);
       setIsGenerating(false);
 
       // Step 5: Auto-save the lesson plan
@@ -161,7 +170,7 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
       setGenerationStatus('Saving lesson plan...');
 
       const saveResult = await autoSaveLessonPlan(
-        aiResponse,
+        fullContent,
         user.id,
         classId,
         undefined,
@@ -182,7 +191,7 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
         }
 
         // Notify parent component
-        onSuccess(aiResponse, saveResult.documentId);
+        onSuccess(fullContent, saveResult.documentId);
 
         // Generate and store the lesson plan title for the notification
         const now = new Date();
@@ -224,53 +233,30 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
   };
 
   const buildLessonPlanPrompt = (profiles: any[]): string => {
-    const studentDetails = profiles.map(student => {
+    const studentSummary = profiles.map(student => {
       const traits = student.personality_traits;
-      return `
-**${student.student_name}**
-- Learning Style: ${traits?.learning_style || 'Not specified'}
-- Work Pace: ${traits?.work_pace || 'Not specified'}
-- Collaboration: ${traits?.collaboration_preference || 'Not specified'}
-- Strengths: ${student.strengths || 'Not specified'}
-- Areas for Improvement: ${student.areas_for_improvement || 'Not specified'}
-- Accommodations: ${student.accommodations || 'None'}
-${student.has_neurodivergence ? `- Neurodivergence: ${student.neurodivergence_type}` : ''}
-      `.trim();
-    }).join('\n\n');
+      const key_info = [];
 
-    return `Please create a detailed, personalized lesson plan for the following class:
+      if (traits?.learning_style && traits.learning_style !== 'Not specified') {
+        key_info.push(`${traits.learning_style} learner`);
+      }
+      if (student.has_neurodivergence && student.neurodivergence_type) {
+        key_info.push(student.neurodivergence_type);
+      }
+      if (student.accommodations && student.accommodations !== 'None') {
+        key_info.push(`needs: ${student.accommodations}`);
+      }
 
-**Class Information:**
-- Class: ${className}
-- Topic: ${formData.topic}
-${formData.subject ? `- Subject: ${formData.subject}` : ''}
-- Duration: ${formData.duration_minutes} minutes
-${formData.lesson_date ? `- Date: ${formData.lesson_date}` : ''}
+      return `${student.student_name}: ${key_info.join(', ') || 'standard profile'}`;
+    }).join('; ');
 
-**Differentiation Level:** ${formData.differentiation_level}
-**Include Accommodations:** ${formData.include_accommodations ? 'Yes' : 'No'}
-${formData.focus_areas.length > 0 ? `**Focus Areas:** ${formData.focus_areas.join(', ')}` : ''}
+    return `Create a ${formData.duration_minutes}-minute lesson plan for "${formData.topic}"${formData.subject ? ` (${formData.subject})` : ''}.
 
-**Student Profiles:**
-${studentDetails}
+CLASS: ${className}
+STUDENTS (${profiles.length}): ${studentSummary}
+DIFFERENTIATION: ${formData.differentiation_level}
 
-Please create a comprehensive lesson plan that:
-1. Addresses each student's learning style and preferences
-2. Incorporates appropriate differentiation strategies
-3. Includes accommodations where needed
-4. Provides specific activities tailored to their strengths
-5. Offers support strategies for areas of improvement
-6. Considers collaboration preferences for group activities
-7. Adapts to the different work paces
-
-Include:
-- Learning objectives
-- Materials needed
-- Step-by-step lesson procedure
-- Differentiation strategies for each student
-- Assessment methods
-- Extension activities
-- Reflection questions`;
+Include: learning objectives, materials, step-by-step activities with differentiation for each student, assessment, and extension activities. Be concise but practical.`;
   };
 
   if (!isOpen) return null;
@@ -525,8 +511,8 @@ Include:
               {isGenerating && !generatedContent && (
                 <div className="text-center py-12">
                   <Sparkles className="w-12 h-12 text-yellow-500 mx-auto mb-4 animate-pulse" />
-                  <p className="text-gray-600">Creating your personalized lesson plan...</p>
-                  <p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+                  <p className="text-gray-600">Starting lesson plan generation...</p>
+                  <p className="text-sm text-gray-500 mt-2">Content will appear shortly</p>
                 </div>
               )}
 
@@ -535,6 +521,12 @@ Include:
                   <div className="prose prose-sm max-w-none">
                     <StreamMarkdown content={generatedContent} />
                   </div>
+                  {isGenerating && (
+                    <div className="flex items-center justify-center mt-4 text-sm text-teal-600">
+                      <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                      <span>Generating more content...</span>
+                    </div>
+                  )}
                 </div>
               )}
 
