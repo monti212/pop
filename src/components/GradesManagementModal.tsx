@@ -60,6 +60,13 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   const [endDate, setEndDate] = useState<string>('');
   const [expandedAssessments, setExpandedAssessments] = useState<Set<string>>(new Set());
 
+  // Distribution view fields
+  const [distributionGrades, setDistributionGrades] = useState<any[]>([]);
+  const [distributionFilter, setDistributionFilter] = useState<'week' | 'month' | 'year' | 'term' | 'all'>('month');
+  const [distributionYear, setDistributionYear] = useState<string>(new Date().getFullYear().toString());
+  const [distributionMonth, setDistributionMonth] = useState<string>((new Date().getMonth() + 1).toString().padStart(2, '0'));
+  const [distributionTerm, setDistributionTerm] = useState<string>('1');
+
   useEffect(() => {
     if (isOpen) {
       loadData();
@@ -71,6 +78,12 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
       loadHistoricalGrades();
     }
   }, [isOpen, viewMode, filterType, selectedYear, selectedMonth, startDate, endDate]);
+
+  useEffect(() => {
+    if (isOpen && viewMode === 'distribution') {
+      loadDistributionData();
+    }
+  }, [isOpen, viewMode, distributionFilter, distributionYear, distributionMonth, distributionTerm]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -289,6 +302,143 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
     { value: '11', label: 'November' },
     { value: '12', label: 'December' }
   ];
+
+  const loadDistributionData = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      let start: string | undefined;
+      let end: string | undefined;
+      const now = new Date();
+
+      if (distributionFilter === 'week') {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        start = weekStart.toISOString().split('T')[0];
+        end = weekEnd.toISOString().split('T')[0];
+      } else if (distributionFilter === 'month') {
+        const year = parseInt(distributionYear);
+        const month = parseInt(distributionMonth);
+        const lastDay = new Date(year, month, 0).getDate();
+        start = `${distributionYear}-${distributionMonth}-01`;
+        end = `${distributionYear}-${distributionMonth}-${lastDay.toString().padStart(2, '0')}`;
+      } else if (distributionFilter === 'year') {
+        start = `${distributionYear}-01-01`;
+        end = `${distributionYear}-12-31`;
+      } else if (distributionFilter === 'term') {
+        const year = parseInt(distributionYear);
+        if (distributionTerm === '1') {
+          start = `${year}-01-01`;
+          end = `${year}-05-31`;
+        } else if (distributionTerm === '2') {
+          start = `${year}-06-01`;
+          end = `${year}-08-31`;
+        } else {
+          start = `${year}-09-01`;
+          end = `${year}-12-31`;
+        }
+      }
+
+      const result = await getClassGradesWithDetails(classId, start, end);
+
+      if (result.success && result.data) {
+        setDistributionGrades(result.data);
+      } else {
+        setError(result.error || 'Failed to load distribution data');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load distribution data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const calculateDistributionStats = () => {
+    if (distributionGrades.length === 0) {
+      return {
+        total: 0,
+        average: 0,
+        letterCounts: { A: 0, B: 0, C: 0, D: 0, F: 0 },
+        assessmentTypes: {} as { [key: string]: number },
+        topPerformers: [] as { student: string; average: number }[],
+        needsHelp: [] as { student: string; average: number }[]
+      };
+    }
+
+    const letterCounts = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+    const assessmentTypes: { [key: string]: number } = {};
+    const studentGrades: { [key: string]: { name: string; grades: number[] } } = {};
+
+    let totalPercentage = 0;
+
+    distributionGrades.forEach(grade => {
+      const percentage = calculatePercentage(grade.grade_value || 0, grade.points_possible || 100);
+      const letter = getLetterGrade(percentage);
+      letterCounts[letter as keyof typeof letterCounts]++;
+      totalPercentage += percentage;
+
+      // Track by assessment type
+      const type = grade.assignment?.assignment_type || 'other';
+      assessmentTypes[type] = (assessmentTypes[type] || 0) + 1;
+
+      // Track by student
+      const studentId = grade.student?.id;
+      const studentName = grade.student?.student_name || 'Unknown';
+      if (studentId) {
+        if (!studentGrades[studentId]) {
+          studentGrades[studentId] = { name: studentName, grades: [] };
+        }
+        studentGrades[studentId].grades.push(percentage);
+      }
+    });
+
+    const average = totalPercentage / distributionGrades.length;
+
+    // Calculate student averages
+    const studentAverages = Object.entries(studentGrades).map(([id, data]) => ({
+      student: data.name,
+      average: data.grades.reduce((sum, g) => sum + g, 0) / data.grades.length
+    }));
+
+    const topPerformers = studentAverages
+      .sort((a, b) => b.average - a.average)
+      .slice(0, 5);
+
+    const needsHelp = studentAverages
+      .filter(s => s.average < 70)
+      .sort((a, b) => a.average - b.average)
+      .slice(0, 5);
+
+    return {
+      total: distributionGrades.length,
+      average,
+      letterCounts,
+      assessmentTypes,
+      topPerformers,
+      needsHelp
+    };
+  };
+
+  const getWeekLabel = () => {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    return `${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
+  };
+
+  const getTermLabel = () => {
+    const labels: { [key: string]: string } = {
+      '1': 'Spring (Jan-May)',
+      '2': 'Summer (Jun-Aug)',
+      '3': 'Fall (Sep-Dec)'
+    };
+    return labels[distributionTerm] || 'Term 1';
+  };
 
   if (!isOpen) return null;
 
@@ -725,9 +875,295 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
           )}
 
           {viewMode === 'distribution' && (
-            <div className="text-center py-12">
-              <Award className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">Grade distribution charts coming soon</p>
+            <div>
+              {/* Filter Controls */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Analytics Period</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      View By
+                    </label>
+                    <select
+                      value={distributionFilter}
+                      onChange={(e) => setDistributionFilter(e.target.value as any)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    >
+                      <option value="week">This Week</option>
+                      <option value="month">Month</option>
+                      <option value="year">Year</option>
+                      <option value="term">Term</option>
+                      <option value="all">All Time</option>
+                    </select>
+                  </div>
+
+                  {distributionFilter === 'month' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Year
+                        </label>
+                        <select
+                          value={distributionYear}
+                          onChange={(e) => setDistributionYear(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        >
+                          {getYearOptions().map(year => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Month
+                        </label>
+                        <select
+                          value={distributionMonth}
+                          onChange={(e) => setDistributionMonth(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        >
+                          {getMonthOptions().map(month => (
+                            <option key={month.value} value={month.value}>{month.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {distributionFilter === 'year' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Year
+                      </label>
+                      <select
+                        value={distributionYear}
+                        onChange={(e) => setDistributionYear(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      >
+                        {getYearOptions().map(year => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {distributionFilter === 'term' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Year
+                        </label>
+                        <select
+                          value={distributionYear}
+                          onChange={(e) => setDistributionYear(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        >
+                          {getYearOptions().map(year => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Term
+                        </label>
+                        <select
+                          value={distributionTerm}
+                          onChange={(e) => setDistributionTerm(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        >
+                          <option value="1">Spring (Jan-May)</option>
+                          <option value="2">Summer (Jun-Aug)</option>
+                          <option value="3">Fall (Sep-Dec)</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Analytics Content */}
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-gray-600">Loading analytics...</p>
+                </div>
+              ) : (() => {
+                const stats = calculateDistributionStats();
+
+                if (stats.total === 0) {
+                  return (
+                    <div className="text-center py-12">
+                      <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600">No grades found for the selected period</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6">
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-blue-600 font-medium">Total Grades</p>
+                            <p className="text-2xl font-bold text-blue-900 mt-1">{stats.total}</p>
+                          </div>
+                          <Award className="w-8 h-8 text-blue-400" />
+                        </div>
+                      </div>
+
+                      <div className="bg-green-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-green-600 font-medium">Class Average</p>
+                            <p className="text-2xl font-bold text-green-900 mt-1">{Math.round(stats.average)}%</p>
+                          </div>
+                          <TrendingUp className="w-8 h-8 text-green-400" />
+                        </div>
+                      </div>
+
+                      <div className="bg-yellow-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-yellow-600 font-medium">Passing Rate</p>
+                            <p className="text-2xl font-bold text-yellow-900 mt-1">
+                              {Math.round(((stats.letterCounts.A + stats.letterCounts.B + stats.letterCounts.C + stats.letterCounts.D) / stats.total) * 100)}%
+                            </p>
+                          </div>
+                          <Award className="w-8 h-8 text-yellow-400" />
+                        </div>
+                      </div>
+
+                      <div className="bg-purple-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-purple-600 font-medium">Excellence Rate</p>
+                            <p className="text-2xl font-bold text-purple-900 mt-1">
+                              {Math.round(((stats.letterCounts.A + stats.letterCounts.B) / stats.total) * 100)}%
+                            </p>
+                          </div>
+                          <Award className="w-8 h-8 text-purple-400" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Grade Distribution Chart */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Grade Distribution</h3>
+                      <div className="space-y-3">
+                        {Object.entries(stats.letterCounts).map(([letter, count]) => {
+                          const percentage = (count / stats.total) * 100;
+                          const colors = {
+                            A: 'bg-green-500',
+                            B: 'bg-blue-500',
+                            C: 'bg-yellow-500',
+                            D: 'bg-orange-500',
+                            F: 'bg-red-500'
+                          };
+                          const bgColors = {
+                            A: 'bg-green-100',
+                            B: 'bg-blue-100',
+                            C: 'bg-yellow-100',
+                            D: 'bg-orange-100',
+                            F: 'bg-red-100'
+                          };
+
+                          return (
+                            <div key={letter} className="flex items-center space-x-4">
+                              <div className="w-8 text-center">
+                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${bgColors[letter as keyof typeof bgColors]} ${letter === 'A' ? 'text-green-800' : letter === 'B' ? 'text-blue-800' : letter === 'C' ? 'text-yellow-800' : letter === 'D' ? 'text-orange-800' : 'text-red-800'}`}>
+                                  {letter}
+                                </span>
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm font-medium text-gray-700">
+                                    {letter} Grade
+                                  </span>
+                                  <span className="text-sm text-gray-600">
+                                    {count} ({Math.round(percentage)}%)
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-3">
+                                  <div
+                                    className={`h-3 rounded-full ${colors[letter as keyof typeof colors]}`}
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Top Performers */}
+                      {stats.topPerformers.length > 0 && (
+                        <div className="bg-white border border-gray-200 rounded-lg p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <Award className="w-5 h-5 text-yellow-500 mr-2" />
+                            Top Performers
+                          </h3>
+                          <div className="space-y-2">
+                            {stats.topPerformers.map((student, index) => (
+                              <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                                <div className="flex items-center space-x-3">
+                                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-700 text-xs font-bold">
+                                    {index + 1}
+                                  </span>
+                                  <span className="text-sm font-medium text-gray-900">{student.student}</span>
+                                </div>
+                                <span className="text-sm font-semibold text-green-600">
+                                  {Math.round(student.average)}%
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Students Needing Support */}
+                      {stats.needsHelp.length > 0 && (
+                        <div className="bg-white border border-gray-200 rounded-lg p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <TrendingUp className="w-5 h-5 text-orange-500 mr-2" />
+                            Needs Support
+                          </h3>
+                          <div className="space-y-2">
+                            {stats.needsHelp.map((student, index) => (
+                              <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                                <span className="text-sm font-medium text-gray-900">{student.student}</span>
+                                <span className="text-sm font-semibold text-orange-600">
+                                  {Math.round(student.average)}%
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Assessment Types Breakdown */}
+                    {Object.keys(stats.assessmentTypes).length > 0 && (
+                      <div className="bg-white border border-gray-200 rounded-lg p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Assessment Types</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {Object.entries(stats.assessmentTypes).map(([type, count]) => (
+                            <div key={type} className="text-center p-4 bg-gray-50 rounded-lg">
+                              <p className="text-2xl font-bold text-gray-900">{count}</p>
+                              <p className="text-sm text-gray-600 capitalize mt-1">{type}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
