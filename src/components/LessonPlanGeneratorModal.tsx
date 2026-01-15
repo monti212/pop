@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Sparkles, Users, Book, Clock, Target, CheckCircle, AlertCircle, FileText } from 'lucide-react';
+import { X, Sparkles, Users, Book, Clock, Target, CheckCircle, AlertCircle, FileText, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Student } from '../types/attendance';
 import { CreateLessonPlanRequestData } from '../types/studentProfile';
 import { createLessonPlanRequest, updateLessonPlanRequest } from '../services/studentProfileService';
@@ -27,6 +28,7 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
   students
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     topic: '',
@@ -45,6 +47,7 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [generationStatus, setGenerationStatus] = useState<string>('');
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const handleStudentToggle = (studentId: string) => {
     setSelectedStudents(prev =>
@@ -177,6 +180,9 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
             generated_at: new Date().toISOString()
           });
         }
+
+        // Show success popup asking if user wants to open the lesson plan
+        setShowSuccessPopup(true);
 
         // Notify parent component
         onSuccess(aiResponse, saveResult.documentId);
@@ -619,6 +625,57 @@ Include:
           )}
         </div>
       </div>
+
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Lesson Plan Created!</h3>
+                  <p className="text-teal-50 text-sm">Your AI lesson plan has been saved</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <p className="text-gray-700 mb-6">
+                Your personalized lesson plan has been successfully generated and saved to U Docs.
+                Would you like to open it now to review and edit?
+              </p>
+
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => {
+                    setShowSuccessPopup(false);
+                    onClose();
+                  }}
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    if (savedDocumentId) {
+                      navigate(`/u-office?documentId=${savedDocumentId}`);
+                    }
+                    setShowSuccessPopup(false);
+                    onClose();
+                  }}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all flex items-center justify-center space-x-2 font-medium shadow-lg"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Open in U Docs</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

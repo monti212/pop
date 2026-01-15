@@ -62,6 +62,11 @@ export const autoSaveLessonPlan = async (
       };
     }
 
+    // Format title with date: date_Title format
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const formattedTitle = `${dateStr}_${lessonPlan.title}`;
+
     const filename = generateLessonPlanFilename(lessonPlan);
     const timestamp = Date.now();
     const storagePath = `${userId}/class-documents/${classId}/${timestamp}-${filename}`;
@@ -83,7 +88,7 @@ export const autoSaveLessonPlan = async (
         class_id: classId,
         folder_id: folderId,
         user_id: userId,
-        title: lessonPlan.title,
+        title: formattedTitle,
         document_type: 'lesson_plan',
         content: lessonPlan.formattedContent,
         storage_path: storagePath,
@@ -138,7 +143,7 @@ export const autoSaveLessonPlan = async (
     try {
       const userDocumentRecord = {
         user_id: userId,
-        title: lessonPlan.title,
+        title: formattedTitle,
         content: lessonPlan.formattedContent,
         document_type: 'office' as const,
         is_auto_saved: true,
@@ -153,9 +158,11 @@ export const autoSaveLessonPlan = async (
         }
       };
 
-      const { error: userDocError } = await supabase
+      const { data: userDocData, error: userDocError } = await supabase
         .from('user_documents')
-        .insert(userDocumentRecord);
+        .insert(userDocumentRecord)
+        .select('id')
+        .single();
 
       if (userDocError) {
         console.warn('Failed to save lesson plan to U Docs:', userDocError);
