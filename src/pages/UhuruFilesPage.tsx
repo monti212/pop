@@ -298,7 +298,7 @@ const UhuruFilesPage: React.FC = () => {
                         <p className="text-xs text-greyed-black/70 mb-0.5">{classItem.subject}</p>
                       )}
                       {classItem.grade_level && (
-                        <p className="text-xs text-greyed-black/60">Grade {classItem.grade_level}</p>
+                        <p className="text-xs text-greyed-black/60">{classItem.grade_level}</p>
                       )}
                     </div>
 
