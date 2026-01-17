@@ -556,6 +556,10 @@ export default function ChatInterface({
     }
   };
 
+  // Refs for batching UI updates
+  const pendingDeltaRef = useRef<string>('');
+  const updateScheduledRef = useRef<number | null>(null);
+
   const processStreamEvent = useCallback((
     type: string,
     payload: any,
@@ -568,36 +572,76 @@ export default function ChatInterface({
       const delta = payload.text ?? payload.textDelta ?? payload.delta ?? '';
       if (!delta) return;
 
-      setCurrentConversation((prev) => {
-        if (!prev) return prev;
-        const conv = { ...prev, messages: [...prev.messages] }; // Ensure messages array is new reference
+      // Accumulate delta in ref (doesn't trigger re-render)
+      pendingDeltaRef.current += delta;
 
-        if (assistantIndexRef.current === null) {
-          const localId = crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-          const msg = {
-            localId,
-            id: undefined, // Will be set when message is saved to database
-            role: 'assistant' as const,
-            content: delta,
-            isLongResponse: delta.length > LONG_RESPONSE_THRESHOLD,
-            timestamp: new Date(),
-          };
-          conv.messages = [...conv.messages, msg];
-          assistantIndexRef.current = conv.messages.length - 1;
-          assistantLocalIdRef.current = localId; // Store the local ID for deduplication
-        } else {
-          const msg = { ...conv.messages[assistantIndexRef.current] };
-          msg.content = (msg.content || '') + delta;
-          msg.isLongResponse = (msg.content?.length || 0) > LONG_RESPONSE_THRESHOLD; // Update long response flag
-          conv.messages[assistantIndexRef.current] = msg;
-        }
+      // Cancel any pending update
+      if (updateScheduledRef.current !== null) {
+        cancelAnimationFrame(updateScheduledRef.current);
+      }
 
-        return conv;
+      // Schedule update on next animation frame for smooth 60fps rendering
+      updateScheduledRef.current = requestAnimationFrame(() => {
+        const accumulatedDelta = pendingDeltaRef.current;
+        if (!accumulatedDelta) return;
+
+        pendingDeltaRef.current = ''; // Reset accumulated delta
+        updateScheduledRef.current = null;
+
+        setCurrentConversation((prev) => {
+          if (!prev) return prev;
+
+          // Create shallow copy of conversation
+          const conv = { ...prev };
+
+          if (assistantIndexRef.current === null) {
+            // First delta - create new assistant message
+            const localId = crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+            const msg = {
+              localId,
+              id: undefined,
+              role: 'assistant' as const,
+              content: accumulatedDelta,
+              isLongResponse: accumulatedDelta.length > LONG_RESPONSE_THRESHOLD,
+              timestamp: new Date(),
+            };
+            // Create new messages array with new message
+            conv.messages = [...prev.messages, msg];
+            assistantIndexRef.current = conv.messages.length - 1;
+            assistantLocalIdRef.current = localId;
+          } else {
+            // Update existing message
+            const existingMsg = prev.messages[assistantIndexRef.current];
+            const newContent = (existingMsg.content || '') + accumulatedDelta;
+            const updatedMsg = {
+              ...existingMsg,
+              content: newContent,
+              isLongResponse: newContent.length > LONG_RESPONSE_THRESHOLD,
+            };
+            // Create new messages array with updated message
+            conv.messages = [
+              ...prev.messages.slice(0, assistantIndexRef.current),
+              updatedMsg,
+              ...prev.messages.slice(assistantIndexRef.current + 1)
+            ];
+          }
+
+          return conv;
+        });
       });
     } else if (type === 'message.completed') {
       if (completionSeenRef.current) return;
       completionSeenRef.current = true;
-      
+
+      // Cancel any pending update and flush remaining deltas
+      if (updateScheduledRef.current !== null) {
+        cancelAnimationFrame(updateScheduledRef.current);
+        updateScheduledRef.current = null;
+      }
+
+      // Flush any remaining pending delta immediately
+      const finalPendingDelta = pendingDeltaRef.current;
+      pendingDeltaRef.current = '';
 
       let finalConversation: Conversation | null = null;
 
@@ -607,8 +651,9 @@ export default function ChatInterface({
 
         if (assistantIndexRef.current !== null) {
           const msg = { ...conv.messages[assistantIndexRef.current] };
-          // Use payload.text as authoritative source, only fall back to accumulated content if truly empty
-          const finalTextToUse = payload.text || msg.content || '';
+          // Add any final pending delta, then use payload.text as authoritative source if provided
+          const currentContent = (msg.content || '') + finalPendingDelta;
+          const finalTextToUse = payload.text || currentContent;
           msg.content = finalTextToUse; // Ensure final content is set
           msg.isLongResponse = (finalTextToUse.length || 0) > LONG_RESPONSE_THRESHOLD;
           conv.messages[assistantIndexRef.current] = msg;

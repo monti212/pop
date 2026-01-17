@@ -441,16 +441,8 @@ export async function streamResponse({
   onEvent: (type: string, payload: any) => void;
 }) {
   try {
-    console.log('🚀 [CHAT] Starting streamResponse call');
-
     // Check authentication first
     const sess = await supabase?.auth.getSession();
-    console.log('🔐 [CHAT] Session check:', {
-      hasSession: !!sess?.data?.session,
-      hasAccessToken: !!sess?.data?.session?.access_token,
-      userId: sess?.data?.session?.user?.id?.substring(0, 8) || 'none',
-      tokenPrefix: sess?.data?.session?.access_token?.substring(0, 10) || 'none'
-    });
 
     if (!sess?.data?.session?.access_token) {
       console.error('❌ [CHAT] No valid session or access token');
@@ -611,10 +603,24 @@ export async function streamResponse({
     let buffer = '';
     let eventCount = 0;
 
+    // Batch processing for better performance - accumulate deltas and flush periodically
+    let deltaBuffer = '';
+    let lastFlushTime = Date.now();
+    const FLUSH_INTERVAL = 16; // ~60fps for smooth streaming without excessive re-renders
+
+    const flushDeltaBuffer = () => {
+      if (deltaBuffer) {
+        onEvent('message.delta', { textDelta: deltaBuffer });
+        deltaBuffer = '';
+        lastFlushTime = Date.now();
+      }
+    };
+
     while (true) {
       const { value, done } = await reader.read();
 
       if (done) {
+        flushDeltaBuffer(); // Flush any remaining deltas
         console.log('✅ [CHAT] Stream completed, total events:', eventCount);
         break;
       }
@@ -646,26 +652,35 @@ export async function streamResponse({
           const SAFE_EVENTS = ['message.delta', 'message.completed', 'run.status', 'error'];
 
           if (!SAFE_EVENTS.includes(event)) {
-            // Silently ignore unsafe events (response.created, response.in_progress,
-            // response.completed, reasoning, and any other upstream passthrough)
-            console.log(`🔒 [CHAT] Ignoring unsafe event: ${event}`);
-            continue;
+            continue; // Remove excessive logging
           }
 
-          onEvent(event, parsedData);
-          eventCount++;
+          // Batch delta events for performance
+          if (event === 'message.delta') {
+            const delta = parsedData.textDelta ?? parsedData.delta ?? parsedData.text ?? '';
+            deltaBuffer += delta;
+            eventCount++;
 
-          // Log every 10th event to avoid console spam
-          if (eventCount % 10 === 0) {
-            console.log(`📨 [CHAT] Processed ${eventCount} events`);
+            // Flush every FLUSH_INTERVAL ms or if buffer is getting large
+            const now = Date.now();
+            if (now - lastFlushTime >= FLUSH_INTERVAL || deltaBuffer.length > 100) {
+              flushDeltaBuffer();
+            }
+          } else {
+            // Non-delta events flush any pending deltas and send immediately
+            flushDeltaBuffer();
+            onEvent(event, parsedData);
+            eventCount++;
           }
         } catch (parseError) {
           // Only forward parse errors for known safe text delta events
           if (event === 'message.delta') {
-            onEvent(event, { textDelta: data });
+            deltaBuffer += data;
             eventCount++;
-          } else {
-            console.log(`🔒 [CHAT] Ignoring parse error for non-delta event: ${event}`);
+            const now = Date.now();
+            if (now - lastFlushTime >= FLUSH_INTERVAL || deltaBuffer.length > 100) {
+              flushDeltaBuffer();
+            }
           }
         }
       }

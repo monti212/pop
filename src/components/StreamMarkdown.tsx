@@ -29,7 +29,7 @@ function stabilizeMarkdownStream(s: string) {
   return s;
 }
 
-export default function StreamMarkdown({ text, isStreaming, dark, components }: Props) {
+const StreamMarkdown = React.memo(function StreamMarkdown({ text, isStreaming, dark, components }: Props) {
   const [renderText, setRenderText] = React.useState(text);
   const lastChunkRef = React.useRef(text);
   const rafRef = React.useRef<number | null>(null);
@@ -64,4 +64,6 @@ export default function StreamMarkdown({ text, isStreaming, dark, components }: 
       </ReactMarkdown>
     </div>
   );
-}
+});
+
+export default StreamMarkdown;
