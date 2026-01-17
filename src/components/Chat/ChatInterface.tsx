@@ -13,6 +13,7 @@ import RegionSelector from '../RegionSelector';
 import FilesBrowser from './FilesBrowser';
 import SettingsModal from '../Settings/SettingsModal';
 import ImageGenerationLoader from '../ImageGenerationLoader';
+import LoadingInsights from './LoadingInsights';
 import Particles from '../Particles';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -69,6 +70,7 @@ export default function ChatInterface({
   const [editingUserMessage, setEditingUserMessage] = useState<{ content: string; index: number; id?: string } | null>(null);
   const [showUserCancellationMessage, setShowUserCancellationMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUserMessage, setLastUserMessage] = useState<string>('');
   
   // Image generation state
   const [showImageInput, setShowImageInput] = useState(false);
@@ -817,6 +819,9 @@ export default function ChatInterface({
 
     const { text: message, files, isWebSearchActive } = data;
 
+    // Store user message for loading insights
+    setLastUserMessage(message);
+
     // Handle message editing (rewind functionality)
     if (editingUserMessage) {
 
@@ -1483,21 +1488,29 @@ export default function ChatInterface({
             </div>
           )}
 
-          {/* Crafting indicator - positioned above chat input */}
+          {/* Loading insights - positioned above chat input */}
           {(typingState.isTyping || webFetchingState.isFetching) && currentConversation?.messages.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
-              className="flex-shrink-0 px-3 sm:px-6 pb-2"
+              className="flex-shrink-0 px-3 sm:px-6 pb-3"
             >
-              <div className="max-w-4xl mx-auto flex justify-start">
-                <div className="ml-2">
-                  <span className="text-sm text-[#0170b9] font-medium">
-                    Crafting response...
-                  </span>
+              <div className="max-w-4xl mx-auto">
+                {/* Crafting response indicator */}
+                <div className="flex justify-start mb-2">
+                  <div className="ml-2">
+                    <span className="text-sm text-[#0170b9] font-medium">
+                      Crafting response...
+                    </span>
+                  </div>
                 </div>
+                {/* Loading insights */}
+                <LoadingInsights
+                  isVisible={typingState.isTyping || webFetchingState.isFetching}
+                  userMessage={lastUserMessage}
+                />
               </div>
             </motion.div>
           )}
