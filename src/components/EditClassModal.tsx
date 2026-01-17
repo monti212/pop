@@ -53,9 +53,9 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ isOpen, onClose, onSucc
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Class name is required';
+      newErrors.name = 'Subject is required';
     } else if (formData.name.length > 100) {
-      newErrors.name = 'Class name must be 100 characters or less';
+      newErrors.name = 'Subject must be 100 characters or less';
     }
 
     if (!formData.grade_level.trim()) {
@@ -161,7 +161,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ isOpen, onClose, onSucc
 
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Class Name <span className="text-red-500">*</span>
+              Subject <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -172,7 +172,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ isOpen, onClose, onSucc
               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
                 errors.name ? 'border-red-300' : 'border-gray-300'
               }`}
-              placeholder="e.g., Math 101, English Literature"
+              placeholder="e.g., Mathematics, English Literature"
               disabled={isSubmitting || isDeleting}
               maxLength={100}
             />
