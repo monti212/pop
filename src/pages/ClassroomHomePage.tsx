@@ -203,7 +203,7 @@ const ClassroomHomePage: React.FC = () => {
       <div className="flex-1 overflow-auto p-6">
         {activeView === 'overview' && (
           <div className="max-w-7xl mx-auto space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -237,6 +237,22 @@ const ClassroomHomePage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
+                className="bg-white rounded-lg border border-[#e8e6e0] p-6 shadow-sm hover:shadow-md transition-all"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <Award className="w-8 h-8 text-greyed-navy" />
+                  <span className="text-sm text-greyed-black/70">average</span>
+                </div>
+                <h3 className="text-3xl font-bold text-greyed-navy mb-1">
+                  {overview.averageGrade > 0 ? `${overview.averageGrade}%` : '—'}
+                </h3>
+                <p className="text-sm text-greyed-black/70">Class Grade</p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
                 className="bg-white rounded-lg border border-[#e8e6e0] p-6 shadow-sm hover:shadow-md transition-all"
               >
                 <div className="flex items-center justify-between mb-3">
