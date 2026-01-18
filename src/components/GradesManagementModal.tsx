@@ -26,7 +26,7 @@ interface GradesManagementModalProps {
   students: Student[];
 }
 
-type ViewMode = 'entry' | 'history' | 'distribution';
+type ViewMode = 'entry' | 'assessments' | 'history' | 'distribution';
 
 const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   isOpen,
@@ -471,6 +471,16 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
               Grade Entry
             </button>
             <button
+              onClick={() => setViewMode('assessments')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                viewMode === 'assessments'
+                  ? 'bg-teal-100 text-teal-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Assessments
+            </button>
+            <button
               onClick={() => setViewMode('history')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 viewMode === 'history'
@@ -647,6 +657,138 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                   <p className="text-gray-600">No students in this class yet</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {viewMode === 'assessments' && (
+            <div>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Manage Assessments</h3>
+                <p className="text-sm text-gray-600 mb-4">Create, edit, and manage assessments for this class. Track active, upcoming, and completed assessments.</p>
+
+                {/* Assessment Statistics */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-green-700">Active</span>
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    </div>
+                    <p className="text-2xl font-bold text-green-900">{assignments.filter(a => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const assigned = a.assigned_date ? new Date(a.assigned_date) : null;
+                      const due = a.due_date ? new Date(a.due_date) : null;
+                      if (assigned && due) {
+                        assigned.setHours(0, 0, 0, 0);
+                        due.setHours(0, 0, 0, 0);
+                        return assigned <= today && due >= today;
+                      }
+                      return false;
+                    }).length}</p>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-blue-700">Upcoming</span>
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-900">{assignments.filter(a => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const assigned = a.assigned_date ? new Date(a.assigned_date) : null;
+                      if (assigned) {
+                        assigned.setHours(0, 0, 0, 0);
+                        return assigned > today;
+                      }
+                      return false;
+                    }).length}</p>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-red-700">Due/Completed</span>
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                    </div>
+                    <p className="text-2xl font-bold text-red-900">{assignments.filter(a => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const due = a.due_date ? new Date(a.due_date) : null;
+                      if (due) {
+                        due.setHours(0, 0, 0, 0);
+                        return due < today;
+                      }
+                      return false;
+                    }).length}</p>
+                  </div>
+                </div>
+
+                {/* Assessments List */}
+                <div className="space-y-3">
+                  {assignments.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Award className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No assessments created yet</p>
+                      <p className="text-sm mt-1">Use the "Grade Entry" tab to create new assessments</p>
+                    </div>
+                  ) : (
+                    assignments.map(assignment => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const assigned = assignment.assigned_date ? new Date(assignment.assigned_date) : null;
+                      const due = assignment.due_date ? new Date(assignment.due_date) : null;
+
+                      let statusColor = 'gray';
+                      let statusText = 'Unknown';
+
+                      if (assigned && due) {
+                        assigned.setHours(0, 0, 0, 0);
+                        due.setHours(0, 0, 0, 0);
+
+                        if (assigned > today) {
+                          statusColor = 'blue';
+                          statusText = 'Upcoming';
+                        } else if (due < today) {
+                          statusColor = 'red';
+                          statusText = 'Completed';
+                        } else {
+                          statusColor = 'green';
+                          statusText = 'Active';
+                        }
+                      }
+
+                      return (
+                        <div key={assignment.id} className={`bg-white border-2 border-${statusColor}-200 rounded-lg p-4 hover:shadow-md transition-all`}>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="text-lg font-semibold text-gray-900">{assignment.title}</h4>
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full bg-${statusColor}-100 text-${statusColor}-700`}>
+                                  {statusText}
+                                </span>
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">
+                                  {assignment.assignment_type || 'Assessment'}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
+                                <div>
+                                  <span className="font-medium">Assigned:</span>{' '}
+                                  {assignment.assigned_date || 'Not set'}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Due:</span>{' '}
+                                  {assignment.due_date || 'Not set'}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Points:</span>{' '}
+                                  {assignment.points_possible || '0'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
