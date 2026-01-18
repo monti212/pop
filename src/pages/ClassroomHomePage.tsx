@@ -258,7 +258,9 @@ const ClassroomHomePage: React.FC = () => {
                 <div className="flex items-center justify-between mb-3">
                   <BookOpen className="w-8 h-8 text-greyed-navy" />
                 </div>
-                <h3 className="text-3xl font-bold text-greyed-navy mb-3">{overview.activeAssignments}</h3>
+                <h3 className="text-3xl font-bold text-greyed-navy mb-3">
+                  {overview.activeAssignments > 0 ? overview.activeAssignments : '—'}
+                </h3>
                 <p className="text-sm text-greyed-black/70 mb-3">Assignments</p>
                 <div className="flex gap-3 text-xs">
                   <div className="flex items-center gap-1">
