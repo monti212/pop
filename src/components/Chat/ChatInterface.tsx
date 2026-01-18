@@ -1249,10 +1249,7 @@ export default function ChatInterface({
     );
   }, [currentConversation, user, editingUserMessage, startStreamingResponse, setCurrentConversation, updateConversation, setEditingUserMessage, setTypingState, setWebFetchingState, setAbortController, setError]);
 
-  const availableLanguages =
-    userSubscription?.tier === 'pro'
-      ? ['english', 'setswana', 'swahili', 'zulu', 'french', 'yoruba', 'igbo', 'hausa', 'amharic', 'arabic', 'portuguese', 'lingala', 'kinyarwanda', 'luganda', 'twi', 'shona', 'sesotho', 'bemba', 'wolof', 'malagasy', 'somali', 'oromo', 'tigrinya', 'ndebele', 'kirundi', 'xhosa', 'afrikaans']
-      : ['english', 'setswana', 'swahili'];
+  const availableLanguages = ['english', 'setswana', 'french', 'twi', 'ewe', 'fante', 'ga'];
 
 
   return (
