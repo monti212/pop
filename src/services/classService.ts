@@ -374,7 +374,7 @@ export const getClassroomOverview = async (
       getClassById(classId),
       supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('class_id', classId),
       supabase.from('student_behavior_logs').select('*', { count: 'exact', head: true }).eq('class_id', classId),
-      supabase.from('student_grades').select('percentage_grade').eq('class_id', classId),
+      supabase.from('student_grades').select('percentage').eq('class_id', classId),
       supabase.from('attendance_records').select('attendance_date').eq('class_id', classId).order('attendance_date', { ascending: false }).limit(1),
       supabase.rpc('calculate_class_attendance_rate', { p_class_id: classId, p_start_date: null, p_end_date: null }),
       supabase.from('attendance_records').select('attendance_date, recorded_at').eq('class_id', classId).order('recorded_at', { ascending: false }).limit(3),
@@ -400,7 +400,7 @@ export const getClassroomOverview = async (
     const { data: recentBehavior } = recentBehaviorResult;
 
     const averageGrade = avgGradeData && avgGradeData.length > 0
-      ? avgGradeData.reduce((sum, g) => sum + (g.percentage_grade || 0), 0) / avgGradeData.length
+      ? avgGradeData.reduce((sum, g) => sum + (g.percentage || 0), 0) / avgGradeData.length
       : 0;
 
     const lastAttendanceDate = attendanceDates && attendanceDates.length > 0
