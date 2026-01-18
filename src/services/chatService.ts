@@ -15,15 +15,44 @@ const extractTextFromMessageContent = (content: MessageContent): string => {
   if (typeof content === 'string') {
     return content;
   }
-  
+
   if (Array.isArray(content)) {
     return content
       .filter(part => part.type === 'text')
       .map(part => (part as TextContent).text)
       .join('\n\n');
   }
-  
+
   return '';
+};
+
+// Helper function to generate a smart conversation title from message content
+const generateConversationTitle = (content: MessageContent): string => {
+  const text = extractTextFromMessageContent(content);
+
+  if (!text || text.trim().length === 0) {
+    return 'New Conversation';
+  }
+
+  // Clean up the text
+  let title = text
+    .trim()
+    .split('\n')[0] // Take first line
+    .replace(/^[#\-*>]+\s*/, '') // Remove markdown symbols
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+
+  // Limit to 50 characters for readability
+  if (title.length > 50) {
+    title = title.substring(0, 47) + '...';
+  }
+
+  // If title is too short or empty after cleaning, use a default
+  if (title.length < 3) {
+    return 'New Conversation';
+  }
+
+  return title;
 };
 
 
@@ -157,7 +186,8 @@ export const getConversationMessages = async (
 export const persistTemporaryConversation = async (
   tempConversationId: string,
   userId: string,
-  title: string = 'New Conversation'
+  title: string = 'New Conversation',
+  firstMessageContent?: MessageContent
 ): Promise<{ success: boolean; conversationId?: string; error?: string }> => {
   try {
     if (!supabase) {
@@ -167,11 +197,16 @@ export const persistTemporaryConversation = async (
       return { success: false, error: 'I couldn\'t save that conversation. Want to try again?' };
     }
 
+    // Generate smart title from first message if provided
+    const smartTitle = firstMessageContent
+      ? generateConversationTitle(firstMessageContent)
+      : title;
+
     const { data, error } = await supabase
       .from('conversations')
       .insert({
         user_id: userId,
-        title: title
+        title: smartTitle
       })
       .select()
       .single();
@@ -219,13 +254,19 @@ export const addMessage = async (
     // If this is a temporary conversation, persist it to the database first
     if (isTemporaryConversation) {
       logger.log('🔍 [ADDMESSAGE] 🔄 Persisting temporary conversation before adding first message');
-      const persistResult = await persistTemporaryConversation(conversationId, userId);
-      
+      // Pass the first user message content to generate a smart title
+      const persistResult = await persistTemporaryConversation(
+        conversationId,
+        userId,
+        'New Conversation',
+        role === 'user' ? content : undefined
+      );
+
       if (!persistResult.success || !persistResult.conversationId) {
         throw new Error(persistResult.error || 'Uhuru could not save your conversation. Please try again.');
         throw new Error(persistResult.error || 'I couldn\'t save your conversation. Want to try again?');
       }
-      
+
       actualConversationId = persistResult.conversationId;
       logger.log('🔍 [ADDMESSAGE] ✅ Temporary conversation persisted with new ID:', actualConversationId);
     } else {
