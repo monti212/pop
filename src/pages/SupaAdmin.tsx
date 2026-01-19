@@ -48,35 +48,6 @@ export default function SupaAdmin() {
           </Link>
         </div>
 
-        <div className="mt-12 bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-          <h3 className="text-xl font-semibold text-white mb-3">Quick Access</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link
-              to="/admin/token-usage"
-              className="text-slate-300 hover:text-white transition-colors p-3 bg-slate-800 rounded-lg hover:bg-slate-700"
-            >
-              Token Usage
-            </Link>
-            <Link
-              to="/admin/knowledge-base"
-              className="text-slate-300 hover:text-white transition-colors p-3 bg-slate-800 rounded-lg hover:bg-slate-700"
-            >
-              Knowledge Base
-            </Link>
-            <Link
-              to="/admin/whatsapp"
-              className="text-slate-300 hover:text-white transition-colors p-3 bg-slate-800 rounded-lg hover:bg-slate-700"
-            >
-              WhatsApp
-            </Link>
-            <Link
-              to="/admin"
-              className="text-slate-300 hover:text-white transition-colors p-3 bg-slate-800 rounded-lg hover:bg-slate-700"
-            >
-              Admin Dashboard
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   );
