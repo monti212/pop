@@ -43,8 +43,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
   // Check if current user is supa admin (monti@orionx.xyz or gaone@orionx.xyz)
   const isSupaAdmin = user?.email === 'monti@orionx.xyz' || user?.email === 'gaone@orionx.xyz';
 
-  // Check if current user is admin (exclude supa_admin - they have their own dashboard)
-  const isAdmin = !isSupaAdmin && (profile?.team_role === 'optimus_prime' || profile?.team_role === 'admin' || profile?.team_role === 'prime');
+  // Check if current user is admin or supa admin (both have access to admin dashboard)
+  const isAdmin = profile?.team_role === 'optimus_prime' || profile?.team_role === 'admin' || profile?.team_role === 'prime' || profile?.team_role === 'supa_admin';
 
   const {
     conversations,
