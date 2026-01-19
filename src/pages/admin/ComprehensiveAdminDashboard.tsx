@@ -141,92 +141,123 @@ const ComprehensiveAdminDashboard: React.FC = () => {
     }
   }, []);
 
-  // Fetch per-user metrics
+  // Fetch per-user metrics - Query from actual conversations and messages
   const fetchUserMetrics = useCallback(async () => {
     try {
-      const { data: usageData, error: usageError } = await supabase
-        .from('usage_metrics')
-        .select(`
-          user_id,
-          message_count,
-          token_count,
-          conversation_count
-        `)
-        .order('message_count', { ascending: false })
-        .limit(50);
-
-      if (usageError) throw usageError;
-
-      // Get user details
-      const userIds = [...new Set(usageData?.map(u => u.user_id) || [])];
+      // Get all users with their conversation and message counts
       const { data: userData, error: userError } = await supabase
         .from('user_profiles')
         .select('id, email')
-        .in('id', userIds);
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (userError) throw userError;
 
-      // Aggregate metrics per user
-      const userMap = new Map<string, UserUsageMetrics>();
+      // For each user, count their conversations and messages
+      const userMetricsPromises = (userData || []).map(async (user) => {
+        const [conversationsResult, messagesResult] = await Promise.all([
+          supabase
+            .from('conversations')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id),
+          supabase
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .in('conversation_id',
+              (await supabase.from('conversations').select('id').eq('user_id', user.id)).data?.map(c => c.id) || []
+            )
+        ]);
 
-      usageData?.forEach((metric) => {
-        const existing = userMap.get(metric.user_id);
-        const userInfo = userData?.find(u => u.id === metric.user_id);
-
-        if (existing) {
-          existing.total_messages += metric.message_count || 0;
-          existing.total_tokens += metric.token_count || 0;
-          existing.total_conversations += metric.conversation_count || 0;
-        } else {
-          userMap.set(metric.user_id, {
-            user_id: metric.user_id,
-            user_email: userInfo?.email || 'Unknown',
-            total_messages: metric.message_count || 0,
-            total_tokens: metric.token_count || 0,
-            total_conversations: metric.conversation_count || 0,
-            last_active: new Date().toISOString(),
-          });
-        }
+        return {
+          user_id: user.id,
+          user_email: user.email || 'Unknown',
+          total_messages: messagesResult.count || 0,
+          total_tokens: 0, // Token tracking needs separate implementation
+          total_conversations: conversationsResult.count || 0,
+          last_active: new Date().toISOString(),
+        };
       });
 
-      setUserMetrics(Array.from(userMap.values()));
+      const metrics = await Promise.all(userMetricsPromises);
+
+      // Filter out users with no activity and sort by message count
+      const activeMetrics = metrics
+        .filter(m => m.total_conversations > 0 || m.total_messages > 0)
+        .sort((a, b) => b.total_messages - a.total_messages);
+
+      setUserMetrics(activeMetrics);
     } catch (err: any) {
       console.error('Error fetching user metrics:', err);
       throw err;
     }
   }, []);
 
-  // Fetch conversation topics
+  // Fetch conversation topics - Query from actual conversations and messages
   const fetchConversationTopics = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('conversation_summaries')
-        .select(`
-          id,
-          conversation_id,
-          user_id,
-          ai_summary,
-          message_count,
-          created_at
-        `)
-        .order('created_at', { ascending: false })
+      // Get recent conversations with their users
+      const { data: conversations, error: convError } = await supabase
+        .from('conversations')
+        .select('id, user_id, title, created_at, updated_at')
+        .order('updated_at', { ascending: false })
         .limit(20);
 
-      if (error) throw error;
+      if (convError) throw convError;
 
       // Get user emails
-      const userIds = [...new Set(data?.map(s => s.user_id) || [])];
+      const userIds = [...new Set(conversations?.map(c => c.user_id) || [])];
       const { data: userData } = await supabase
         .from('user_profiles')
         .select('id, email')
         .in('id', userIds);
 
-      const summariesWithEmails = data?.map(summary => ({
-        ...summary,
-        user_email: userData?.find(u => u.id === summary.user_id)?.email || 'Unknown',
-      })) || [];
+      // For each conversation, count messages and get first message as summary
+      const topicsPromises = (conversations || []).map(async (conv) => {
+        const { count: messageCount } = await supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('conversation_id', conv.id);
 
-      setConversationTopics(summariesWithEmails);
+        const { data: firstMessage } = await supabase
+          .from('messages')
+          .select('content')
+          .eq('conversation_id', conv.id)
+          .eq('role', 'user')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        const userEmail = userData?.find(u => u.id === conv.user_id)?.email || 'Unknown';
+
+        // Extract text content from JSONB
+        let summaryText = conv.title || 'Untitled Conversation';
+        if (firstMessage?.content) {
+          try {
+            const contentObj = typeof firstMessage.content === 'string'
+              ? JSON.parse(firstMessage.content)
+              : firstMessage.content;
+            summaryText = contentObj.text || contentObj.content || summaryText;
+            if (summaryText.length > 100) {
+              summaryText = summaryText.substring(0, 100) + '...';
+            }
+          } catch {
+            // If parsing fails, use title
+          }
+        }
+
+        return {
+          id: conv.id,
+          conversation_id: conv.id,
+          user_id: conv.user_id,
+          user_email: userEmail,
+          ai_summary: summaryText,
+          message_count: messageCount || 0,
+          created_at: conv.created_at,
+        };
+      });
+
+      const topics = await Promise.all(topicsPromises);
+      setConversationTopics(topics);
     } catch (err: any) {
       console.error('Error fetching conversation topics:', err);
       throw err;
