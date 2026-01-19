@@ -19,7 +19,6 @@ import GradesManagementModal from '../components/GradesManagementModal';
 import BehaviorLogModal from '../components/BehaviorLogModal';
 import LessonPlanGeneratorModal from '../components/LessonPlanGeneratorModal';
 import ClassDocumentsView from '../components/ClassDocumentsView';
-import AssessmentManagementModal from '../components/AssessmentManagementModal';
 import Logo from '../components/Logo';
 
 const ClassroomHomePage: React.FC = () => {
@@ -42,7 +41,6 @@ const ClassroomHomePage: React.FC = () => {
   const [showGradesModal, setShowGradesModal] = useState(false);
   const [showBehaviorModal, setShowBehaviorModal] = useState(false);
   const [showLessonPlanModal, setShowLessonPlanModal] = useState(false);
-  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
 
   useEffect(() => {
     if (classId && user) {
@@ -255,8 +253,7 @@ const ClassroomHomePage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                onClick={() => setShowAssessmentModal(true)}
-                className="bg-white rounded-lg border border-[#e8e6e0] p-6 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                className="bg-white rounded-lg border border-[#e8e6e0] p-6 shadow-sm hover:shadow-md transition-all"
               >
                 <div className="flex items-center justify-between mb-3">
                   <BookOpen className="w-8 h-8 text-greyed-navy" />
@@ -567,16 +564,6 @@ const ClassroomHomePage: React.FC = () => {
           classId={classId!}
           className={classData.class_name}
           students={students}
-        />
-      )}
-
-      {showAssessmentModal && (
-        <AssessmentManagementModal
-          isOpen={showAssessmentModal}
-          onClose={() => setShowAssessmentModal(false)}
-          onSuccess={handleModalSuccess}
-          classId={classId!}
-          className={classData.class_name}
         />
       )}
     </div>
