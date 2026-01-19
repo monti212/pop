@@ -532,6 +532,22 @@ input, textarea, select {
   font-size: 16px; /* Prevents iOS zoom on focus */
 }
 
+/* Auto-capitalize first letter of text inputs */
+input[type="text"],
+input[type="search"],
+input:not([type]),
+textarea {
+  text-transform: capitalize;
+}
+
+/* Don't capitalize password, number, email, and url inputs */
+input[type="password"],
+input[type="number"],
+input[type="email"],
+input[type="url"] {
+  text-transform: none;
+}
+
 /* Add momentum scrolling on iOS */
 .overflow-y-auto,
 .overflow-x-auto {

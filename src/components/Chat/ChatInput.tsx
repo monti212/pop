@@ -818,6 +818,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     }}
                     placeholder="e.g., A serene African sunset over the savanna..."
                     disabled={isGeneratingImage}
+                    autoCapitalize="sentences"
                     className="w-full px-3 py-2 border border-[#f5b233]/40 rounded-lg bg-white text-sm focus:ring-2 focus:ring-[#f5b233] focus:border-[#f5b233] transition-all disabled:opacity-60"
                   />
                   <div className="flex items-center justify-between mt-1">
@@ -911,6 +912,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             placeholder=""
             rows={1}
             disabled={isTyping || isListening || isGeneratingImage}
+            autoCapitalize="sentences"
             className="flex-1 py-3 sm:py-4 px-4 bg-transparent border-0 focus:ring-0 focus:outline-none resize-none text-sm text-black disabled:opacity-60 transition-all duration-200"
             style={{
               fontSize: '16px',

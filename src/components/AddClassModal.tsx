@@ -137,6 +137,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSucces
               placeholder="e.g., Mathematics, English Literature"
               disabled={isSubmitting}
               maxLength={100}
+              autoCapitalize="words"
             />
             {errors.name && (
               <p className="mt-1 text-sm text-red-600">{errors.name}</p>
@@ -159,6 +160,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSucces
               placeholder="e.g., Grade 5, Year 10, Form 2"
               disabled={isSubmitting}
               maxLength={50}
+              autoCapitalize="words"
             />
             {errors.grade_level && (
               <p className="mt-1 text-sm text-red-600">{errors.grade_level}</p>
