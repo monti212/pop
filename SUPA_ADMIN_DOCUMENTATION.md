@@ -6,10 +6,15 @@ The **supa_admin** role (accessed via `.uhuru` account) represents the highest l
 
 ## Account Details
 
-- **Email**: `.uhuru@pencilsofpromise.org` (or designated supa_admin account)
+**Supa Admin Accounts**:
+- **monti@orionx.xyz** - Primary supa_admin
+- **gaone@orionx.xyz** - Secondary supa_admin
+
 - **Role**: `supa_admin` (highest privilege level)
 - **Access Level**: Full system access - all tables, functions, and operations
 - **Purpose**: System monitoring, administration, security oversight, and operational management
+
+**Note**: Both accounts can be used as normal users AND have full supa_admin privileges.
 
 ## Role Hierarchy
 
@@ -722,10 +727,12 @@ users.forEach(user => {
 
 ### How to Access Supa Admin Dashboard
 
-1. **Login**: Navigate to `https://app.uhuru.com/admin-login`
-2. **Email**: `.uhuru@pencilsofpromise.org`
-3. **Password**: [Use secure password manager]
+1. **Login**: Navigate to the application login page
+2. **Email**: `monti@orionx.xyz` OR `gaone@orionx.xyz`
+3. **Password**: Set via Supabase Auth (use secure password manager)
 4. **2FA**: [If enabled, use authenticator app]
+
+**Enhanced Supa Admin Page**: Navigate to `/supa-admin` after login for full system control.
 
 ### Dashboard Navigation
 
@@ -780,7 +787,7 @@ From main admin dashboard:
 | Date | Change | Modified By | Reason |
 |------|--------|-------------|--------|
 | 2025-11-04 | Role renamed from optimus_prime to supa_admin | System Migration | Clearer hierarchy |
-| [Add dates] | [Add changes] | [Add admin] | [Add reason] |
+| 2026-01-19 | Added gaone@orionx.xyz as supa_admin | System Update | Secondary supa_admin account |
 
 ---
 
@@ -803,6 +810,6 @@ For questions about supa_admin access or capabilities:
 
 ---
 
-**Last Updated**: November 11, 2025
-**Document Version**: 1.0
+**Last Updated**: January 19, 2026
+**Document Version**: 1.1
 **Maintained By**: Uhuru AI Technical Team
