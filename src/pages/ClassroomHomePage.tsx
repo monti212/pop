@@ -259,7 +259,7 @@ const ClassroomHomePage: React.FC = () => {
                   <BookOpen className="w-8 h-8 text-greyed-navy" />
                 </div>
                 <p className="text-sm text-greyed-black/70 mb-3">Assessment</p>
-                <div className="flex gap-3 text-xs">
+                <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-green-500"></div>
                     <span className="text-greyed-black/60">{overview.activeAssignments} active</span>
@@ -271,6 +271,10 @@ const ClassroomHomePage: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-red-500"></div>
                     <span className="text-greyed-black/60">{overview.dueAssignments} due</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                    <span className="text-greyed-black/60">{overview.completedAssignments} completed</span>
                   </div>
                 </div>
               </motion.div>

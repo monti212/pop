@@ -338,6 +338,7 @@ export interface ClassroomOverview {
   activeAssignments: number;
   upcomingAssignments: number;
   dueAssignments: number;
+  completedAssignments: number;
   behaviorLogCount: number;
   lastAttendanceDate: string | null;
   recentActivity: RecentActivity[];
@@ -365,7 +366,7 @@ export const getClassroomOverview = async (
     // Fetch all data in parallel for maximum performance
     const [
       classResult,
-      assignmentsResult,
+      assessmentsResult,
       behaviorLogCountResult,
       avgGradeDataResult,
       attendanceDatesResult,
@@ -375,7 +376,7 @@ export const getClassroomOverview = async (
       recentBehaviorResult
     ] = await Promise.all([
       getClassById(classId),
-      supabase.from('assignments').select('id, assigned_date, due_date, status').eq('class_id', classId),
+      supabase.from('class_assessments').select('id, status').eq('class_id', classId),
       supabase.from('student_behavior_logs').select('*', { count: 'exact', head: true }).eq('class_id', classId),
       supabase.from('student_grades').select('percentage').eq('class_id', classId),
       supabase.from('attendance_records').select('attendance_date').eq('class_id', classId).order('attendance_date', { ascending: false }).limit(1),
@@ -393,7 +394,7 @@ export const getClassroomOverview = async (
     }
 
     const classData = classResult.data;
-    const { data: assignments } = assignmentsResult;
+    const { data: assessments } = assessmentsResult;
     const { count: behaviorLogCount } = behaviorLogCountResult;
     const { data: avgGradeData } = avgGradeDataResult;
     const { data: attendanceDates } = attendanceDatesResult;
@@ -402,38 +403,32 @@ export const getClassroomOverview = async (
     const { data: recentGrades } = recentGradesResult;
     const { data: recentBehavior } = recentBehaviorResult;
 
-    // Calculate assignment statistics
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
+    // Calculate assessment statistics from class_assessments table
     let activeAssignments = 0;
     let upcomingAssignments = 0;
     let dueAssignments = 0;
+    let completedAssignments = 0;
 
-    if (assignments && assignments.length > 0) {
-      assignments.forEach(assignment => {
-        const assignedDate = assignment.assigned_date ? new Date(assignment.assigned_date) : null;
-        const dueDate = assignment.due_date ? new Date(assignment.due_date) : null;
-
-        if (assignedDate && dueDate) {
-          assignedDate.setHours(0, 0, 0, 0);
-          dueDate.setHours(0, 0, 0, 0);
-
-          if (assignedDate > today) {
-            // Not yet assigned
-            upcomingAssignments++;
-          } else if (dueDate < today) {
-            // Past due date
-            dueAssignments++;
-          } else {
-            // Currently active (assigned <= today AND due >= today)
+    if (assessments && assessments.length > 0) {
+      assessments.forEach(assessment => {
+        switch (assessment.status) {
+          case 'active':
             activeAssignments++;
-          }
+            break;
+          case 'upcoming':
+            upcomingAssignments++;
+            break;
+          case 'due':
+            dueAssignments++;
+            break;
+          case 'completed':
+            completedAssignments++;
+            break;
         }
       });
     }
 
-    const assignmentCount = assignments?.length || 0;
+    const assignmentCount = assessments?.length || 0;
 
     const averageGrade = avgGradeData && avgGradeData.length > 0
       ? avgGradeData.reduce((sum, g) => sum + (g.percentage || 0), 0) / avgGradeData.length
@@ -498,6 +493,7 @@ export const getClassroomOverview = async (
         activeAssignments,
         upcomingAssignments,
         dueAssignments,
+        completedAssignments,
         behaviorLogCount: behaviorLogCount || 0,
         lastAttendanceDate,
         recentActivity: recentActivity.slice(0, 5)
