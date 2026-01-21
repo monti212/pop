@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { captureException } from '../utils/sentry';
 import { logger } from '../utils/logger';
+import { errorLogService } from '../services/errorLogService';
 
 interface Props {
   children: ReactNode;
@@ -39,6 +40,19 @@ export class ErrorBoundary extends Component<Props, State> {
     captureException(error, {
       componentStack: errorInfo.componentStack,
       errorBoundary: true,
+    });
+
+    errorLogService.logError({
+      error_type: 'runtime',
+      error_message: error.message,
+      error_stack: error.stack || null,
+      error_context: {
+        componentStack: errorInfo.componentStack,
+        errorBoundary: true,
+      },
+      severity: 'high',
+    }).catch((err) => {
+      console.error('Failed to log error to database:', err);
     });
 
     this.setState({
