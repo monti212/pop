@@ -415,7 +415,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.05 }}
               >
-                <GraduationCap className="w-4 h-4" />
+                <GraduationCap className="w-4 h-4 text-[#f5b233]" />
                 <span className="text-sm font-medium">GreyEd Teach</span>
               </motion.button>
 
