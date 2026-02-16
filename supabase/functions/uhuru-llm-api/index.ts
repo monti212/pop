@@ -672,12 +672,67 @@ Deno.serve(async (req) => {
 
     // Enhance educational/scientific prompts for accuracy
     if (isEducational) {
-      console.log('🎓 [IMAGE] Educational content detected, enhancing prompt for accuracy');
+      console.log('🎓 [IMAGE] Educational content detected, checking for reference images');
 
       // Initialize Supabase client for knowledge base access
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+      // Check if we have actual reference images in the knowledge base
+      try {
+        const { data: imageDocuments, error: imageError } = await supabase
+          .from('admin_knowledge_documents')
+          .select('id, title, file_name, storage_path, original_content')
+          .in('file_format', ['jpeg', 'jpg', 'png', 'gif', 'webp', 'other'])
+          .eq('processing_status', 'completed')
+          .eq('is_active', true)
+          .or(`title.ilike.%${prompt}%,original_content.ilike.%${prompt}%,key_concepts::text.ilike.%${prompt}%`)
+          .limit(4);
+
+        if (!imageError && imageDocuments && imageDocuments.length > 0) {
+          console.log(`🖼️  [IMAGE] Found ${imageDocuments.length} reference image(s) in knowledge base!`);
+          console.log('📸 [IMAGE] Returning stored reference images instead of generating new ones');
+
+          // Get public URLs for the images
+          const imageUrls: string[] = [];
+          for (const doc of imageDocuments) {
+            if (doc.storage_path) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('user-files')
+                .getPublicUrl(doc.storage_path);
+
+              if (publicUrl) {
+                console.log(`✅ [IMAGE] Retrieved reference image: ${doc.title}`);
+                // Fetch the image and convert to base64
+                try {
+                  const imageResponse = await fetch(publicUrl);
+                  if (imageResponse.ok) {
+                    const imageBuffer = await imageResponse.arrayBuffer();
+                    const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+                    imageUrls.push(base64);
+                  }
+                } catch (fetchError) {
+                  console.warn(`⚠️  [IMAGE] Could not fetch image ${doc.title}:`, fetchError);
+                }
+              }
+            } else if (doc.file_name) {
+              // Try to get from assets folder
+              const assetPath = `supabase/assets/${doc.file_name}`;
+              console.log(`📁 [IMAGE] Trying asset path: ${assetPath}`);
+            }
+          }
+
+          if (imageUrls.length > 0) {
+            console.log(`✅ [IMAGE] Returning ${imageUrls.length} reference image(s) from knowledge base`);
+            return j({ images: imageUrls }, 200, origin);
+          }
+        }
+
+        console.log('📚 [IMAGE] No matching reference images found, will generate new image');
+      } catch (kbImageError) {
+        console.warn('⚠️  [IMAGE] Error checking for reference images:', kbImageError);
+      }
 
       // Fetch relevant knowledge base content for context
       try {
