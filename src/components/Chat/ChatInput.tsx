@@ -432,7 +432,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         recognitionRef.current.onresult = (event: any) => {
           let finalTranscript = '';
           let interimText = '';
-          
+
           // Process all results
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const result = event.results[i];
@@ -442,11 +442,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
               interimText += result[0].transcript;
             }
           }
-          
+
           // Update interim transcript for real-time display
           setInterimTranscript(interimText);
-          
-          // Append final transcript to message
+
+          // Append final transcript to message and clear interim
           if (finalTranscript) {
             setMessage(prev => {
               const newMessage = prev ? `${prev} ${finalTranscript}` : finalTranscript;
@@ -454,6 +454,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
               setTimeout(adjustTextareaHeight, 0);
               return newMessage;
             });
+            // Clear interim transcript since it's now final
+            setInterimTranscript('');
           }
         };
         
@@ -482,13 +484,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
         };
         
         recognitionRef.current.onend = () => {
-          // Commit any remaining interim transcript
-          if (interimTranscript) {
-            setMessage(prev => prev ? `${prev} ${interimTranscript}` : interimTranscript);
-          }
+          // Only commit interim transcript if there's actually something there
+          // and it wasn't already processed as final
+          setInterimTranscript(prev => {
+            if (prev.trim()) {
+              // Add any remaining interim text to message
+              setMessage(current => current ? `${current} ${prev}` : prev);
+            }
+            return '';
+          });
           setIsListening(false);
           setUserStoppedListening(false);
-          setInterimTranscript('');
         };
       }
     }
@@ -523,17 +529,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
   // Handle microphone click
   const handleMicrophoneClick = async () => {
     if (isListening) {
-      // Stop listening
-      // Commit any interim transcript before stopping
-      if (interimTranscript) {
-        setMessage(prev => prev ? `${prev} ${interimTranscript}` : interimTranscript);
-        setInterimTranscript('');
-      }
+      // Stop listening - let onend handler commit any remaining transcript
       setUserStoppedListening(true);
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
-      setIsListening(false);
+      // isListening will be set to false by onend handler
     } else {
       // Start listening
       setUserStoppedListening(false);
