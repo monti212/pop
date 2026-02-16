@@ -654,9 +654,96 @@ Deno.serve(async (req) => {
       return j({ error: 'Uhuru Image Generation model not configured' }, 500, origin);
     }
 
+    // Detect educational/anatomical/scientific content
+    const educationalKeywords = [
+      'anatomy', 'anatomical', 'digestive', 'system', 'organ', 'biological',
+      'cell', 'tissue', 'skeleton', 'respiratory', 'circulatory', 'nervous',
+      'muscular', 'cardiovascular', 'diagram', 'labeled', 'scientific',
+      'medical', 'structure', 'function', 'human body', 'animal', 'plant',
+      'chemistry', 'molecule', 'atom', 'physics', 'mathematical', 'geometric',
+      'educational', 'learning', 'teaching', 'textbook', 'study'
+    ];
+
+    const isEducational = educationalKeywords.some(keyword =>
+      prompt.toLowerCase().includes(keyword.toLowerCase())
+    );
+
+    let enhancedPrompt = prompt;
+
+    // Enhance educational/scientific prompts for accuracy
+    if (isEducational) {
+      console.log('🎓 [IMAGE] Educational content detected, enhancing prompt for accuracy');
+
+      // Initialize Supabase client for knowledge base access
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+      // Fetch relevant knowledge base content for context
+      try {
+        const { content: knowledgeContext } = await fetchRelevantKnowledgeBase(
+          supabase,
+          prompt,
+          1, // First message - tight budget
+          false
+        );
+
+        if (knowledgeContext && knowledgeContext.length > 0) {
+          console.log('📚 [IMAGE] Found relevant educational reference material');
+          // Extract key information from knowledge base
+          const contextSummary = knowledgeContext.substring(0, 500); // Use first 500 chars as context
+          enhancedPrompt = `Create a detailed, accurate educational diagram showing ${prompt}.
+
+CRITICAL ACCURACY REQUIREMENTS:
+- All anatomical parts must be correctly labeled with their proper scientific names
+- Parts must be positioned anatomically accurately
+- Include all major components and structures
+- Use clear, readable labels with leader lines pointing to each part
+- Follow standard medical/scientific illustration conventions
+- Color-code different structures for clarity
+- Ensure proportions and spatial relationships are anatomically correct
+- Style: Clean, professional educational diagram suitable for textbooks
+
+Reference context: ${contextSummary}
+
+Remember: Accuracy is paramount for educational content.`;
+        } else {
+          // No knowledge base content, but still enhance for accuracy
+          enhancedPrompt = `Create a detailed, accurate educational diagram showing ${prompt}.
+
+CRITICAL ACCURACY REQUIREMENTS:
+- All parts must be correctly labeled with proper scientific/technical names
+- Parts must be positioned accurately according to scientific knowledge
+- Include all major components and structures
+- Use clear, readable labels with leader lines pointing to each part
+- Follow standard scientific illustration conventions
+- Color-code different structures for clarity
+- Ensure accurate proportions and spatial relationships
+- Style: Clean, professional educational diagram suitable for textbooks
+
+This is for educational purposes - accuracy and proper labeling are essential.`;
+        }
+      } catch (kbError) {
+        console.warn('⚠️ [IMAGE] Could not fetch knowledge base context:', kbError);
+        // Fallback to basic enhancement
+        enhancedPrompt = `Create a detailed, accurate educational diagram showing ${prompt}.
+
+ACCURACY REQUIREMENTS:
+- Correctly label all parts with proper scientific names
+- Position all elements accurately
+- Use clear labels with leader lines
+- Follow standard scientific illustration style
+- Professional educational diagram quality
+
+Educational accuracy is critical.`;
+      }
+
+      console.log('✅ [IMAGE] Enhanced educational prompt:', enhancedPrompt.substring(0, 200) + '...');
+    }
+
     const payload: any = {
       model: imageModel,
-      prompt,
+      prompt: enhancedPrompt,
       size
     };
 
