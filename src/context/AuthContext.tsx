@@ -67,22 +67,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = async () => {
     logger.debug('Refreshing user profile...');
-    if (!user) {
-      setProfile(null);
-      setProfileError(null);
-      return;
-    }
 
     try {
+      // Always fetch current user from session, don't rely on state
       const authUser = await withTimeout(
         getCurrentUser(),
         AUTH_TIMEOUT,
         'Profile refresh timed out'
       );
+
+      if (!authUser.user) {
+        setProfile(null);
+        setProfileError(null);
+        return;
+      }
+
       setProfileError(null);
       logger.debug('Refreshed profile data:', authUser.profile);
       setProfile(authUser.profile);
-      setCachedAuth(user, authUser.profile);
+      setCachedAuth(authUser.user, authUser.profile);
     } catch (error: any) {
       logger.error('Error refreshing profile:', error);
       setProfileError(error.message);
@@ -188,7 +191,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Only update state if user actually changed (not just token refresh)
         setUser((prevUser) => {
           if (!user && !prevUser) return prevUser; // Both null, no change
-          if (user && prevUser && user.id === prevUser.id) return prevUser; // Same user, no change
+
+          // For same user, still refresh profile to get latest data (role changes, etc.)
+          if (user && prevUser && user.id === prevUser.id) {
+            logger.debug('Same user detected, refreshing profile to get latest data');
+            // Clear cache to force fresh fetch
+            localStorage.removeItem(CACHE_KEY);
+            queueMicrotask(() => {
+              refreshProfile().catch((error) => {
+                logger.error('Error refreshing profile after auth change:', error);
+              });
+            });
+            return prevUser;
+          }
 
           // User changed, update state
           if (!user) {
@@ -196,6 +211,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.removeItem(CACHE_KEY);
           } else {
             logger.debug('Auth state changed to new user, refreshing profile for user:', user.id);
+            // Clear cache to force fresh fetch
+            localStorage.removeItem(CACHE_KEY);
             // Use queueMicrotask to avoid blocking the render cycle
             queueMicrotask(() => {
               refreshProfile().catch((error) => {
