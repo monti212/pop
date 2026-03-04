@@ -1,9 +1,14 @@
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.0.1';
 const CACHE_NAME = `uhuru-ai-${CACHE_VERSION}`;
 
 const STATIC_CACHE = `${CACHE_NAME}-static`;
 const DYNAMIC_CACHE = `${CACHE_NAME}-dynamic`;
 const API_CACHE = `${CACHE_NAME}-api`;
+
+// Maximum entries per cache to prevent unbounded growth on Android
+const MAX_STATIC_ENTRIES = 100;
+const MAX_DYNAMIC_ENTRIES = 50;
+const MAX_API_ENTRIES = 30;
 
 const STATIC_ASSETS = [
   '/',
@@ -102,6 +107,7 @@ async function cacheFirstStrategy(request, cacheName) {
     if (networkResponse && networkResponse.status === 200) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
+      trimCache(cacheName, MAX_STATIC_ENTRIES);
     }
 
     return networkResponse;
@@ -130,6 +136,7 @@ async function networkFirstStrategy(request, cacheName) {
     if (networkResponse && networkResponse.status === 200) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
+      trimCache(cacheName, MAX_DYNAMIC_ENTRIES);
     }
 
     return networkResponse;
@@ -166,18 +173,17 @@ async function networkFirstWithCacheStrategy(request, cacheName) {
     if (networkResponse && networkResponse.status === 200) {
       const cache = await caches.open(cacheName);
 
-      const responseToCache = networkResponse.clone();
-      const cacheEntry = {
-        response: responseToCache,
-        timestamp: Date.now(),
-      };
-
-      cache.put(request, new Response(JSON.stringify({
-        timestamp: Date.now(),
-        data: await networkResponse.clone().text()
-      }), {
-        headers: networkResponse.headers
+      // Clone the response and store it with a timestamp header instead of
+      // re-serializing the body (avoids heavy JSON parse on Android)
+      const headers = new Headers(networkResponse.headers);
+      headers.set('x-sw-cached-at', String(Date.now()));
+      const body = await networkResponse.clone().arrayBuffer();
+      cache.put(request, new Response(body, {
+        status: networkResponse.status,
+        statusText: networkResponse.statusText,
+        headers
       }));
+      trimCache(cacheName, MAX_API_ENTRIES);
     }
 
     return networkResponse;
@@ -187,14 +193,12 @@ async function networkFirstWithCacheStrategy(request, cacheName) {
     const cachedResponse = await caches.match(request);
 
     if (cachedResponse) {
-      const cacheData = await cachedResponse.json();
-      const age = Date.now() - cacheData.timestamp;
+      const cachedAt = Number(cachedResponse.headers.get('x-sw-cached-at') || 0);
+      const age = Date.now() - cachedAt;
 
       if (age < API_CACHE_DURATION) {
         console.log('[Service Worker] Serving cached API response');
-        return new Response(cacheData.data, {
-          headers: cachedResponse.headers
-        });
+        return cachedResponse;
       } else {
         console.log('[Service Worker] Cached API response expired');
       }
@@ -210,6 +214,19 @@ async function networkFirstWithCacheStrategy(request, cacheName) {
         'Content-Type': 'application/json',
       }),
     });
+  }
+}
+
+// Trim cache to a maximum number of entries (FIFO eviction)
+async function trimCache(cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length > maxEntries) {
+    // Delete oldest entries (first in the list)
+    const excess = keys.length - maxEntries;
+    for (let i = 0; i < excess; i++) {
+      await cache.delete(keys[i]);
+    }
   }
 }
 

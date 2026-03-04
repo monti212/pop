@@ -290,11 +290,18 @@ export default function ChatInterface({
     }
   }, [currentConversation, conversations]);
 
-  // Save chat state backup periodically
+  // Save chat state backup — debounced to avoid thrashing sessionStorage during streaming
+  const backupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (currentConversation && currentConversation.messages.length > 0) {
-      saveChatStateBackup(currentConversation);
+      if (backupTimerRef.current) clearTimeout(backupTimerRef.current);
+      backupTimerRef.current = setTimeout(() => {
+        saveChatStateBackup(currentConversation);
+      }, 2000);
     }
+    return () => {
+      if (backupTimerRef.current) clearTimeout(backupTimerRef.current);
+    };
   }, [currentConversation]);
 
   // Clear backup on successful unmount (user navigated away intentionally)

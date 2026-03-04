@@ -216,6 +216,40 @@ export const deleteStudent = async (
   }
 };
 
+export const bulkDeleteStudents = async (
+  studentIds: string[]
+): Promise<ServiceResponse<{ deleted: number; failed: number }>> => {
+  try {
+    if (!supabase) {
+      return { success: false, error: 'Service temporarily unavailable' };
+    }
+
+    if (studentIds.length === 0) {
+      return { success: false, error: 'No students selected' };
+    }
+
+    const { error } = await supabase
+      .from('students')
+      .delete()
+      .in('id', studentIds);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return {
+      success: true,
+      data: { deleted: studentIds.length, failed: 0 }
+    };
+  } catch (error: any) {
+    console.error('Error bulk deleting students:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to delete students'
+    };
+  }
+};
+
 export const deactivateStudent = async (
   studentId: string
 ): Promise<ServiceResponse<Student>> => {
