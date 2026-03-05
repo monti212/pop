@@ -137,33 +137,6 @@ const StudentProfilePage: React.FC = () => {
     ? grades.reduce((sum, grade) => sum + grade.percentage, 0) / grades.length
     : 0;
 
-  const getGradeNumber = (percentage: number): string => {
-    if (percentage >= 90) return '1';
-    if (percentage >= 80) return '2';
-    if (percentage >= 70) return '3';
-    if (percentage >= 60) return '4';
-    if (percentage >= 55) return '5';
-    if (percentage >= 50) return '6';
-    if (percentage >= 40) return '7';
-    if (percentage >= 35) return '8';
-    return '9';
-  };
-
-  const getGradeColor = (grade: string): string => {
-    switch (grade) {
-      case '1': return 'text-green-600';
-      case '2': return 'text-green-500';
-      case '3': return 'text-blue-600';
-      case '4': return 'text-blue-500';
-      case '5': return 'text-yellow-600';
-      case '6': return 'text-yellow-500';
-      case '7': return 'text-orange-500';
-      case '8': return 'text-orange-600';
-      case '9': return 'text-red-600';
-      default: return 'text-gray-400';
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -242,7 +215,12 @@ const StudentProfilePage: React.FC = () => {
             <div className="bg-purple-50 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <GraduationCap className="w-5 h-5 text-purple-600" />
-                <span className="text-2xl font-bold text-purple-900">{Math.round(averageGrade)}%</span>
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-purple-900">{Math.round(averageGrade)}%</span>
+                  {averageGrade > 0 && (
+                    <span className="ml-1 text-sm font-medium text-purple-600">(Grade {getGradeNumber(averageGrade)})</span>
+                  )}
+                </div>
               </div>
               <p className="text-sm text-purple-700">Average Grade</p>
             </div>
@@ -567,7 +545,7 @@ const StudentProfilePage: React.FC = () => {
                         </span>
                       </div>
                       <p className="text-sm text-gray-600">
-                        {grade.grade_value}/{grade.points_possible}
+                        Grade {getGradeNumber(grade.percentage)} • {grade.grade_value}/{grade.points_possible}
                       </p>
                     </div>
                   </div>

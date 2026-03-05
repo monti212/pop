@@ -52,6 +52,11 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Assessment management state
+  const [assessmentsList, setAssessmentsList] = useState<Assessment[]>([]);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
+
   // New assessment entry fields
   const [assessmentType, setAssessmentType] = useState<string>('quiz');
   const [assessmentTitle, setAssessmentTitle] = useState<string>('');
@@ -97,11 +102,32 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
     }
   }, [isOpen, viewMode, distributionFilter, distributionYear, distributionMonth, distributionTerm]);
 
-  useEffect(() => {
-    if (isOpen && viewMode === 'assessments') {
-      loadAssessments();
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const [assignmentsResult, categoriesResult] = await Promise.all([
+        getClassAssignments(classId),
+        getClassGradeCategories(classId)
+      ]);
+
+      if (assignmentsResult.success && assignmentsResult.data) {
+        setAssignments(assignmentsResult.data);
+        if (assignmentsResult.data.length > 0) {
+          setSelectedAssignment(assignmentsResult.data[0]);
+        }
+      }
+
+      if (categoriesResult.success && categoriesResult.data) {
+        setCategories(categoriesResult.data);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load grade data');
+    } finally {
+      setIsLoading(false);
     }
-  }, [isOpen, viewMode, classId]);
+  };
 
   const loadAssessments = async () => {
     setIsLoading(true);
@@ -123,12 +149,12 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   };
 
   const handleCreateAssessment = () => {
-    setSelectedAssessmentItem(null);
+    setSelectedAssessment(null);
     setShowAssessmentModal(true);
   };
 
   const handleEditAssessment = (assessment: Assessment) => {
-    setSelectedAssessmentItem(assessment);
+    setSelectedAssessment(assessment);
     setShowAssessmentModal(true);
   };
 
@@ -179,33 +205,6 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   const handleAssessmentModalSuccess = () => {
     loadAssessments();
     setShowAssessmentModal(false);
-  };
-
-  const loadData = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const [assignmentsResult, categoriesResult] = await Promise.all([
-        getClassAssignments(classId),
-        getClassGradeCategories(classId)
-      ]);
-
-      if (assignmentsResult.success && assignmentsResult.data) {
-        setAssignments(assignmentsResult.data);
-        if (assignmentsResult.data.length > 0) {
-          setSelectedAssignment(assignmentsResult.data[0]);
-        }
-      }
-
-      if (categoriesResult.success && categoriesResult.data) {
-        setCategories(categoriesResult.data);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load grade data');
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const loadHistoricalGrades = async () => {
@@ -287,14 +286,19 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
       // Create grades for students who have entries
       const gradesToCreate: CreateGradeData[] = Object.entries(gradeEntries)
         .filter(([_, value]) => value && value.trim() !== '')
-        .map(([studentId, value]) => ({
-          student_id: studentId,
-          assignment_id: assignmentId,
-          class_id: classId,
-          grade_value: parseFloat(value),
-          points_possible: pointsValue,
-          graded_date: assessmentDate
-        }));
+        .map(([studentId, value]) => {
+          const gradeValue = parseFloat(value);
+          const pct = calculatePercentage(gradeValue, pointsValue);
+          return {
+            student_id: studentId,
+            assignment_id: assignmentId,
+            class_id: classId,
+            grade_value: gradeValue,
+            points_possible: pointsValue,
+            letter_grade: `Grade ${getLetterGrade(pct)}`,
+            graded_date: assessmentDate
+          };
+        });
 
       if (gradesToCreate.length === 0) {
         setError('Please enter at least one grade');
@@ -327,57 +331,11 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   };
 
   const getLetterGrade = (percentage: number): string => {
-    if (percentage >= 90) return '1';
-    if (percentage >= 80) return '2';
-    if (percentage >= 70) return '3';
-    if (percentage >= 60) return '4';
-    if (percentage >= 55) return '5';
-    if (percentage >= 50) return '6';
-    if (percentage >= 40) return '7';
-    if (percentage >= 35) return '8';
-    return '9';
-  };
-
-  const getGradeColor = (grade: string): string => {
-    switch (grade) {
-      case '1': return 'text-green-600';
-      case '2': return 'text-green-500';
-      case '3': return 'text-blue-600';
-      case '4': return 'text-blue-500';
-      case '5': return 'text-yellow-600';
-      case '6': return 'text-yellow-500';
-      case '7': return 'text-orange-500';
-      case '8': return 'text-orange-600';
-      case '9': return 'text-red-600';
-      default: return 'text-gray-400';
-    }
-  };
-
-  const getGradeBgColor = (grade: string): string => {
-    switch (grade) {
-      case '1': return 'bg-green-100 text-green-800';
-      case '2': return 'bg-green-50 text-green-700';
-      case '3': return 'bg-blue-100 text-blue-800';
-      case '4': return 'bg-blue-50 text-blue-700';
-      case '5': return 'bg-yellow-100 text-yellow-800';
-      case '6': return 'bg-yellow-50 text-yellow-700';
-      case '7': return 'bg-orange-100 text-orange-800';
-      case '8': return 'bg-orange-50 text-orange-700';
-      case '9': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-400';
-    }
-  };
-
-  const getPercentageColor = (percentage: number): string => {
-    if (percentage >= 90) return 'text-green-600';
-    if (percentage >= 80) return 'text-green-500';
-    if (percentage >= 70) return 'text-blue-600';
-    if (percentage >= 60) return 'text-blue-500';
-    if (percentage >= 55) return 'text-yellow-600';
-    if (percentage >= 50) return 'text-yellow-500';
-    if (percentage >= 40) return 'text-orange-500';
-    if (percentage >= 35) return 'text-orange-600';
-    return 'text-red-600';
+    if (percentage >= 90) return 'A';
+    if (percentage >= 80) return 'B';
+    if (percentage >= 70) return 'C';
+    if (percentage >= 60) return 'D';
+    return 'F';
   };
 
   const calculatePercentage = (value: number, possible: number): number => {
@@ -516,10 +474,10 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
 
     let totalPercentage = 0;
 
-    distributionGrades.forEach(entry => {
-      const percentage = calculatePercentage(entry.grade_value || 0, entry.points_possible || 100);
-      const gradeNum = getLetterGrade(percentage);
-      gradeCounts[gradeNum] = (gradeCounts[gradeNum] || 0) + 1;
+    distributionGrades.forEach(grade => {
+      const percentage = calculatePercentage(grade.grade_value || 0, grade.points_possible || 100);
+      const letter = getLetterGrade(percentage);
+      letterCounts[letter as keyof typeof letterCounts]++;
       totalPercentage += percentage;
 
       // Track by assessment type
@@ -550,7 +508,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
       .slice(0, 5);
 
     const needsHelp = studentAverages
-      .filter(s => s.average < 70)
+      .filter(s => s.average < 40)
       .sort((a, b) => a.average - b.average)
       .slice(0, 5);
 
@@ -770,7 +728,14 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                           </span>
                         </div>
                         <div className="col-span-2">
-                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${getGradeBgColor(letterGrade)}`}>
+                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${
+                            letterGrade === 'A' ? 'bg-green-100 text-green-800' :
+                            letterGrade === 'B' ? 'bg-blue-100 text-blue-800' :
+                            letterGrade === 'C' ? 'bg-yellow-100 text-yellow-800' :
+                            letterGrade === 'D' ? 'bg-orange-100 text-orange-800' :
+                            letterGrade === 'F' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-400'
+                          }`}>
                             {letterGrade}
                           </span>
                         </div>
@@ -1131,7 +1096,13 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                                           </span>
                                         </td>
                                         <td className="py-2 pr-4">
-                                          <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${getGradeBgColor(letterGrade)}`}>
+                                          <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+                                            letterGrade === 'A' ? 'bg-green-100 text-green-800' :
+                                            letterGrade === 'B' ? 'bg-blue-100 text-blue-800' :
+                                            letterGrade === 'C' ? 'bg-yellow-100 text-yellow-800' :
+                                            letterGrade === 'D' ? 'bg-orange-100 text-orange-800' :
+                                            'bg-red-100 text-red-800'
+                                          }`}>
                                             {letterGrade}
                                           </span>
                                         </td>
@@ -1310,8 +1281,9 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                           <div>
                             <p className="text-sm text-yellow-600 font-medium">Passing Rate</p>
                             <p className="text-2xl font-bold text-yellow-900 mt-1">
-                              {Math.round(((['1','2','3','4','5','6'].reduce((sum, g) => sum + (stats.gradeCounts[g] || 0), 0)) / stats.total) * 100)}%
+                              {Math.round(((stats.letterCounts.A + stats.letterCounts.B + stats.letterCounts.C + stats.letterCounts.D) / stats.total) * 100)}%
                             </p>
+                            <p className="text-xs text-yellow-600 mt-0.5">Grade 1–7</p>
                           </div>
                           <Award className="w-8 h-8 text-yellow-400" />
                         </div>
@@ -1322,8 +1294,9 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                           <div>
                             <p className="text-sm text-purple-600 font-medium">Excellence Rate</p>
                             <p className="text-2xl font-bold text-purple-900 mt-1">
-                              {Math.round((((stats.gradeCounts['1'] || 0) + (stats.gradeCounts['2'] || 0)) / stats.total) * 100)}%
+                              {Math.round(((stats.letterCounts.A + stats.letterCounts.B) / stats.total) * 100)}%
                             </p>
+                            <p className="text-xs text-purple-600 mt-0.5">Grade 1–3</p>
                           </div>
                           <Award className="w-8 h-8 text-purple-400" />
                         </div>
@@ -1334,32 +1307,34 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                     <div className="bg-white border border-gray-200 rounded-lg p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">Grade Distribution</h3>
                       <div className="space-y-3">
-                        {Object.entries(stats.gradeCounts).map(([grade, count]) => {
-                          const pct = (count / stats.total) * 100;
-                          const barColors: { [key: string]: string } = {
-                            '1': 'bg-green-500', '2': 'bg-green-400',
-                            '3': 'bg-blue-500', '4': 'bg-blue-400',
-                            '5': 'bg-yellow-500', '6': 'bg-yellow-400',
-                            '7': 'bg-orange-400', '8': 'bg-orange-500',
-                            '9': 'bg-red-500'
+                        {Object.entries(stats.letterCounts).map(([letter, count]) => {
+                          const percentage = (count / stats.total) * 100;
+                          const colors = {
+                            A: 'bg-green-500',
+                            B: 'bg-blue-500',
+                            C: 'bg-yellow-500',
+                            D: 'bg-orange-500',
+                            F: 'bg-red-500'
                           };
-                          const gradeLabels: { [key: string]: string } = {
-                            '1': '90–100%', '2': '80–89%', '3': '70–79%',
-                            '4': '60–69%', '5': '55–59%', '6': '50–54%',
-                            '7': '40–49%', '8': '35–39%', '9': '0–34%'
+                          const bgColors = {
+                            A: 'bg-green-100',
+                            B: 'bg-blue-100',
+                            C: 'bg-yellow-100',
+                            D: 'bg-orange-100',
+                            F: 'bg-red-100'
                           };
 
                           return (
-                            <div key={grade} className="flex items-center space-x-4">
+                            <div key={letter} className="flex items-center space-x-4">
                               <div className="w-8 text-center">
-                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${getGradeBgColor(grade)}`}>
-                                  {grade}
+                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${bgColors[letter as keyof typeof bgColors]} ${letter === 'A' ? 'text-green-800' : letter === 'B' ? 'text-blue-800' : letter === 'C' ? 'text-yellow-800' : letter === 'D' ? 'text-orange-800' : 'text-red-800'}`}>
+                                  {letter}
                                 </span>
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-sm font-medium text-gray-700">
-                                    Grade {grade} ({gradeLabels[grade]})
+                                    {letter} Grade
                                   </span>
                                   <span className="text-sm text-gray-600">
                                     {count} ({Math.round(pct)}%)
@@ -1367,8 +1342,8 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-3">
                                   <div
-                                    className={`h-3 rounded-full ${barColors[grade] || 'bg-gray-400'}`}
-                                    style={{ width: `${pct}%` }}
+                                    className={`h-3 rounded-full ${colors[letter as keyof typeof colors]}`}
+                                    style={{ width: `${percentage}%` }}
                                   />
                                 </div>
                               </div>
@@ -1475,19 +1450,6 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
           )}
         </div>
       </div>
-
-      {showAssessmentModal && (
-        <AssessmentManagementModal
-          isOpen={showAssessmentModal}
-          onClose={() => {
-            setShowAssessmentModal(false);
-            setSelectedAssessmentItem(null);
-          }}
-          onSuccess={handleAssessmentModalSuccess}
-          classId={classId}
-          assessment={selectedAssessmentItem}
-        />
-      )}
     </div>
   );
 };
