@@ -25,9 +25,11 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    username: '',
     password: '',
     confirmPassword: ''
   });
+  const [useUsername, setUseUsername] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -52,8 +54,23 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
       return;
     }
     
-    if (!formData.email.trim()) {
+    if (!useUsername && !formData.email.trim()) {
       setError('I need your email address to set up your account.');
+      return;
+    }
+
+    if (useUsername && !formData.username.trim()) {
+      setError('I need a username to set up your account.');
+      return;
+    }
+
+    if (useUsername && formData.username.trim().length < 3) {
+      setError('Username should be at least 3 characters long.');
+      return;
+    }
+
+    if (useUsername && !/^[a-zA-Z0-9_-]+$/.test(formData.username.trim())) {
+      setError('Username can only contain letters, numbers, underscores, and hyphens.');
       return;
     }
     
@@ -76,9 +93,10 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
     
     try {
       const { success, error, user } = await signUp(
-        formData.email,
+        useUsername ? formData.username : formData.email,
         formData.password,
-        formData.name
+        formData.name,
+        useUsername
       );
       
       if (!success) {
@@ -176,22 +194,50 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
             </div>
             
             <div>
-              <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor={useUsername ? "username" : "email"} className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {useUsername ? 'Username' : 'Email'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setUseUsername(!useUsername)}
+                  className="text-xs text-[#0170b9] hover:text-[#015a94] font-medium transition-colors"
+                >
+                  Use {useUsername ? 'Email' : 'Username'} instead
+                </button>
+              </div>
               <div className="relative">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-3 rounded-xl border border-[#0170b9]/20 bg-white text-[#002F4B] focus:ring-2 focus:ring-[#0170b9] focus:border-transparent text-sm transition-all shadow-sm"
-                  placeholder="your@email.com"
-                  required
-                  style={{ fontSize: '16px' }}
-                />
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
+                {useUsername ? (
+                  <>
+                    <input
+                      id="username"
+                      name="username"
+                      type="text"
+                      value={formData.username}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-3 py-3 rounded-xl border border-[#0170b9]/20 bg-white text-[#002F4B] focus:ring-2 focus:ring-[#0170b9] focus:border-transparent text-sm transition-all shadow-sm"
+                      placeholder="your_username"
+                      required
+                      style={{ fontSize: '16px' }}
+                    />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  </>
+                ) : (
+                  <>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-3 py-3 rounded-xl border border-[#0170b9]/20 bg-white text-[#002F4B] focus:ring-2 focus:ring-[#0170b9] focus:border-transparent text-sm transition-all shadow-sm"
+                      placeholder="your@email.com"
+                      required
+                      style={{ fontSize: '16px' }}
+                    />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  </>
+                )}
               </div>
             </div>
             

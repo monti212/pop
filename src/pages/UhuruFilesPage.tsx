@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Class, Student } from '../types/attendance';
 import { getTeacherClasses, getActiveClassCount } from '../services/classService';
-import { getClassStudents } from '../services/studentService';
+import { getClassStudents, bulkDeleteStudents } from '../services/studentService';
 import AddClassModal from '../components/AddClassModal';
 import EditClassModal from '../components/EditClassModal';
 import AddStudentModal from '../components/AddStudentModal';
@@ -49,6 +49,11 @@ const UhuruFilesPage: React.FC = () => {
   const [showPersonalityModal, setShowPersonalityModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
+  // Bulk delete state
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
   useEffect(() => {
     if (user) {
       loadClasses();
@@ -59,6 +64,7 @@ const UhuruFilesPage: React.FC = () => {
   useEffect(() => {
     if (selectedClass && viewMode === 'students') {
       loadStudents(selectedClass.id);
+      setSelectedStudentIds(new Set()); // Clear selection when switching class/view
     }
   }, [selectedClass, viewMode]);
 
@@ -137,6 +143,46 @@ const UhuruFilesPage: React.FC = () => {
     loadClassCount();
     if (selectedClass) {
       loadStudents(selectedClass.id);
+    }
+  };
+
+  // Bulk selection helpers
+  const toggleStudentSelection = (studentId: string) => {
+    setSelectedStudentIds(prev => {
+      const next = new Set(prev);
+      if (next.has(studentId)) {
+        next.delete(studentId);
+      } else {
+        next.add(studentId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedStudentIds.size === students.length) {
+      setSelectedStudentIds(new Set());
+    } else {
+      setSelectedStudentIds(new Set(students.map(s => s.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedStudentIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const result = await bulkDeleteStudents(Array.from(selectedStudentIds));
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete students');
+      }
+      setSelectedStudentIds(new Set());
+      setShowBulkDeleteConfirm(false);
+      handleModalSuccess();
+    } catch (err: any) {
+      console.error('Bulk delete error:', err);
+      setError(err.message || 'Failed to delete students');
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -298,7 +344,7 @@ const UhuruFilesPage: React.FC = () => {
                         <p className="text-xs text-greyed-black/70 mb-0.5">{classItem.subject}</p>
                       )}
                       {classItem.grade_level && (
-                        <p className="text-xs text-greyed-black/60">Grade {classItem.grade_level}</p>
+                        <p className="text-xs text-greyed-black/60">{classItem.grade_level}</p>
                       )}
                     </div>
 
@@ -350,10 +396,42 @@ const UhuruFilesPage: React.FC = () => {
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-[#e8e6e0] shadow-sm overflow-hidden">
+              {/* Bulk actions bar */}
+              {selectedStudentIds.size > 0 && (
+                <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center justify-between">
+                  <span className="text-sm font-medium text-red-800">
+                    {selectedStudentIds.size} student{selectedStudentIds.size > 1 ? 's' : ''} selected
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setSelectedStudentIds(new Set())}
+                      className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                    >
+                      Clear selection
+                    </button>
+                    <button
+                      onClick={() => setShowBulkDeleteConfirm(true)}
+                      className="px-4 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete Selected
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-[#f8f8f6] border-b border-[#e8e6e0]">
                     <tr>
+                      <th className="px-4 py-4 text-left w-12">
+                        <input
+                          type="checkbox"
+                          checked={students.length > 0 && selectedStudentIds.size === students.length}
+                          onChange={toggleSelectAll}
+                          className="w-4 h-4 text-greyed-navy border-gray-300 rounded focus:ring-greyed-navy cursor-pointer"
+                          title="Select all students"
+                        />
+                      </th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-navy">Student Name</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-navy">ID</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-greyed-navy">Status</th>
@@ -362,7 +440,15 @@ const UhuruFilesPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-[#e8e6e0]">
                     {students.map((student) => (
-                      <tr key={student.id} className="hover:bg-[#f8f8f6] transition-colors">
+                      <tr key={student.id} className={`hover:bg-[#f8f8f6] transition-colors ${selectedStudentIds.has(student.id) ? 'bg-red-50/50' : ''}`}>
+                        <td className="px-4 py-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedStudentIds.has(student.id)}
+                            onChange={() => toggleStudentSelection(student.id)}
+                            className="w-4 h-4 text-greyed-navy border-gray-300 rounded focus:ring-greyed-navy cursor-pointer"
+                          />
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-greyed-blue/30 flex items-center justify-center">
@@ -562,6 +648,49 @@ const UhuruFilesPage: React.FC = () => {
             students={students}
           />
         </>
+      )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete {selectedStudentIds.size} Student{selectedStudentIds.size > 1 ? 's' : ''}?</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              This will permanently delete <span className="font-semibold">{selectedStudentIds.size}</span> student record{selectedStudentIds.size > 1 ? 's' : ''} and all associated data including attendance records, grades, and behavior logs. This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                disabled={isBulkDeleting}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+              >
+                {isBulkDeleting ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Permanently
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

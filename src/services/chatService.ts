@@ -15,15 +15,44 @@ const extractTextFromMessageContent = (content: MessageContent): string => {
   if (typeof content === 'string') {
     return content;
   }
-  
+
   if (Array.isArray(content)) {
     return content
       .filter(part => part.type === 'text')
       .map(part => (part as TextContent).text)
       .join('\n\n');
   }
-  
+
   return '';
+};
+
+// Helper function to generate a smart conversation title from message content
+const generateConversationTitle = (content: MessageContent): string => {
+  const text = extractTextFromMessageContent(content);
+
+  if (!text || text.trim().length === 0) {
+    return 'New Conversation';
+  }
+
+  // Clean up the text
+  let title = text
+    .trim()
+    .split('\n')[0] // Take first line
+    .replace(/^[#\-*>]+\s*/, '') // Remove markdown symbols
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+
+  // Limit to 50 characters for readability
+  if (title.length > 50) {
+    title = title.substring(0, 47) + '...';
+  }
+
+  // If title is too short or empty after cleaning, use a default
+  if (title.length < 3) {
+    return 'New Conversation';
+  }
+
+  return title;
 };
 
 
@@ -157,7 +186,8 @@ export const getConversationMessages = async (
 export const persistTemporaryConversation = async (
   tempConversationId: string,
   userId: string,
-  title: string = 'New Conversation'
+  title: string = 'New Conversation',
+  firstMessageContent?: MessageContent
 ): Promise<{ success: boolean; conversationId?: string; error?: string }> => {
   try {
     if (!supabase) {
@@ -167,11 +197,16 @@ export const persistTemporaryConversation = async (
       return { success: false, error: 'I couldn\'t save that conversation. Want to try again?' };
     }
 
+    // Generate smart title from first message if provided
+    const smartTitle = firstMessageContent
+      ? generateConversationTitle(firstMessageContent)
+      : title;
+
     const { data, error } = await supabase
       .from('conversations')
       .insert({
         user_id: userId,
-        title: title
+        title: smartTitle
       })
       .select()
       .single();
@@ -219,13 +254,19 @@ export const addMessage = async (
     // If this is a temporary conversation, persist it to the database first
     if (isTemporaryConversation) {
       logger.log('🔍 [ADDMESSAGE] 🔄 Persisting temporary conversation before adding first message');
-      const persistResult = await persistTemporaryConversation(conversationId, userId);
-      
+      // Pass the first user message content to generate a smart title
+      const persistResult = await persistTemporaryConversation(
+        conversationId,
+        userId,
+        'New Conversation',
+        role === 'user' ? content : undefined
+      );
+
       if (!persistResult.success || !persistResult.conversationId) {
         throw new Error(persistResult.error || 'Uhuru could not save your conversation. Please try again.');
         throw new Error(persistResult.error || 'I couldn\'t save your conversation. Want to try again?');
       }
-      
+
       actualConversationId = persistResult.conversationId;
       logger.log('🔍 [ADDMESSAGE] ✅ Temporary conversation persisted with new ID:', actualConversationId);
     } else {
@@ -441,16 +482,8 @@ export async function streamResponse({
   onEvent: (type: string, payload: any) => void;
 }) {
   try {
-    console.log('🚀 [CHAT] Starting streamResponse call');
-
     // Check authentication first
     const sess = await supabase?.auth.getSession();
-    console.log('🔐 [CHAT] Session check:', {
-      hasSession: !!sess?.data?.session,
-      hasAccessToken: !!sess?.data?.session?.access_token,
-      userId: sess?.data?.session?.user?.id?.substring(0, 8) || 'none',
-      tokenPrefix: sess?.data?.session?.access_token?.substring(0, 10) || 'none'
-    });
 
     if (!sess?.data?.session?.access_token) {
       console.error('❌ [CHAT] No valid session or access token');
@@ -611,10 +644,24 @@ export async function streamResponse({
     let buffer = '';
     let eventCount = 0;
 
+    // Batch processing for better performance - accumulate deltas and flush periodically
+    let deltaBuffer = '';
+    let lastFlushTime = Date.now();
+    const FLUSH_INTERVAL = 16; // ~60fps for smooth streaming without excessive re-renders
+
+    const flushDeltaBuffer = () => {
+      if (deltaBuffer) {
+        onEvent('message.delta', { textDelta: deltaBuffer });
+        deltaBuffer = '';
+        lastFlushTime = Date.now();
+      }
+    };
+
     while (true) {
       const { value, done } = await reader.read();
 
       if (done) {
+        flushDeltaBuffer(); // Flush any remaining deltas
         console.log('✅ [CHAT] Stream completed, total events:', eventCount);
         break;
       }
@@ -646,26 +693,35 @@ export async function streamResponse({
           const SAFE_EVENTS = ['message.delta', 'message.completed', 'run.status', 'error'];
 
           if (!SAFE_EVENTS.includes(event)) {
-            // Silently ignore unsafe events (response.created, response.in_progress,
-            // response.completed, reasoning, and any other upstream passthrough)
-            console.log(`🔒 [CHAT] Ignoring unsafe event: ${event}`);
-            continue;
+            continue; // Remove excessive logging
           }
 
-          onEvent(event, parsedData);
-          eventCount++;
+          // Batch delta events for performance
+          if (event === 'message.delta') {
+            const delta = parsedData.textDelta ?? parsedData.delta ?? parsedData.text ?? '';
+            deltaBuffer += delta;
+            eventCount++;
 
-          // Log every 10th event to avoid console spam
-          if (eventCount % 10 === 0) {
-            console.log(`📨 [CHAT] Processed ${eventCount} events`);
+            // Flush every FLUSH_INTERVAL ms or if buffer is getting large
+            const now = Date.now();
+            if (now - lastFlushTime >= FLUSH_INTERVAL || deltaBuffer.length > 100) {
+              flushDeltaBuffer();
+            }
+          } else {
+            // Non-delta events flush any pending deltas and send immediately
+            flushDeltaBuffer();
+            onEvent(event, parsedData);
+            eventCount++;
           }
         } catch (parseError) {
           // Only forward parse errors for known safe text delta events
           if (event === 'message.delta') {
-            onEvent(event, { textDelta: data });
+            deltaBuffer += data;
             eventCount++;
-          } else {
-            console.log(`🔒 [CHAT] Ignoring parse error for non-delta event: ${event}`);
+            const now = Date.now();
+            if (now - lastFlushTime >= FLUSH_INTERVAL || deltaBuffer.length > 100) {
+              flushDeltaBuffer();
+            }
           }
         }
       }

@@ -212,11 +212,12 @@ export interface AuthUser {
   isLoading: boolean;
 }
 
-// Sign up with email and password
+// Sign up with email/username and password
 export const signUp = async (
-  email: string,
+  emailOrUsername: string,
   password: string,
-  name: string
+  name: string,
+  isUsername: boolean = false
 ): Promise<{ success: boolean; error?: string; user?: User }> => {
   if (!isSupabaseConfigured()) {
     // Check if it's specifically a JWT expiration issue
@@ -240,12 +241,19 @@ export const signUp = async (
   }
 
   try {
+    // If username is provided, generate an internal email
+    const actualEmail = isUsername
+      ? `${emailOrUsername.toLowerCase()}@uhuru.local`
+      : emailOrUsername;
+
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: actualEmail,
       password,
       options: {
         data: {
-          name
+          name,
+          username: isUsername ? emailOrUsername.toLowerCase() : null,
+          auth_type: isUsername ? 'username' : 'email'
         }
       }
     });
@@ -307,9 +315,9 @@ export const signUp = async (
   }
 };
 
-// Sign in with email and password
+// Sign in with email/username and password
 export const signIn = async (
-  email: string,
+  emailOrUsername: string,
   password: string
 ): Promise<{ success: boolean; error?: string; user?: User }> => {
   if (!isSupabaseConfigured()) {
@@ -335,10 +343,18 @@ export const signIn = async (
 
   try {
     let data, error;
-    
+
+    // Check if input looks like an email or username
+    const isEmail = emailOrUsername.includes('@') && emailOrUsername.includes('.');
+
+    // If it's not an email format, assume it's a username and convert to internal email
+    const actualEmail = isEmail
+      ? emailOrUsername
+      : `${emailOrUsername.toLowerCase()}@uhuru.local`;
+
     try {
       const result = await supabase.auth.signInWithPassword({
-        email,
+        email: actualEmail,
         password
       });
       data = result.data;

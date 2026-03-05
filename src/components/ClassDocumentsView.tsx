@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FolderOpen, FileText, Upload, Search, Download, Eye, Trash2,
-  Edit3, X, Loader, AlertTriangle, Calendar, Tag, File, HardDrive, CheckCircle2
+  Edit3, X, Loader, AlertTriangle, Calendar, Tag, File, HardDrive, CheckCircle2, Shield
 } from 'lucide-react';
 import {
   getClassFolders,
@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/authService';
 import mammoth from 'mammoth';
+import { validateImages, IMAGE_CONTENT_POLICY } from '../utils/imageValidator';
 
 interface ClassDocumentsViewProps {
   classId: string;
@@ -45,6 +46,9 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [docxHtmlContent, setDocxHtmlContent] = useState<string | null>(null);
+  const [validationWarnings, setValidationWarnings] = useState<{ file: string; warnings: string[] }[]>([]);
+  const [showContentPolicy, setShowContentPolicy] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
     loadFoldersAndDocuments();
@@ -93,14 +97,50 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
     }
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (files.length > 5) {
       setError('You can upload up to 5 files at once');
       return;
     }
-    setSelectedFiles(files);
-    setShowUploadModal(true);
+
+    setIsValidating(true);
+    setError(null);
+    setValidationWarnings([]);
+
+    try {
+      // Validate images
+      const { validFiles, invalidFiles, warnings } = await validateImages(files);
+
+      // If there are invalid files, show error and don't proceed
+      if (invalidFiles.length > 0) {
+        const errorMessages = invalidFiles.map(({ file, error }) => `${file.name}: ${error}`);
+        setError(`The following files failed validation:\n\n${errorMessages.join('\n\n')}`);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        setIsValidating(false);
+        return;
+      }
+
+      // If there are warnings, store them to show in the upload modal
+      if (warnings.length > 0) {
+        setValidationWarnings(warnings.map(w => ({
+          file: w.file.name,
+          warnings: w.warnings
+        })));
+      }
+
+      setSelectedFiles(validFiles);
+      setShowUploadModal(true);
+    } catch (error: any) {
+      setError('Failed to validate files: ' + error.message);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const handleUpload = async () => {
@@ -142,6 +182,7 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
     setShowUploadModal(false);
     setSelectedFiles([]);
     setUploadProgress([]);
+    setValidationWarnings([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -410,25 +451,42 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
             {selectedFolder ? `${selectedFolder.folder_name} Documents` : 'All Documents'}
           </h3>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowContentPolicy(true)}
+              className="px-3 py-2 text-sm text-gray-600 hover:text-teal hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+              title="View upload guidelines"
+            >
+              <Shield className="w-4 h-4" />
+              Guidelines
+            </button>
             <input
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"
+              accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp,.svg"
               onChange={handleFileSelect}
               className="hidden"
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              disabled={getStoragePercentage() >= 95}
+              disabled={getStoragePercentage() >= 95 || isValidating}
               className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
-                getStoragePercentage() >= 95
+                getStoragePercentage() >= 95 || isValidating
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-teal text-white hover:bg-teal/90'
               }`}
             >
-              <Upload className="w-4 h-4" />
-              Upload Documents
+              {isValidating ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Validating...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Upload Documents
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -558,6 +616,29 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
               </div>
 
               <div className="p-6 max-h-[60vh] overflow-y-auto">
+                {validationWarnings.length > 0 && (
+                  <div className="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-orange-900 mb-2">Content Review Required</h4>
+                        {validationWarnings.map((warning, idx) => (
+                          <div key={idx} className="mb-2 last:mb-0">
+                            <p className="text-sm font-medium text-orange-800">{warning.file}</p>
+                            <ul className="list-disc list-inside text-sm text-orange-700 mt-1">
+                              {warning.warnings.map((w, wIdx) => (
+                                <li key={wIdx}>{w}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                        <p className="text-xs text-orange-700 mt-2">
+                          Please review these files to ensure they are appropriate for educational use before uploading.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {selectedFiles.length > 0 && (
                   <div className="space-y-3">
                     {selectedFiles.map((file, index) => {
@@ -851,6 +932,105 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
                     <Edit3 className="w-4 h-4" />
                     Edit in U Docs
                   </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Content Policy Modal */}
+      <AnimatePresence>
+        {showContentPolicy && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden"
+            >
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-teal/10 rounded-lg">
+                      <Shield className="w-6 h-6 text-teal" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">{IMAGE_CONTENT_POLICY.title}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{IMAGE_CONTENT_POLICY.description}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowContentPolicy(false)}
+                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 max-h-[calc(85vh-12rem)] overflow-y-auto space-y-6">
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-orange-500" />
+                    Content Requirements
+                  </h4>
+                  <ul className="space-y-2">
+                    {IMAGE_CONTENT_POLICY.rules.map((rule, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal mt-2 flex-shrink-0"></span>
+                        <span className="text-gray-700">{rule}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="border-t border-gray-200 pt-6">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    Acceptable Content Examples
+                  </h4>
+                  <ul className="space-y-2">
+                    {IMAGE_CONTENT_POLICY.acceptableExamples.map((example, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <span className="text-green-500 flex-shrink-0">✓</span>
+                        <span className="text-gray-700">{example}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-900 mb-2">Automated Safety Checks</h4>
+                  <p className="text-sm text-blue-800">
+                    All uploaded images go through automated validation to check:
+                  </p>
+                  <ul className="text-sm text-blue-800 mt-2 space-y-1 list-disc list-inside">
+                    <li>File format and size limits</li>
+                    <li>Image dimensions and quality</li>
+                    <li>Basic content analysis</li>
+                  </ul>
+                  <p className="text-xs text-blue-700 mt-3">
+                    While we perform automated checks, teachers are ultimately responsible for ensuring
+                    all uploaded content is appropriate for their educational environment.
+                  </p>
+                </div>
+
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-orange-900 mb-2">Reporting Concerns</h4>
+                  <p className="text-sm text-orange-800">
+                    If you encounter inappropriate content, please report it immediately to your
+                    administrator. Violations of content policy may result in account restrictions.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-200 flex items-center justify-end">
+                <button
+                  onClick={() => setShowContentPolicy(false)}
+                  className="px-6 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors"
+                >
+                  I Understand
+                </button>
               </div>
             </motion.div>
           </div>

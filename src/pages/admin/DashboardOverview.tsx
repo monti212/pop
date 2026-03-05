@@ -62,6 +62,10 @@ const DashboardOverview: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState('overview');
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(10);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Scroll to section
   const scrollToSection = (sectionId: string) => {
@@ -79,7 +83,7 @@ const DashboardOverview: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsRefreshing(true);
     setError(null);
 
     try {
@@ -178,17 +182,30 @@ const DashboardOverview: React.FC = () => {
       };
 
       setDashboardData(summary);
+      setLastUpdate(new Date());
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err);
       setError(err.message || 'Failed to load dashboard data.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchDashboardData();
   }, [user]);
+
+  // Auto-refresh based on selected interval
+  useEffect(() => {
+    if (!autoRefresh || !user) return;
+
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, refreshInterval * 1000);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshInterval, user]);
 
   const getHealthStatusColor = (status: string) => {
     switch (status) {
@@ -253,15 +270,49 @@ const DashboardOverview: React.FC = () => {
           <h2 className="text-2xl font-bold text-navy">Admin Dashboard</h2>
           <p className="text-navy/70 text-sm">Overview of platform metrics and health</p>
         </div>
-        
-        <button
-          onClick={fetchDashboardData}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-3 py-2 bg-teal text-white rounded-lg hover:bg-teal/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Refresh</span>
-        </button>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-line bg-white">
+            <div className={`w-2 h-2 rounded-full ${autoRefresh ? 'animate-pulse' : ''}`} style={{ background: autoRefresh ? '#0096B3' : '#666' }} />
+            <span className="text-xs font-medium text-navy">
+              {autoRefresh ? 'Live' : 'Paused'}
+            </span>
+            <span className="text-xs text-navy/50">
+              • {new Date(lastUpdate).toLocaleTimeString()}
+            </span>
+          </div>
+
+          <select
+            value={refreshInterval}
+            onChange={(e) => setRefreshInterval(Number(e.target.value))}
+            disabled={!autoRefresh}
+            className="px-3 py-1.5 rounded-lg border border-line text-xs font-medium disabled:opacity-50 text-navy bg-white"
+          >
+            <option value={5}>5s</option>
+            <option value={10}>10s</option>
+            <option value={30}>30s</option>
+            <option value={60}>60s</option>
+          </select>
+
+          <button
+            onClick={fetchDashboardData}
+            disabled={isRefreshing}
+            className="p-2 rounded-lg hover:bg-white/80 transition-colors disabled:opacity-50"
+            style={{ color: '#19324A' }}
+            title="Refresh data"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
+
+          <button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className="px-3 py-1.5 rounded-lg font-medium transition-colors text-xs text-white"
+            style={{ background: autoRefresh ? '#0096B3' : '#666' }}
+            title={autoRefresh ? 'Pause auto-refresh' : 'Resume auto-refresh'}
+          >
+            {autoRefresh ? 'Pause' : 'Resume'}
+          </button>
+        </div>
       </div>
 
           </div>

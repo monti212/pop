@@ -172,6 +172,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                 placeholder="John Doe"
                 disabled={isSubmitting}
                 maxLength={100}
+                autoCapitalize="none"
               />
               {errors.student_name && (
                 <p className="mt-1 text-sm text-red-600">{errors.student_name}</p>

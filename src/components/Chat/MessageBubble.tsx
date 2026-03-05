@@ -16,6 +16,7 @@ import FileAttachment from './FileAttachment';
 import { containsLessonPlanKeywords } from '../../utils/lessonPlanDetection';
 import { autoSaveLessonPlan } from '../../services/lessonPlanService';
 import { useAuth } from '../../context/AuthContext';
+import ImageZoomModal from '../ImageZoomModal';
 
 // Content-aware components for fluid assistant styling - NO BORDERS
 
@@ -201,6 +202,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [lessonPlanSaved, setLessonPlanSaved] = useState(false);
   const [isSavingLessonPlan, setIsSavingLessonPlan] = useState(false);
 
+  // Image zoom state
+  const [zoomImageSrc, setZoomImageSrc] = useState<string | null>(null);
+  const [zoomImageAlt, setZoomImageAlt] = useState<string | undefined>(undefined);
+
   // Detect lesson plans in assistant messages
   useEffect(() => {
     if (role === 'assistant' && !isStreaming && rawText && rawText.length > 200) {
@@ -333,7 +338,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         src={src}
         alt={alt}
         loading="lazy"
-        className="my-3 max-h-[520px] w-auto rounded-xl shadow-sm"
+        className="my-3 max-h-[520px] w-auto rounded-xl shadow-sm cursor-zoom-in hover:shadow-md transition-shadow duration-300"
+        onClick={() => { setZoomImageSrc(src); setZoomImageAlt(alt); }}
       />
     ),
   };
@@ -562,10 +568,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         <img 
           src={src} 
           alt={alt || 'Generated image'} 
-          className="max-w-full rounded-lg shadow-sm transition-shadow duration-300 hover:shadow-md"
+          className="max-w-full rounded-lg shadow-sm transition-shadow duration-300 hover:shadow-md cursor-zoom-in"
           style={{ maxHeight: '512px' }}
+          onClick={() => { setZoomImageSrc(src); setZoomImageAlt(alt); }}
         />
-        {isGeneratedImage && isHovered && (
+        {isHovered && (
           <motion.div 
             className="absolute top-2 right-2 flex gap-2"
             initial={{ opacity: 0, y: -10 }}
@@ -575,13 +582,28 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             <button 
               onClick={(e) => {
                 e.preventDefault();
-                handleImageDownload(src, 'png');
+                e.stopPropagation();
+                setZoomImageSrc(src);
+                setZoomImageAlt(alt);
               }}
               className="p-2 bg-black/70 hover:bg-black/80 text-white rounded-lg transition-colors duration-200"
-              title="Download PNG"
+              title="Zoom in"
             >
-              <Download className="w-4 h-4" />
+              <Search className="w-4 h-4" />
             </button>
+            {isGeneratedImage && (
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleImageDownload(src, 'png');
+                }}
+                className="p-2 bg-black/70 hover:bg-black/80 text-white rounded-lg transition-colors duration-200"
+                title="Download PNG"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+            )}
           </motion.div>
         )}
       </div>
@@ -834,7 +856,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 <>
                   <button
                     onClick={() => handleOpenUhuruDocs()}
-                    className="text-xs font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white/90 backdrop-blur-sm rounded-md px-2 py-0.5"
+                    className="text-xs font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white rounded-md px-2 py-0.5"
                     title="Open in U Docs"
                   >
                     U Docs
@@ -848,7 +870,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 <>
                   <button
                     onClick={enterAssistEdit}
-                    className="text-xs font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white/90 backdrop-blur-sm rounded-md px-2 py-0.5"
+                    className="text-xs font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white rounded-md px-2 py-0.5"
                     title="Edit"
                   >
                     Edit
@@ -859,7 +881,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
               <button
                 onClick={copyAssistant}
-                className="text-xs font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white/90 backdrop-blur-sm rounded-md px-2 py-0.5"
+                className="text-xs font-medium text-navy hover:text-orange transition-colors duration-150 ease-out bg-white rounded-md px-2 py-0.5"
                 title={isCopied ? "Copied!" : "Copy"}
               >
                 {isCopied ? "Copied!" : "Copy"}
@@ -875,7 +897,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           'max-w-[min(720px,92%)] min-h-0 px-4 py-3 rounded-2xl shadow-sm',
           role === 'user'
             ? 'bg-gradient-to-br from-[#FEF7E8] to-[#FFF9F0] text-[#002F4B] border border-[#f5b233]/30 rounded-lg md:rounded-md shadow-sm'
-           : 'rounded-2xl bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 ring-1 ring-[#0170b9]/10'
+           : 'rounded-2xl bg-white ring-1 ring-[#0170b9]/10'
         ].join(' ')}
       >
         {/* Message content */}
@@ -1185,8 +1207,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           </button>
         </div>
       )}
+
+      {/* Image Zoom Modal */}
+      <ImageZoomModal
+        src={zoomImageSrc || ''}
+        alt={zoomImageAlt}
+        isOpen={!!zoomImageSrc}
+        onClose={() => { setZoomImageSrc(null); setZoomImageAlt(undefined); }}
+        onDownload={(url) => handleImageDownload(url, 'png')}
+      />
     </motion.div>
   );
 };
 
-export default MessageBubble;
+export default React.memo(MessageBubble);

@@ -154,12 +154,22 @@ export const createDocument = async (
   metadata?: Record<string, any>
 ): Promise<ServiceResponse<ClassDocument>> => {
   try {
+    let finalTitle = title;
+
+    if (documentType === 'lesson_plan') {
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      if (!finalTitle.match(/^\d{4}-\d{2}-\d{2}_/)) {
+        finalTitle = `${dateStr}_${finalTitle}`;
+      }
+    }
+
     const { data, error } = await supabase
       .from('class_documents')
       .insert({
         class_id: classId,
         folder_id: folderId,
-        title,
+        title: finalTitle,
         document_type: documentType,
         content,
         metadata: metadata || {}
@@ -398,13 +408,23 @@ export const uploadClassDocuments = async (
         const documentType = detectDocumentType(file.name, file.type);
         const isLessonPlan = contentPreview.toLowerCase().includes('lesson') && contentPreview.toLowerCase().includes('objective');
 
+        let fileTitle = file.name.replace(/\.[^/.]+$/, '');
+
+        if (documentType === 'lesson_plan' || isLessonPlan) {
+          const now = new Date();
+          const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          if (!fileTitle.match(/^\d{4}-\d{2}-\d{2}_/)) {
+            fileTitle = `${dateStr}_${fileTitle}`;
+          }
+        }
+
         const { data: docData, error: docError } = await supabase
           .from('class_documents')
           .insert({
             class_id: classId,
             folder_id: folderId,
             user_id: userId,
-            title: file.name.replace(/\.[^/.]+$/, ''),
+            title: fileTitle,
             document_type: documentType,
             content: contentPreview,
             file_url: publicUrl,

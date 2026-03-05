@@ -27,21 +27,13 @@
     -webkit-backface-visibility: hidden;
   }
 
-  /* Hardware acceleration hints for animated elements */
-  [data-animated], button:hover, a:hover {
+  /* Hardware acceleration hints — only promote on active interaction */
+  button:active, a:active {
     will-change: transform;
   }
 
-  /* Reset will-change after transitions complete to free up resources */
-  [data-animated]:not(:hover), button:not(:hover), a:not(:hover) {
-    will-change: auto;
-  }
-
-  /* Ensure proper vertical alignment and no perspective distortion */
-  .flex, [class*="flex"] {
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-  }
+  /* GPU layer promotion removed — was causing excessive memory usage on Android.
+     Only promote elements that truly need it via will-change on hover. */
   
   h1, h2, h3, h4, h5, h6 {
     @apply tracking-tight font-headline font-bold;
@@ -55,6 +47,35 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
       transform: none !important;
+    }
+  }
+
+  /* Disable expensive backdrop-blur on mobile / low-end devices */
+  @media (max-width: 768px), (hover: none) {
+    .backdrop-blur-sm,
+    .backdrop-blur,
+    [class*="backdrop-blur"] {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+    }
+
+    /* Replace glass transparency with solid backgrounds for readability */
+    .glass-effect {
+      background-color: rgba(255, 255, 255, 0.97) !important;
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+    }
+
+    .dark .glass-effect {
+      background-color: rgba(33, 39, 84, 0.97) !important;
+    }
+
+    /* Disable infinite shimmer animations on mobile to save battery & CPU */
+    .metallic-shimmer-text,
+    .metallic-shimmer-text-slow,
+    .crafting-shine-text {
+      animation: none !important;
+      background-size: 100% auto !important;
     }
   }
   
@@ -670,7 +691,7 @@ body {
 }
 
 .glass-card {
-  @apply glass-effect rounded-xl shadow-sm hover:shadow-md transition-all duration-150 ease-out hover:scale-[1.01];
+  @apply glass-effect rounded-xl shadow-sm hover:shadow-md transition-shadow duration-150 ease-out;
 }
 
 /* Uhuru Office - ReactQuill Styling */

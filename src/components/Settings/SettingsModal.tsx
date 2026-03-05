@@ -61,8 +61,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'account' | 'language' | 'subscription' | 'upgrade' | 'privacy' | 'help'>('account');
   
-  // Temporarily make all languages available while resolving subscription issues
-  const availableLanguages = ['english', 'setswana', 'swahili', 'zulu', 'french', 'yoruba', 'igbo', 'hausa', 'amharic', 'arabic', 'portuguese', 'lingala', 'kinyarwanda', 'luganda', 'twi', 'shona', 'sesotho', 'bemba', 'wolof', 'malagasy', 'somali', 'oromo', 'tigrinya', 'ndebele', 'kirundi', 'xhosa', 'afrikaans'];
+  // Available languages for interface and response
+  const availableLanguages = ['english', 'setswana', 'french', 'twi', 'ewe', 'fante', 'ga'];
   
   // Check if URL has tab parameter
   useEffect(() => {
@@ -379,7 +379,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     },
     {
       question: translations[interfaceLanguage]?.whatLanguagesSupported || "What languages are supported?",
-      answer: translations[interfaceLanguage]?.uhuruSupports || "Uhuru supports English, Setswana, and Swahili. You can select your preferred language in the Language tab of Settings."
+      answer: translations[interfaceLanguage]?.uhuruSupports || "Uhuru supports English, Setswana, French, Twi, Ewe, Fante, and Ga. You can select your preferred language in the Language tab of Settings."
     },
     {
       question: translations[interfaceLanguage]?.howCanIDeleteAccount || "How can I delete my account?",
@@ -644,65 +644,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       <option value="english">English</option>
                       <option value="setswana">Setswana</option>
-                      <option value="swahili">Swahili</option>
-                     <option value="zulu">Zulu</option>
-                     <option value="xhosa">Xhosa</option>
-                     <option value="afrikaans">Afrikaans</option>
-                     <option value="yoruba">Yoruba</option>
-                     <option value="igbo">Igbo</option>
-                     <option value="hausa">Hausa</option>
-                     <option value="amharic">Amharic</option>
-                     <option value="arabic">Arabic</option>
-                     <option value="french">French</option>
-                     <option value="portuguese">Portuguese</option>
-                     <option value="lingala">Lingala</option>
-                     <option value="kinyarwanda">Kinyarwanda</option>
-                     <option value="luganda">Luganda</option>
-                     <option value="twi">Twi</option>
-                     <option value="shona">Shona</option>
-                     <option value="sesotho">Sesotho</option>
-                     <option value="bemba">Bemba</option>
-                     <option value="wolof">Wolof</option>
-                     <option value="zulu">Zulu</option>
-                     <option value="xhosa">Xhosa</option>
-                     <option value="afrikaans">Afrikaans</option>
-                     <option value="yoruba">Yoruba</option>
-                     <option value="igbo">Igbo</option>
-                     <option value="hausa">Hausa</option>
-                     <option value="amharic">Amharic</option>
-                     <option value="arabic">Arabic</option>
-                     <option value="french">French</option>
-                     <option value="xhosa">Xhosa</option>
-                     <option value="afrikaans">Afrikaans</option>
-                     <option value="yoruba">Yoruba</option>
-                     <option value="igbo">Igbo</option>
-                     <option value="hausa">Hausa</option>
-                     <option value="amharic">Amharic</option>
-                     <option value="arabic">Arabic</option>
-                     <option value="portuguese">Portuguese</option>
-                     <option value="lingala">Lingala</option>
-                     <option value="kinyarwanda">Kinyarwanda</option>
-                     <option value="luganda">Luganda</option>
-                     <option value="twi">Twi</option>
-                     <option value="shona">Shona</option>
-                     <option value="sesotho">Sesotho</option>
-                     <option value="bemba">Bemba</option>
-                     <option value="wolof">Wolof</option>
-                     <option value="malagasy">Malagasy</option>
-                     <option value="somali">Somali</option>
-                     <option value="oromo">Oromo</option>
-                     <option value="tigrinya">Tigrinya</option>
-                     <option value="ndebele">Ndebele</option>
-                     <option value="kirundi">Kirundi</option>
-                     <option value="portuguese">Portuguese</option>
-                     <option value="lingala">Lingala</option>
-                     <option value="kinyarwanda">Kinyarwanda</option>
-                     <option value="luganda">Luganda</option>
-                     <option value="twi">Twi</option>
-                     <option value="shona">Shona</option>
-                     <option value="sesotho">Sesotho</option>
-                     <option value="bemba">Bemba</option>
-                     <option value="wolof">Wolof</option>
+                      <option value="french">French</option>
+                      <option value="twi">Twi</option>
+                      <option value="ewe">Ewe</option>
+                      <option value="fante">Fante</option>
+                      <option value="ga">Ga</option>
                     </select>
                     <p className="text-xs mt-1 text-navy">
                       {getTranslation('controlsMenus')}
@@ -720,31 +666,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       <option value="english">English</option>
                       <option value="setswana">Setswana</option>
-                      <option value="swahili">Swahili</option>
-                      <option value="zulu">Zulu</option>
                       <option value="french">French</option>
-                     <option value="xhosa">Xhosa</option>
-                     <option value="afrikaans">Afrikaans</option>
-                     <option value="yoruba">Yoruba</option>
-                     <option value="igbo">Igbo</option>
-                     <option value="hausa">Hausa</option>
-                     <option value="amharic">Amharic</option>
-                     <option value="arabic">Arabic</option>
-                     <option value="portuguese">Portuguese</option>
-                     <option value="lingala">Lingala</option>
-                     <option value="kinyarwanda">Kinyarwanda</option>
-                     <option value="luganda">Luganda</option>
-                     <option value="twi">Twi</option>
-                     <option value="shona">Shona</option>
-                     <option value="sesotho">Sesotho</option>
-                     <option value="bemba">Bemba</option>
-                     <option value="wolof">Wolof</option>
-                     <option value="malagasy">Malagasy</option>
-                     <option value="somali">Somali</option>
-                     <option value="oromo">Oromo</option>
-                     <option value="tigrinya">Tigrinya</option>
-                     <option value="ndebele">Ndebele</option>
-                     <option value="kirundi">Kirundi</option>
+                      <option value="twi">Twi</option>
+                      <option value="ewe">Ewe</option>
+                      <option value="fante">Fante</option>
+                      <option value="ga">Ga</option>
                     </select>
                     <p className="text-xs mt-1 text-navy">
                       {getTranslation('uhuruWillRespond')}

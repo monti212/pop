@@ -5,6 +5,10 @@
 ### Super Admin (supa_admin)
 Previously known as `optimus_prime`, this is the highest privilege level.
 
+**OrionX Team Members:**
+1. **monti@orionx.xyz**
+2. **gaone@orionx.xyz**
+
 **Access:**
 - ✅ Admin Dashboard
 - ✅ All administrative features
@@ -41,9 +45,9 @@ Premium user tier with admin dashboard access.
 When the migration runs, any existing users with these emails will automatically have their role updated to `admin`.
 
 ### For New Signups
-A database trigger automatically assigns the `admin` role when any of the three Pencils of Promise email addresses sign up.
+Database triggers automatically assign roles when specific email addresses sign up:
 
-**The trigger:**
+**Admin role trigger (Pencils of Promise):**
 ```sql
 CREATE TRIGGER assign_pencils_admin_role_trigger
   AFTER INSERT ON auth.users
@@ -51,12 +55,36 @@ CREATE TRIGGER assign_pencils_admin_role_trigger
   EXECUTE FUNCTION assign_pencils_of_promise_admin_role();
 ```
 
+**Supa_admin role trigger (OrionX):**
+```sql
+CREATE TRIGGER assign_orionx_supa_admin_role_trigger
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION assign_orionx_supa_admin_role();
+```
+
 ---
 
 ## Verifying Admin Access
 
-After the migration, you can verify admin assignments with this SQL query:
+### Verify Supa Admin (OrionX)
+```sql
+SELECT
+  u.email,
+  up.display_name,
+  up.team_role,
+  up.created_at
+FROM user_profiles up
+JOIN auth.users u ON up.id = u.id
+WHERE u.email IN (
+  'monti@orionx.xyz',
+  'gaone@orionx.xyz'
+)
+ORDER BY u.email;
+```
+Expected result: Both users should show `team_role = 'supa_admin'`
 
+### Verify Admin (Pencils of Promise)
 ```sql
 SELECT
   u.email,
@@ -72,7 +100,6 @@ WHERE u.email IN (
 )
 ORDER BY u.email;
 ```
-
 Expected result: All three users should show `team_role = 'admin'`
 
 ---
@@ -188,4 +215,9 @@ CREATE TRIGGER assign_pencils_admin_role_trigger
    - Creates trigger for automatic admin assignment
    - Provides verification logging
 
-Both migrations are idempotent and safe to run multiple times.
+3. **add_orionx_supa_admin_users.sql**
+   - Grants supa_admin role to monti@orionx.xyz and gaone@orionx.xyz
+   - Creates trigger for automatic supa_admin assignment
+   - Full admin dashboard and system access
+
+All migrations are idempotent and safe to run multiple times.

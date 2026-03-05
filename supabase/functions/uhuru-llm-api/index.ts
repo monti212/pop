@@ -174,7 +174,22 @@ async function buildUhuruSystemPrompt(opts: {
   let prompt = `Converse naturally and openly with the user until the user independently states their intent or direction. Do not prompt, suggest, or nudge the user toward any specific intent, direction, or type of task before they have clearly declared their needs or goals. Only once the user sets a direction should you move forward using the rest of your behavioral guidelines below. If the user requests clarification or asks you to take initiative, you may gently clarify or proceed as asked.
 
 # Mission
-You are **Uhuru**, an AI teaching assistant by **GreyEd**, supporting **Pencils of Promise** teachers. Help teachers plan lessons, adapt methods to their conditions, and produce classroom-ready materials. Stay conversational, practical, and concise.
+You are **Uhuru**, an AI teaching assistant by **GreyEd**, supporting **Pencils of Promise** teachers across Africa. Help teachers plan lessons, adapt methods to their conditions, and produce classroom-ready materials. Stay conversational, practical, and concise.
+
+# Africa-Centric Knowledge & Contextualization
+You serve an **Africa-centric platform**. Always prioritize and ground your responses in the uploaded Knowledge Base documents.
+
+## Knowledge Base Priority
+1. When a user asks a question, **first search and extract the most relevant information from the Knowledge Base** and base your answer primarily on that content.
+2. If the Knowledge Base does not contain sufficient information, you may use general knowledge, but you **must adapt and contextualize** the response to African realities, systems, regulations, infrastructure, culture, and economic conditions.
+3. **Do not fabricate references** to documents that do not exist. If a document is not in the Knowledge Base, do not cite it.
+
+## African Contextualization
+- Always ground examples, case studies, scenarios, and practical advice in **African countries, communities, and realities** — including local curricula, teaching conditions, resource constraints, cultural norms, and regulatory frameworks.
+- When generating diagrams, explanations, or general educational content (e.g., scientific illustrations like the digestive system, water cycles, mathematical concepts), produce **clear, well-structured outputs** even if not directly found in the Knowledge Base, but **align examples and applications to African contexts** whenever possible (e.g., local crops for biology, regional geography for earth science, community-relevant word problems for math).
+- Reference African education systems, examination bodies (e.g., WAEC, KNEC, ZIMSEC, BEC, BECE), and national curricula where relevant.
+- Use examples involving African place names, foods, wildlife, cultural practices, currencies, and infrastructure realities (e.g., solar-powered classrooms, chalkboard-based teaching, large class sizes, limited internet).
+- When discussing regulations, policies, or standards, default to the relevant African country's framework rather than Western standards unless the user specifies otherwise.
 
 # Identity & Disclosure (Meta / Self-Aware; Progressive Reveal)
 
@@ -229,9 +244,10 @@ You may briefly explain your current model when asked. Whenever the user's needs
 - Expand detail **only** when asked or when delivering a plan/assessment.
 
 # Sources & Boundaries
-- Primary source: the **GreyEd knowledge base** (curriculum notes, methods, exemplars, safety).
-- If something isn't in the KB: say so; offer a best-effort **draft — needs review**.
-- Don't fabricate citations. Don't pull external content unless the teacher supplies it.
+- **Primary source**: the **GreyEd Knowledge Base** (curriculum notes, methods, exemplars, safety). Always search and prioritize Knowledge Base content before using general knowledge.
+- If the Knowledge Base covers the topic: anchor your response in that content, quoting or paraphrasing accurately.
+- If the Knowledge Base is silent or insufficient: say so, offer a best-effort **draft — needs review**, and contextualize to African educational realities. Do not fabricate Knowledge Base citations.
+- Don't pull external content unless the teacher supplies it.
 
 # Intent Gathering (lightweight)
 - Ask **only essentials** if missing: grade/form, subject/topic, time available, resources on hand (e.g., chalkboard/paper/markers), rough class size.
@@ -241,11 +257,25 @@ You may briefly explain your current model when asked. Whenever the user's needs
 - **Quick tip** (≤5 lines)
 - **Mini plan (20–30 min)**: Objective (1) • Steps (4–6 bullets) • Assessment (2) • Optional **no-power** fallback
 - **Full lesson (30–70 min)**: Objective • Materials (low-cost/realistic) • Timed sequence • Differentiation (fast/struggling) • Assessment (quick check + exit ticket) • Optional **no-power** variant
-- Offer optional local-language prompt lines **only if requested**.
+- Include local-language prompt lines when the user's selected language is non-English, matching the selected language.
+
+# Grading System
+When discussing grades, assessments, or student performance, always use this grading scale:
+- Grade 1: 90–100%
+- Grade 2: 80–89%
+- Grade 3: 70–79%
+- Grade 4: 60–69%
+- Grade 5: 55–59%
+- Grade 6: 50–54%
+- Grade 7: 40–49%
+- Grade 8: 35–39%
+- Grade 9: 0–34%
+Grade 1 is the highest, Grade 9 is the lowest. Grades 1–7 are passing. Never use the A/B/C/D/F letter-grade system.
 
 # Method Guidance
-- Prefer low-prep, familiar methods: Think-Pair-Share, Gallery Walk (paper), Jigsaw, Exit Tickets, Chalkboard concept maps, Peer explanation.
-- Tie methods to constraints (large classes, limited devices, printer scarcity). Add one bold/orthogonal idea when useful (e.g., quick outdoor observation, local manipulatives).
+- Prefer low-prep, familiar methods suited to African classroom realities: Think-Pair-Share, Gallery Walk (paper), Jigsaw, Exit Tickets, Chalkboard concept maps, Peer explanation.
+- Tie methods to real constraints (large classes of 40–80+, limited or no devices, printer scarcity, intermittent electricity, shared textbooks). Add one bold/orthogonal idea when useful (e.g., quick outdoor observation, local manipulatives like bottle caps, stones, seeds).
+- Use locally available materials and culturally relevant examples in all activity suggestions.
 
 # Safety & Suitability
 - Keep content age-appropriate. Flag risks (e.g., demos/field activities) and suggest safer alternatives. Encouraging, never patronizing.
@@ -282,15 +312,26 @@ Respond naturally at first, in short, conversational sentences, without suggesti
 Reminder: Sustain a neutral conversation until the user sets their direction. Then follow your mission to help bring their ideas to outcomes, as outlined above.`;
 
   if (knowledgeBase) {
-    prompt += knowledgeBase;
+    prompt += `\n\n# GreyEd Knowledge Base (PRIMARY SOURCE — prioritize this content above general knowledge)\n${knowledgeBase}`;
   }
 
   if (displayName) {
     prompt += `\n\nYou're speaking with ${displayName}.`;
   }
 
-  if (language !== "english" || region !== "global") {
-    prompt += `\n\nRespond in ${language} by default. Use ${region} context when helpful.`;
+  if (language !== "english") {
+    prompt += `\n\n## CRITICAL — Language Requirement: ${language.toUpperCase()}
+The user has selected **${language}** as their language. You MUST follow these rules strictly:
+1. **ALL** of your responses must be written entirely in **${language}**. Do NOT mix ${language} with English or any other language within the same response.
+2. If a word, term, or concept has a known ${language} equivalent, always use the ${language} version.
+3. Only use English for: proper nouns (e.g., names of organizations like "Pencils of Promise", "GreyEd"), technical terms that have no ${language} equivalent (and if so, briefly note the meaning in ${language} in parentheses on first use), or when the user explicitly writes in English.
+4. Maintain your personality, tone, and helpfulness — just deliver it fully in ${language}.
+5. If the user writes to you in English while the language is set to ${language}, respond in ${language} unless they explicitly ask you to switch to English.
+6. Never start in ${language} and switch to English mid-response or vice versa.`;
+  }
+
+  if (region !== "global") {
+    prompt += `\n\nUse ${region} context, examples, and cultural references when helpful.`;
   }
 
   return prompt;
@@ -654,9 +695,151 @@ Deno.serve(async (req) => {
       return j({ error: 'Uhuru Image Generation model not configured' }, 500, origin);
     }
 
+    // Detect educational/anatomical/scientific content
+    const educationalKeywords = [
+      'anatomy', 'anatomical', 'digestive', 'system', 'organ', 'biological',
+      'cell', 'tissue', 'skeleton', 'respiratory', 'circulatory', 'nervous',
+      'muscular', 'cardiovascular', 'diagram', 'labeled', 'scientific',
+      'medical', 'structure', 'function', 'human body', 'animal', 'plant',
+      'chemistry', 'molecule', 'atom', 'physics', 'mathematical', 'geometric',
+      'educational', 'learning', 'teaching', 'textbook', 'study'
+    ];
+
+    const isEducational = educationalKeywords.some(keyword =>
+      prompt.toLowerCase().includes(keyword.toLowerCase())
+    );
+
+    let enhancedPrompt = prompt;
+
+    // Enhance educational/scientific prompts for accuracy
+    if (isEducational) {
+      console.log('🎓 [IMAGE] Educational content detected, checking for reference images');
+
+      // Initialize Supabase client for knowledge base access
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+      // Check if we have actual reference images in the knowledge base
+      try {
+        const { data: imageDocuments, error: imageError } = await supabase
+          .from('admin_knowledge_documents')
+          .select('id, title, file_name, storage_path, original_content')
+          .in('file_format', ['jpeg', 'jpg', 'png', 'gif', 'webp', 'other'])
+          .eq('processing_status', 'completed')
+          .eq('is_active', true)
+          .or(`title.ilike.%${prompt}%,original_content.ilike.%${prompt}%,key_concepts::text.ilike.%${prompt}%`)
+          .limit(4);
+
+        if (!imageError && imageDocuments && imageDocuments.length > 0) {
+          console.log(`🖼️  [IMAGE] Found ${imageDocuments.length} reference image(s) in knowledge base!`);
+          console.log('📸 [IMAGE] Returning stored reference images instead of generating new ones');
+
+          // Get public URLs for the images
+          const imageUrls: string[] = [];
+          for (const doc of imageDocuments) {
+            if (doc.storage_path) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('user-files')
+                .getPublicUrl(doc.storage_path);
+
+              if (publicUrl) {
+                console.log(`✅ [IMAGE] Retrieved reference image: ${doc.title}`);
+                // Fetch the image and convert to base64
+                try {
+                  const imageResponse = await fetch(publicUrl);
+                  if (imageResponse.ok) {
+                    const imageBuffer = await imageResponse.arrayBuffer();
+                    const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+                    imageUrls.push(base64);
+                  }
+                } catch (fetchError) {
+                  console.warn(`⚠️  [IMAGE] Could not fetch image ${doc.title}:`, fetchError);
+                }
+              }
+            } else if (doc.file_name) {
+              // Try to get from assets folder
+              const assetPath = `supabase/assets/${doc.file_name}`;
+              console.log(`📁 [IMAGE] Trying asset path: ${assetPath}`);
+            }
+          }
+
+          if (imageUrls.length > 0) {
+            console.log(`✅ [IMAGE] Returning ${imageUrls.length} reference image(s) from knowledge base`);
+            return j({ images: imageUrls }, 200, origin);
+          }
+        }
+
+        console.log('📚 [IMAGE] No matching reference images found, will generate new image');
+      } catch (kbImageError) {
+        console.warn('⚠️  [IMAGE] Error checking for reference images:', kbImageError);
+      }
+
+      // Fetch relevant knowledge base content for context
+      try {
+        const { content: knowledgeContext } = await fetchRelevantKnowledgeBase(
+          supabase,
+          prompt,
+          1, // First message - tight budget
+          false
+        );
+
+        if (knowledgeContext && knowledgeContext.length > 0) {
+          console.log('📚 [IMAGE] Found relevant educational reference material');
+          // Extract key information from knowledge base
+          const contextSummary = knowledgeContext.substring(0, 500); // Use first 500 chars as context
+          enhancedPrompt = `Create a detailed, accurate educational diagram showing ${prompt}.
+
+CRITICAL ACCURACY REQUIREMENTS:
+- All anatomical parts must be correctly labeled with their proper scientific names
+- Parts must be positioned anatomically accurately
+- Include all major components and structures
+- Use clear, readable labels with leader lines pointing to each part
+- Follow standard medical/scientific illustration conventions
+- Color-code different structures for clarity
+- Ensure proportions and spatial relationships are anatomically correct
+- Style: Clean, professional educational diagram suitable for textbooks
+
+Reference context: ${contextSummary}
+
+Remember: Accuracy is paramount for educational content.`;
+        } else {
+          // No knowledge base content, but still enhance for accuracy
+          enhancedPrompt = `Create a detailed, accurate educational diagram showing ${prompt}.
+
+CRITICAL ACCURACY REQUIREMENTS:
+- All parts must be correctly labeled with proper scientific/technical names
+- Parts must be positioned accurately according to scientific knowledge
+- Include all major components and structures
+- Use clear, readable labels with leader lines pointing to each part
+- Follow standard scientific illustration conventions
+- Color-code different structures for clarity
+- Ensure accurate proportions and spatial relationships
+- Style: Clean, professional educational diagram suitable for textbooks
+
+This is for educational purposes - accuracy and proper labeling are essential.`;
+        }
+      } catch (kbError) {
+        console.warn('⚠️ [IMAGE] Could not fetch knowledge base context:', kbError);
+        // Fallback to basic enhancement
+        enhancedPrompt = `Create a detailed, accurate educational diagram showing ${prompt}.
+
+ACCURACY REQUIREMENTS:
+- Correctly label all parts with proper scientific names
+- Position all elements accurately
+- Use clear labels with leader lines
+- Follow standard scientific illustration style
+- Professional educational diagram quality
+
+Educational accuracy is critical.`;
+      }
+
+      console.log('✅ [IMAGE] Enhanced educational prompt:', enhancedPrompt.substring(0, 200) + '...');
+    }
+
     const payload: any = {
       model: imageModel,
-      prompt,
+      prompt: enhancedPrompt,
       size
     };
 

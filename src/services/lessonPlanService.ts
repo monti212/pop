@@ -62,10 +62,12 @@ export const autoSaveLessonPlan = async (
       };
     }
 
-    // Format title with date: date_Title format
+    // Format title with date: YYYY-MM-DD_Title format
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const formattedTitle = `${dateStr}_${lessonPlan.title}`;
+    const formattedTitle = lessonPlan.title.match(/^\d{4}-\d{2}-\d{2}_/)
+      ? lessonPlan.title
+      : `${dateStr}_${lessonPlan.title}`;
 
     const filename = generateLessonPlanFilename(lessonPlan);
     const timestamp = Date.now();

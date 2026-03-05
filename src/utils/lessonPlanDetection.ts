@@ -127,25 +127,43 @@ export const detectLessonPlan = (content: string): LessonPlanData => {
  * Extract title from content
  */
 const extractTitle = (content: string): string => {
-  // Try to find explicit title
+  // Priority 1: Try to find Topic/Subject (most specific)
+  const subjectMatch = content.match(SECTION_PATTERNS.subject);
+  if (subjectMatch && subjectMatch[1]) {
+    const subject = subjectMatch[1].trim();
+    // Clean up common prefixes/formatting
+    return subject
+      .replace(/^[:\-\s]+/, '')
+      .replace(/\*\*/g, '')
+      .trim();
+  }
+
+  // Priority 2: Try to find explicit title
   const titleMatch = content.match(SECTION_PATTERNS.title);
   if (titleMatch && titleMatch[1]) {
     return titleMatch[1].trim();
   }
 
-  // Try to find first heading
+  // Priority 3: Try to find first heading that looks like a topic
   const headingMatch = content.match(/^#+\s*(.+)/m);
   if (headingMatch && headingMatch[1]) {
-    return headingMatch[1].trim();
+    const heading = headingMatch[1].trim();
+    // Skip generic headings
+    if (!heading.toLowerCase().includes('lesson plan') && heading.length < 100) {
+      return heading;
+    }
   }
 
-  // Try to extract from first line if it looks like a title
+  // Priority 4: Try to extract from first line if it looks like a title
   const lines = content.split('\n').filter(line => line.trim());
   if (lines.length > 0) {
     const firstLine = lines[0].trim();
     // If first line is short and doesn't have common markdown, use it as title
     if (firstLine.length < 100 && !firstLine.includes('|') && !firstLine.includes('```')) {
-      return firstLine.replace(/^#+\s*/, '').trim();
+      const cleanLine = firstLine.replace(/^#+\s*/, '').trim();
+      if (!cleanLine.toLowerCase().includes('lesson plan') && cleanLine.length > 0) {
+        return cleanLine;
+      }
     }
   }
 

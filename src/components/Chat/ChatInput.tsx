@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, X, Image, Search, PenTool as Tool, FileText, RefreshCw, FolderOpen, ChevronUp, ChevronDown, Mic, MicOff } from 'lucide-react';
 import { UserFile } from '../../services/fileService';
@@ -85,6 +85,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const imageModelSelectorBtnRef = useRef<HTMLButtonElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
+  const baseMessageRef = useRef<string>('');
   
   // Document upload limit
   const MAX_DOCUMENTS = 10;
@@ -424,37 +425,38 @@ const ChatInput: React.FC<ChatInputProps> = ({
     if (typeof window !== 'undefined') {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
+        const isAndroid = /android/i.test(navigator.userAgent);
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
+        // Android Chrome freezes with continuous=true; use single-shot mode instead
+        recognitionRef.current.continuous = !isAndroid;
         recognitionRef.current.interimResults = true;
         recognitionRef.current.lang = 'en-US';
         
         recognitionRef.current.onresult = (event: any) => {
-          let finalTranscript = '';
+          let fullFinal = '';
           let interimText = '';
-          
-          // Process all results
-          for (let i = event.resultIndex; i < event.results.length; i++) {
+
+          // Rebuild the complete transcript from ALL results (index 0)
+          // to avoid duplication from overlapping resultIndex values
+          for (let i = 0; i < event.results.length; i++) {
             const result = event.results[i];
             if (result.isFinal) {
-              finalTranscript += result[0].transcript;
+              fullFinal += result[0].transcript;
             } else {
               interimText += result[0].transcript;
             }
           }
-          
+
           // Update interim transcript for real-time display
           setInterimTranscript(interimText);
-          
-          // Append final transcript to message
-          if (finalTranscript) {
-            setMessage(prev => {
-              const newMessage = prev ? `${prev} ${finalTranscript}` : finalTranscript;
-              // Trigger textarea resize after state update
-              setTimeout(adjustTextareaHeight, 0);
-              return newMessage;
-            });
-          }
+
+          // Set message to base text + all finalized transcript so far
+          const base = baseMessageRef.current;
+          const newMessage = base
+            ? `${base} ${fullFinal}`.trim()
+            : fullFinal.trim();
+          setMessage(newMessage);
+          setTimeout(adjustTextareaHeight, 0);
         };
         
         recognitionRef.current.onerror = (event: any) => {
@@ -482,16 +484,47 @@ const ChatInput: React.FC<ChatInputProps> = ({
         };
         
         recognitionRef.current.onend = () => {
-          // Commit any remaining interim transcript
-          if (interimTranscript) {
-            setMessage(prev => prev ? `${prev} ${interimTranscript}` : interimTranscript);
+          // Only commit remaining interim text that never became final
+          setInterimTranscript(prev => {
+            if (prev.trim()) {
+              setMessage(current => current ? `${current} ${prev.trim()}` : prev.trim());
+            }
+            return '';
+          });
+
+          // On Android (non-continuous mode), auto-restart if user hasn't stopped
+          const isAndroidDevice = /android/i.test(navigator.userAgent);
+          if (isAndroidDevice && !userStoppedListening && recognitionRef.current) {
+            try {
+              // Update base to include everything accumulated so far
+              setMessage(current => {
+                baseMessageRef.current = current;
+                return current;
+              });
+              recognitionRef.current.start();
+              return; // Don't reset isListening — keep the mic active
+            } catch (e) {
+              // If restart fails, fall through to stop
+            }
           }
+
           setIsListening(false);
           setUserStoppedListening(false);
-          setInterimTranscript('');
+          setTimeout(adjustTextareaHeight, 0);
         };
       }
     }
+
+    // Cleanup: stop recognition if active when component unmounts
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {
+          // ignore — may not be started
+        }
+      }
+    };
   }, []);
   
   // Helper function to request microphone permission
@@ -523,17 +556,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
   // Handle microphone click
   const handleMicrophoneClick = async () => {
     if (isListening) {
-      // Stop listening
-      // Commit any interim transcript before stopping
-      if (interimTranscript) {
-        setMessage(prev => prev ? `${prev} ${interimTranscript}` : interimTranscript);
-        setInterimTranscript('');
-      }
+      // Stop listening - let onend handler commit any remaining transcript
       setUserStoppedListening(true);
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
-      setIsListening(false);
+      // isListening will be set to false by onend handler
     } else {
       // Start listening
       setUserStoppedListening(false);
@@ -547,6 +575,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
         }
         
         try {
+          // Save current message as the base before recording starts
+          baseMessageRef.current = message;
           recognitionRef.current.start();
           setIsListening(true);
           
@@ -818,6 +848,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     }}
                     placeholder="e.g., A serene African sunset over the savanna..."
                     disabled={isGeneratingImage}
+                    autoCapitalize="none"
                     className="w-full px-3 py-2 border border-[#f5b233]/40 rounded-lg bg-white text-sm focus:ring-2 focus:ring-[#f5b233] focus:border-[#f5b233] transition-all disabled:opacity-60"
                   />
                   <div className="flex items-center justify-between mt-1">
@@ -911,6 +942,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             placeholder=""
             rows={1}
             disabled={isTyping || isListening || isGeneratingImage}
+            autoCapitalize="none"
             className="flex-1 py-3 sm:py-4 px-4 bg-transparent border-0 focus:ring-0 focus:outline-none resize-none text-sm text-black disabled:opacity-60 transition-all duration-200"
             style={{
               fontSize: '16px',
@@ -1017,37 +1049,55 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
       {/* Uploaded Files Display - Behind chat input */}
       {selectedFiles.length > 0 && (
-        <div className="absolute left-4 flex gap-2" style={{ bottom: '-32px', zIndex: -1 }}>
-          {selectedFiles.map((file, index) => {
-            const isImage = file.type.startsWith('image/');
-            const preview = isImage ? URL.createObjectURL(file) : null;
-
-            return (
-              <div
-                key={index}
-                className="relative w-24 h-10 rounded-t-lg border border-b-0 border-borders bg-white shadow-sm overflow-hidden"
-                style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }}
-              >
-                {preview ? (
-                  <img src={preview} alt={file.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex items-center justify-center h-full bg-gray-50">
-                    <FileText className="w-5 h-5 text-gray-400" />
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFile(index)}
-                  className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md transition-colors"
-                  title="Remove file"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <FilePreviewThumbnails files={selectedFiles} onRemove={handleRemoveFile} />
       )}
+    </div>
+  );
+};
+
+/**
+ * Extracted component for file preview thumbnails.
+ * Creates blob URLs via useMemo and revokes them on cleanup to prevent memory leaks.
+ */
+const FilePreviewThumbnails: React.FC<{ files: File[]; onRemove: (index: number) => void }> = ({ files, onRemove }) => {
+  // Create stable blob URLs and revoke on change/unmount
+  const previews = useMemo(() => {
+    return files.map(file =>
+      file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+    );
+  }, [files]);
+
+  useEffect(() => {
+    return () => {
+      previews.forEach(url => { if (url) URL.revokeObjectURL(url); });
+    };
+  }, [previews]);
+
+  return (
+    <div className="absolute left-4 flex gap-2" style={{ bottom: '-32px', zIndex: -1 }}>
+      {files.map((file, index) => (
+        <div
+          key={index}
+          className="relative w-24 h-10 rounded-t-lg border border-b-0 border-borders bg-white shadow-sm overflow-hidden"
+          style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }}
+        >
+          {previews[index] ? (
+            <img src={previews[index]!} alt={file.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gray-50">
+              <FileText className="w-5 h-5 text-gray-400" />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md transition-colors"
+            title="Remove file"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
     </div>
   );
 };

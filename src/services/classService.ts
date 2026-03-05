@@ -335,6 +335,10 @@ export interface ClassroomOverview {
   attendanceRate: number;
   averageGrade: number;
   assignmentCount: number;
+  activeAssignments: number;
+  upcomingAssignments: number;
+  dueAssignments: number;
+  completedAssignments: number;
   behaviorLogCount: number;
   lastAttendanceDate: string | null;
   recentActivity: RecentActivity[];
@@ -362,7 +366,7 @@ export const getClassroomOverview = async (
     // Fetch all data in parallel for maximum performance
     const [
       classResult,
-      assignmentCountResult,
+      assessmentsResult,
       behaviorLogCountResult,
       avgGradeDataResult,
       attendanceDatesResult,
@@ -372,9 +376,9 @@ export const getClassroomOverview = async (
       recentBehaviorResult
     ] = await Promise.all([
       getClassById(classId),
-      supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('class_id', classId),
+      supabase.from('class_assessments').select('id, status').eq('class_id', classId),
       supabase.from('student_behavior_logs').select('*', { count: 'exact', head: true }).eq('class_id', classId),
-      supabase.from('student_grades').select('percentage_grade').eq('class_id', classId),
+      supabase.from('student_grades').select('percentage').eq('class_id', classId),
       supabase.from('attendance_records').select('attendance_date').eq('class_id', classId).order('attendance_date', { ascending: false }).limit(1),
       supabase.rpc('calculate_class_attendance_rate', { p_class_id: classId, p_start_date: null, p_end_date: null }),
       supabase.from('attendance_records').select('attendance_date, recorded_at').eq('class_id', classId).order('recorded_at', { ascending: false }).limit(3),
@@ -390,7 +394,7 @@ export const getClassroomOverview = async (
     }
 
     const classData = classResult.data;
-    const { count: assignmentCount } = assignmentCountResult;
+    const { data: assessments } = assessmentsResult;
     const { count: behaviorLogCount } = behaviorLogCountResult;
     const { data: avgGradeData } = avgGradeDataResult;
     const { data: attendanceDates } = attendanceDatesResult;
@@ -399,8 +403,35 @@ export const getClassroomOverview = async (
     const { data: recentGrades } = recentGradesResult;
     const { data: recentBehavior } = recentBehaviorResult;
 
+    // Calculate assessment statistics from class_assessments table
+    let activeAssignments = 0;
+    let upcomingAssignments = 0;
+    let dueAssignments = 0;
+    let completedAssignments = 0;
+
+    if (assessments && assessments.length > 0) {
+      assessments.forEach(assessment => {
+        switch (assessment.status) {
+          case 'active':
+            activeAssignments++;
+            break;
+          case 'upcoming':
+            upcomingAssignments++;
+            break;
+          case 'due':
+            dueAssignments++;
+            break;
+          case 'completed':
+            completedAssignments++;
+            break;
+        }
+      });
+    }
+
+    const assignmentCount = assessments?.length || 0;
+
     const averageGrade = avgGradeData && avgGradeData.length > 0
-      ? avgGradeData.reduce((sum, g) => sum + (g.percentage_grade || 0), 0) / avgGradeData.length
+      ? avgGradeData.reduce((sum, g) => sum + (g.percentage || 0), 0) / avgGradeData.length
       : 0;
 
     const lastAttendanceDate = attendanceDates && attendanceDates.length > 0
@@ -459,6 +490,10 @@ export const getClassroomOverview = async (
         attendanceRate: rateData || 0,
         averageGrade: Math.round(averageGrade * 10) / 10,
         assignmentCount: assignmentCount || 0,
+        activeAssignments,
+        upcomingAssignments,
+        dueAssignments,
+        completedAssignments,
         behaviorLogCount: behaviorLogCount || 0,
         lastAttendanceDate,
         recentActivity: recentActivity.slice(0, 5)

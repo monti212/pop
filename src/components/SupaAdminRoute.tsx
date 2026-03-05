@@ -8,7 +8,7 @@ const SupaAdminRoute: React.FC = () => {
 
   useEffect(() => {
     if (!isLoading) {
-      if (user && user.email === 'monti@orionx.xyz') {
+      if (user && (user.email === 'monti@orionx.xyz' || user.email === 'gaone@orionx.xyz')) {
         setHasAccess(true);
       } else {
         setHasAccess(false);

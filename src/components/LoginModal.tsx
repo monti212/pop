@@ -40,7 +40,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
     setError('');
     
     if (!formData.email.trim() || !formData.password) {
-      setError('I need both your email and password to sign you in.');
+      setError('I need both your email/username and password to sign you in.');
       return;
     }
     
@@ -239,18 +239,18 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
 
               <div>
                 <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Email
+                  Email or Username
                 </label>
                 <div className="relative">
                   <input
                     id="email"
                     name="email"
-                    type="email"
+                    type="text"
                     required
                     value={formData.email}
                     onChange={handleChange}
                     className="w-full pl-10 pr-3 py-3 rounded-xl border border-[#0170b9]/20 bg-white text-[#002F4B] focus:ring-2 focus:ring-[#0170b9] focus:border-transparent text-sm transition-all shadow-sm"
-                    placeholder="your@email.com"
+                    placeholder="your@email.com or username"
                     style={{ fontSize: '16px' }}
                   />
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />

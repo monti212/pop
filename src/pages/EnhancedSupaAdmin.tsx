@@ -498,6 +498,14 @@ export default function EnhancedSupaAdmin() {
                   <StatRow icon={Calendar} label="Active This Month" value={formatNumber(metrics.activeUsersMonth)} color="#8B5CF6" />
                   <StatRow icon={Clock} label="Avg Response Time" value={`${metrics.avgResponseTime}ms`} color="#6366F1" />
                 </div>
+
+                <Link
+                  to="/supa-admin/error-logs"
+                  className="mt-6 w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
+                >
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                  <span className="font-medium text-red-700">View Error Logs</span>
+                </Link>
               </div>
             </div>
 

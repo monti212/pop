@@ -111,7 +111,7 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({
   useEffect(() => {
     const loadPreferences = async () => {
       if (!user) return;
-      
+
       setIsLoading(true);
       try {
         const { data, error } = await supabase
@@ -119,9 +119,18 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({
           .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
-        
-        if (error) throw error;
-        
+
+        if (error) {
+          console.error('Error loading privacy preferences:', error);
+          // Only show error for actual database errors, not missing records
+          if (error.code !== 'PGRST116') {
+            setSaveError('Unable to load privacy settings. Using defaults.');
+            // Clear error after 3 seconds
+            setTimeout(() => setSaveError(null), 3000);
+          }
+        }
+
+        // If data exists, use it; otherwise keep the defaults
         if (data) {
           setPreferences({
             share_data: data.share_data,
@@ -133,13 +142,12 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({
         }
       } catch (error) {
         console.error('Error loading privacy preferences:', error);
-        setSaveError('Uhuru could not load your privacy preferences. Please try again.');
-        setSaveError('I couldn\'t load your privacy settings. Want to try again?');
+        // Use default preferences on error
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     loadPreferences();
   }, [user]);
 
@@ -152,10 +160,10 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({
 
   const handleSave = async () => {
     if (!user) return;
-    
+
     setIsSaving(true);
     setSaveError(null);
-    
+
     try {
       const { error } = await supabase
         .from('privacy_preferences')
@@ -170,19 +178,18 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({
         }, {
           onConflict: 'user_id'
         });
-      
+
       if (error) throw error;
-      
+
       setSaveSuccess(true);
       if (onSaveSuccess) onSaveSuccess();
-      
+
       setTimeout(() => {
         setSaveSuccess(false);
       }, 3000);
     } catch (error: any) {
       console.error('Error saving privacy preferences:', error);
-      setSaveError(error.message || 'Uhuru could not save your privacy preferences. Please try again.');
-      setSaveError(error.message || 'Privacy settings aren\'t saving right now. Try again?');
+      setSaveError(error.message || 'Unable to save privacy settings. Please try again.');
     } finally {
       setIsSaving(false);
     }

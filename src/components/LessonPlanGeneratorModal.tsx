@@ -254,6 +254,8 @@ Please create a comprehensive lesson plan that:
 6. Considers collaboration preferences for group activities
 7. Adapts to the different work paces
 
+IMPORTANT: Start your lesson plan with a "# Topic:" or "## Topic:" heading that clearly states the topic "${formData.topic}".
+
 Include:
 - Learning objectives
 - Materials needed

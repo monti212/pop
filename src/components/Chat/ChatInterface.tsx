@@ -13,6 +13,7 @@ import RegionSelector from '../RegionSelector';
 import FilesBrowser from './FilesBrowser';
 import SettingsModal from '../Settings/SettingsModal';
 import ImageGenerationLoader from '../ImageGenerationLoader';
+import LoadingInsights from './LoadingInsights';
 import Particles from '../Particles';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -69,6 +70,7 @@ export default function ChatInterface({
   const [editingUserMessage, setEditingUserMessage] = useState<{ content: string; index: number; id?: string } | null>(null);
   const [showUserCancellationMessage, setShowUserCancellationMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUserMessage, setLastUserMessage] = useState<string>('');
   
   // Image generation state
   const [showImageInput, setShowImageInput] = useState(false);
@@ -288,11 +290,18 @@ export default function ChatInterface({
     }
   }, [currentConversation, conversations]);
 
-  // Save chat state backup periodically
+  // Save chat state backup — debounced to avoid thrashing sessionStorage during streaming
+  const backupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (currentConversation && currentConversation.messages.length > 0) {
-      saveChatStateBackup(currentConversation);
+      if (backupTimerRef.current) clearTimeout(backupTimerRef.current);
+      backupTimerRef.current = setTimeout(() => {
+        saveChatStateBackup(currentConversation);
+      }, 2000);
     }
+    return () => {
+      if (backupTimerRef.current) clearTimeout(backupTimerRef.current);
+    };
   }, [currentConversation]);
 
   // Clear backup on successful unmount (user navigated away intentionally)
@@ -556,6 +565,10 @@ export default function ChatInterface({
     }
   };
 
+  // Refs for batching UI updates
+  const pendingDeltaRef = useRef<string>('');
+  const updateScheduledRef = useRef<number | null>(null);
+
   const processStreamEvent = useCallback((
     type: string,
     payload: any,
@@ -568,36 +581,76 @@ export default function ChatInterface({
       const delta = payload.text ?? payload.textDelta ?? payload.delta ?? '';
       if (!delta) return;
 
-      setCurrentConversation((prev) => {
-        if (!prev) return prev;
-        const conv = { ...prev, messages: [...prev.messages] }; // Ensure messages array is new reference
+      // Accumulate delta in ref (doesn't trigger re-render)
+      pendingDeltaRef.current += delta;
 
-        if (assistantIndexRef.current === null) {
-          const localId = crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-          const msg = {
-            localId,
-            id: undefined, // Will be set when message is saved to database
-            role: 'assistant' as const,
-            content: delta,
-            isLongResponse: delta.length > LONG_RESPONSE_THRESHOLD,
-            timestamp: new Date(),
-          };
-          conv.messages = [...conv.messages, msg];
-          assistantIndexRef.current = conv.messages.length - 1;
-          assistantLocalIdRef.current = localId; // Store the local ID for deduplication
-        } else {
-          const msg = { ...conv.messages[assistantIndexRef.current] };
-          msg.content = (msg.content || '') + delta;
-          msg.isLongResponse = (msg.content?.length || 0) > LONG_RESPONSE_THRESHOLD; // Update long response flag
-          conv.messages[assistantIndexRef.current] = msg;
-        }
+      // Cancel any pending update
+      if (updateScheduledRef.current !== null) {
+        cancelAnimationFrame(updateScheduledRef.current);
+      }
 
-        return conv;
+      // Schedule update on next animation frame for smooth 60fps rendering
+      updateScheduledRef.current = requestAnimationFrame(() => {
+        const accumulatedDelta = pendingDeltaRef.current;
+        if (!accumulatedDelta) return;
+
+        pendingDeltaRef.current = ''; // Reset accumulated delta
+        updateScheduledRef.current = null;
+
+        setCurrentConversation((prev) => {
+          if (!prev) return prev;
+
+          // Create shallow copy of conversation
+          const conv = { ...prev };
+
+          if (assistantIndexRef.current === null) {
+            // First delta - create new assistant message
+            const localId = crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+            const msg = {
+              localId,
+              id: undefined,
+              role: 'assistant' as const,
+              content: accumulatedDelta,
+              isLongResponse: accumulatedDelta.length > LONG_RESPONSE_THRESHOLD,
+              timestamp: new Date(),
+            };
+            // Create new messages array with new message
+            conv.messages = [...prev.messages, msg];
+            assistantIndexRef.current = conv.messages.length - 1;
+            assistantLocalIdRef.current = localId;
+          } else {
+            // Update existing message
+            const existingMsg = prev.messages[assistantIndexRef.current];
+            const newContent = (existingMsg.content || '') + accumulatedDelta;
+            const updatedMsg = {
+              ...existingMsg,
+              content: newContent,
+              isLongResponse: newContent.length > LONG_RESPONSE_THRESHOLD,
+            };
+            // Create new messages array with updated message
+            conv.messages = [
+              ...prev.messages.slice(0, assistantIndexRef.current),
+              updatedMsg,
+              ...prev.messages.slice(assistantIndexRef.current + 1)
+            ];
+          }
+
+          return conv;
+        });
       });
     } else if (type === 'message.completed') {
       if (completionSeenRef.current) return;
       completionSeenRef.current = true;
-      
+
+      // Cancel any pending update and flush remaining deltas
+      if (updateScheduledRef.current !== null) {
+        cancelAnimationFrame(updateScheduledRef.current);
+        updateScheduledRef.current = null;
+      }
+
+      // Flush any remaining pending delta immediately
+      const finalPendingDelta = pendingDeltaRef.current;
+      pendingDeltaRef.current = '';
 
       let finalConversation: Conversation | null = null;
 
@@ -607,8 +660,9 @@ export default function ChatInterface({
 
         if (assistantIndexRef.current !== null) {
           const msg = { ...conv.messages[assistantIndexRef.current] };
-          // Use payload.text as authoritative source, only fall back to accumulated content if truly empty
-          const finalTextToUse = payload.text || msg.content || '';
+          // Add any final pending delta, then use payload.text as authoritative source if provided
+          const currentContent = (msg.content || '') + finalPendingDelta;
+          const finalTextToUse = payload.text || currentContent;
           msg.content = finalTextToUse; // Ensure final content is set
           msg.isLongResponse = (finalTextToUse.length || 0) > LONG_RESPONSE_THRESHOLD;
           conv.messages[assistantIndexRef.current] = msg;
@@ -771,6 +825,9 @@ export default function ChatInterface({
     if (!currentConversation || !user) return;
 
     const { text: message, files, isWebSearchActive } = data;
+
+    // Store user message for loading insights
+    setLastUserMessage(message);
 
     // Handle message editing (rewind functionality)
     if (editingUserMessage) {
@@ -1199,10 +1256,7 @@ export default function ChatInterface({
     );
   }, [currentConversation, user, editingUserMessage, startStreamingResponse, setCurrentConversation, updateConversation, setEditingUserMessage, setTypingState, setWebFetchingState, setAbortController, setError]);
 
-  const availableLanguages =
-    userSubscription?.tier === 'pro'
-      ? ['english', 'setswana', 'swahili', 'zulu', 'french', 'yoruba', 'igbo', 'hausa', 'amharic', 'arabic', 'portuguese', 'lingala', 'kinyarwanda', 'luganda', 'twi', 'shona', 'sesotho', 'bemba', 'wolof', 'malagasy', 'somali', 'oromo', 'tigrinya', 'ndebele', 'kirundi', 'xhosa', 'afrikaans']
-      : ['english', 'setswana', 'swahili'];
+  const availableLanguages = ['english', 'setswana', 'french', 'twi', 'ewe', 'fante', 'ga'];
 
 
   return (
@@ -1438,21 +1492,29 @@ export default function ChatInterface({
             </div>
           )}
 
-          {/* Crafting indicator - positioned above chat input */}
+          {/* Loading insights - positioned above chat input */}
           {(typingState.isTyping || webFetchingState.isFetching) && currentConversation?.messages.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
-              className="flex-shrink-0 px-3 sm:px-6 pb-2"
+              className="flex-shrink-0 px-3 sm:px-6 pb-3"
             >
-              <div className="max-w-4xl mx-auto flex justify-start">
-                <div className="ml-2">
-                  <span className="text-sm text-[#0170b9] font-medium">
-                    Crafting response...
-                  </span>
+              <div className="max-w-4xl mx-auto">
+                {/* Crafting response indicator */}
+                <div className="flex justify-start mb-2">
+                  <div className="ml-2">
+                    <span className="text-sm text-[#0170b9] font-medium">
+                      Crafting response...
+                    </span>
+                  </div>
                 </div>
+                {/* Loading insights */}
+                <LoadingInsights
+                  isVisible={typingState.isTyping || webFetchingState.isFetching}
+                  userMessage={lastUserMessage}
+                />
               </div>
             </motion.div>
           )}

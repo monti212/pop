@@ -137,6 +137,18 @@ const StudentProfilePage: React.FC = () => {
     ? grades.reduce((sum, grade) => sum + grade.percentage, 0) / grades.length
     : 0;
 
+  const getGradeNumber = (percentage: number): string => {
+    if (percentage >= 90) return '1';
+    if (percentage >= 80) return '2';
+    if (percentage >= 70) return '3';
+    if (percentage >= 60) return '4';
+    if (percentage >= 55) return '5';
+    if (percentage >= 50) return '6';
+    if (percentage >= 40) return '7';
+    if (percentage >= 35) return '8';
+    return '9';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
