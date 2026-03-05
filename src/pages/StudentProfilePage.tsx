@@ -137,6 +137,33 @@ const StudentProfilePage: React.FC = () => {
     ? grades.reduce((sum, grade) => sum + grade.percentage, 0) / grades.length
     : 0;
 
+  const getGradeNumber = (percentage: number): string => {
+    if (percentage >= 90) return '1';
+    if (percentage >= 80) return '2';
+    if (percentage >= 70) return '3';
+    if (percentage >= 60) return '4';
+    if (percentage >= 55) return '5';
+    if (percentage >= 50) return '6';
+    if (percentage >= 40) return '7';
+    if (percentage >= 35) return '8';
+    return '9';
+  };
+
+  const getGradeColor = (grade: string): string => {
+    switch (grade) {
+      case '1': return 'text-green-600';
+      case '2': return 'text-green-500';
+      case '3': return 'text-blue-600';
+      case '4': return 'text-blue-500';
+      case '5': return 'text-yellow-600';
+      case '6': return 'text-yellow-500';
+      case '7': return 'text-orange-500';
+      case '8': return 'text-orange-600';
+      case '9': return 'text-red-600';
+      default: return 'text-gray-400';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -527,7 +554,18 @@ const StudentProfilePage: React.FC = () => {
                       <p className="text-sm text-gray-600">{new Date(grade.graded_date).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-gray-900">{Math.round(grade.percentage)}%</p>
+                      <div className="flex items-center space-x-2 justify-end">
+                        <p className="text-lg font-bold text-gray-900">{Math.round(grade.percentage)}%</p>
+                        <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+                          parseInt(getGradeNumber(grade.percentage)) <= 2 ? 'bg-green-100 text-green-800' :
+                          parseInt(getGradeNumber(grade.percentage)) <= 4 ? 'bg-blue-100 text-blue-800' :
+                          parseInt(getGradeNumber(grade.percentage)) <= 6 ? 'bg-yellow-100 text-yellow-800' :
+                          parseInt(getGradeNumber(grade.percentage)) <= 8 ? 'bg-orange-100 text-orange-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {getGradeNumber(grade.percentage)}
+                        </span>
+                      </div>
                       <p className="text-sm text-gray-600">
                         {grade.grade_value}/{grade.points_possible}
                       </p>

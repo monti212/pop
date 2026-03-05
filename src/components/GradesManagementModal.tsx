@@ -231,11 +231,57 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   };
 
   const getLetterGrade = (percentage: number): string => {
-    if (percentage >= 90) return 'A';
-    if (percentage >= 80) return 'B';
-    if (percentage >= 70) return 'C';
-    if (percentage >= 60) return 'D';
-    return 'F';
+    if (percentage >= 90) return '1';
+    if (percentage >= 80) return '2';
+    if (percentage >= 70) return '3';
+    if (percentage >= 60) return '4';
+    if (percentage >= 55) return '5';
+    if (percentage >= 50) return '6';
+    if (percentage >= 40) return '7';
+    if (percentage >= 35) return '8';
+    return '9';
+  };
+
+  const getGradeColor = (grade: string): string => {
+    switch (grade) {
+      case '1': return 'text-green-600';
+      case '2': return 'text-green-500';
+      case '3': return 'text-blue-600';
+      case '4': return 'text-blue-500';
+      case '5': return 'text-yellow-600';
+      case '6': return 'text-yellow-500';
+      case '7': return 'text-orange-500';
+      case '8': return 'text-orange-600';
+      case '9': return 'text-red-600';
+      default: return 'text-gray-400';
+    }
+  };
+
+  const getGradeBgColor = (grade: string): string => {
+    switch (grade) {
+      case '1': return 'bg-green-100 text-green-800';
+      case '2': return 'bg-green-50 text-green-700';
+      case '3': return 'bg-blue-100 text-blue-800';
+      case '4': return 'bg-blue-50 text-blue-700';
+      case '5': return 'bg-yellow-100 text-yellow-800';
+      case '6': return 'bg-yellow-50 text-yellow-700';
+      case '7': return 'bg-orange-100 text-orange-800';
+      case '8': return 'bg-orange-50 text-orange-700';
+      case '9': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-400';
+    }
+  };
+
+  const getPercentageColor = (percentage: number): string => {
+    if (percentage >= 90) return 'text-green-600';
+    if (percentage >= 80) return 'text-green-500';
+    if (percentage >= 70) return 'text-blue-600';
+    if (percentage >= 60) return 'text-blue-500';
+    if (percentage >= 55) return 'text-yellow-600';
+    if (percentage >= 50) return 'text-yellow-500';
+    if (percentage >= 40) return 'text-orange-500';
+    if (percentage >= 35) return 'text-orange-600';
+    return 'text-red-600';
   };
 
   const calculatePercentage = (value: number, possible: number): number => {
@@ -361,32 +407,32 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
       return {
         total: 0,
         average: 0,
-        letterCounts: { A: 0, B: 0, C: 0, D: 0, F: 0 },
+        gradeCounts: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0 },
         assessmentTypes: {} as { [key: string]: number },
         topPerformers: [] as { student: string; average: number }[],
         needsHelp: [] as { student: string; average: number }[]
       };
     }
 
-    const letterCounts = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+    const gradeCounts: { [key: string]: number } = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0 };
     const assessmentTypes: { [key: string]: number } = {};
     const studentGrades: { [key: string]: { name: string; grades: number[] } } = {};
 
     let totalPercentage = 0;
 
-    distributionGrades.forEach(grade => {
-      const percentage = calculatePercentage(grade.grade_value || 0, grade.points_possible || 100);
-      const letter = getLetterGrade(percentage);
-      letterCounts[letter as keyof typeof letterCounts]++;
+    distributionGrades.forEach(entry => {
+      const percentage = calculatePercentage(entry.grade_value || 0, entry.points_possible || 100);
+      const gradeNum = getLetterGrade(percentage);
+      gradeCounts[gradeNum] = (gradeCounts[gradeNum] || 0) + 1;
       totalPercentage += percentage;
 
       // Track by assessment type
-      const type = grade.assignment?.assignment_type || 'other';
+      const type = entry.assignment?.assignment_type || 'other';
       assessmentTypes[type] = (assessmentTypes[type] || 0) + 1;
 
       // Track by student
-      const studentId = grade.student?.id;
-      const studentName = grade.student?.student_name || 'Unknown';
+      const studentId = entry.student?.id;
+      const studentName = entry.student?.student_name || 'Unknown';
       if (studentId) {
         if (!studentGrades[studentId]) {
           studentGrades[studentId] = { name: studentName, grades: [] };
@@ -415,7 +461,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
     return {
       total: distributionGrades.length,
       average,
-      letterCounts,
+      gradeCounts,
       assessmentTypes,
       topPerformers,
       needsHelp
@@ -583,9 +629,9 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
 
                   <div className="grid grid-cols-12 gap-4 font-medium text-sm text-gray-700 border-b border-gray-200 pb-2">
                     <div className="col-span-5">Student Name</div>
-                    <div className="col-span-3">Grade (out of {totalPoints || '—'})</div>
+                    <div className="col-span-3">Score (out of {totalPoints || '—'})</div>
                     <div className="col-span-2">Percentage</div>
-                    <div className="col-span-2">Letter Grade</div>
+                    <div className="col-span-2">Grade</div>
                   </div>
 
                   {students.map(student => {
@@ -613,25 +659,12 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                           />
                         </div>
                         <div className="col-span-2">
-                          <span className={`font-medium ${
-                            percentage >= 90 ? 'text-green-600' :
-                            percentage >= 80 ? 'text-blue-600' :
-                            percentage >= 70 ? 'text-yellow-600' :
-                            percentage >= 60 ? 'text-orange-600' :
-                            gradeValue ? 'text-red-600' : 'text-gray-400'
-                          }`}>
+                          <span className={`font-medium ${gradeValue ? getPercentageColor(percentage) : 'text-gray-400'}`}>
                             {gradeValue ? `${Math.round(percentage)}%` : '-'}
                           </span>
                         </div>
                         <div className="col-span-2">
-                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${
-                            letterGrade === 'A' ? 'bg-green-100 text-green-800' :
-                            letterGrade === 'B' ? 'bg-blue-100 text-blue-800' :
-                            letterGrade === 'C' ? 'bg-yellow-100 text-yellow-800' :
-                            letterGrade === 'D' ? 'bg-orange-100 text-orange-800' :
-                            letterGrade === 'F' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-400'
-                          }`}>
+                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${getGradeBgColor(letterGrade)}`}>
                             {letterGrade}
                           </span>
                         </div>
@@ -816,7 +849,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                                     <th className="pb-2 pr-4">Student</th>
                                     <th className="pb-2 pr-4">Score</th>
                                     <th className="pb-2 pr-4">Percentage</th>
-                                    <th className="pb-2 pr-4">Letter</th>
+                                    <th className="pb-2 pr-4">Grade</th>
                                     <th className="pb-2">Date</th>
                                   </tr>
                                 </thead>
@@ -834,24 +867,12 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                                           {grade.grade_value} / {grade.points_possible}
                                         </td>
                                         <td className="py-2 pr-4">
-                                          <span className={`font-medium ${
-                                            percentage >= 90 ? 'text-green-600' :
-                                            percentage >= 80 ? 'text-blue-600' :
-                                            percentage >= 70 ? 'text-yellow-600' :
-                                            percentage >= 60 ? 'text-orange-600' :
-                                            'text-red-600'
-                                          }`}>
+                                          <span className={`font-medium ${getPercentageColor(percentage)}`}>
                                             {Math.round(percentage)}%
                                           </span>
                                         </td>
                                         <td className="py-2 pr-4">
-                                          <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
-                                            letterGrade === 'A' ? 'bg-green-100 text-green-800' :
-                                            letterGrade === 'B' ? 'bg-blue-100 text-blue-800' :
-                                            letterGrade === 'C' ? 'bg-yellow-100 text-yellow-800' :
-                                            letterGrade === 'D' ? 'bg-orange-100 text-orange-800' :
-                                            'bg-red-100 text-red-800'
-                                          }`}>
+                                          <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${getGradeBgColor(letterGrade)}`}>
                                             {letterGrade}
                                           </span>
                                         </td>
@@ -1030,7 +1051,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                           <div>
                             <p className="text-sm text-yellow-600 font-medium">Passing Rate</p>
                             <p className="text-2xl font-bold text-yellow-900 mt-1">
-                              {Math.round(((stats.letterCounts.A + stats.letterCounts.B + stats.letterCounts.C + stats.letterCounts.D) / stats.total) * 100)}%
+                              {Math.round(((['1','2','3','4','5','6'].reduce((sum, g) => sum + (stats.gradeCounts[g] || 0), 0)) / stats.total) * 100)}%
                             </p>
                           </div>
                           <Award className="w-8 h-8 text-yellow-400" />
@@ -1042,7 +1063,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                           <div>
                             <p className="text-sm text-purple-600 font-medium">Excellence Rate</p>
                             <p className="text-2xl font-bold text-purple-900 mt-1">
-                              {Math.round(((stats.letterCounts.A + stats.letterCounts.B) / stats.total) * 100)}%
+                              {Math.round((((stats.gradeCounts['1'] || 0) + (stats.gradeCounts['2'] || 0)) / stats.total) * 100)}%
                             </p>
                           </div>
                           <Award className="w-8 h-8 text-purple-400" />
@@ -1054,43 +1075,41 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                     <div className="bg-white border border-gray-200 rounded-lg p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">Grade Distribution</h3>
                       <div className="space-y-3">
-                        {Object.entries(stats.letterCounts).map(([letter, count]) => {
-                          const percentage = (count / stats.total) * 100;
-                          const colors = {
-                            A: 'bg-green-500',
-                            B: 'bg-blue-500',
-                            C: 'bg-yellow-500',
-                            D: 'bg-orange-500',
-                            F: 'bg-red-500'
+                        {Object.entries(stats.gradeCounts).map(([grade, count]) => {
+                          const pct = (count / stats.total) * 100;
+                          const barColors: { [key: string]: string } = {
+                            '1': 'bg-green-500', '2': 'bg-green-400',
+                            '3': 'bg-blue-500', '4': 'bg-blue-400',
+                            '5': 'bg-yellow-500', '6': 'bg-yellow-400',
+                            '7': 'bg-orange-400', '8': 'bg-orange-500',
+                            '9': 'bg-red-500'
                           };
-                          const bgColors = {
-                            A: 'bg-green-100',
-                            B: 'bg-blue-100',
-                            C: 'bg-yellow-100',
-                            D: 'bg-orange-100',
-                            F: 'bg-red-100'
+                          const gradeLabels: { [key: string]: string } = {
+                            '1': '90–100%', '2': '80–89%', '3': '70–79%',
+                            '4': '60–69%', '5': '55–59%', '6': '50–54%',
+                            '7': '40–49%', '8': '35–39%', '9': '0–34%'
                           };
 
                           return (
-                            <div key={letter} className="flex items-center space-x-4">
+                            <div key={grade} className="flex items-center space-x-4">
                               <div className="w-8 text-center">
-                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${bgColors[letter as keyof typeof bgColors]} ${letter === 'A' ? 'text-green-800' : letter === 'B' ? 'text-blue-800' : letter === 'C' ? 'text-yellow-800' : letter === 'D' ? 'text-orange-800' : 'text-red-800'}`}>
-                                  {letter}
+                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${getGradeBgColor(grade)}`}>
+                                  {grade}
                                 </span>
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-sm font-medium text-gray-700">
-                                    {letter} Grade
+                                    Grade {grade} ({gradeLabels[grade]})
                                   </span>
                                   <span className="text-sm text-gray-600">
-                                    {count} ({Math.round(percentage)}%)
+                                    {count} ({Math.round(pct)}%)
                                   </span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-3">
                                   <div
-                                    className={`h-3 rounded-full ${colors[letter as keyof typeof colors]}`}
-                                    style={{ width: `${percentage}%` }}
+                                    className={`h-3 rounded-full ${barColors[grade] || 'bg-gray-400'}`}
+                                    style={{ width: `${pct}%` }}
                                   />
                                 </div>
                               </div>
