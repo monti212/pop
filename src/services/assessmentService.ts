@@ -77,16 +77,42 @@ export const createAssessment = async (assessmentData: CreateAssessmentData) => 
 
 export const updateAssessment = async (assessmentId: string, updates: UpdateAssessmentData) => {
   try {
-    const { data, error } = await supabase
-      .from('class_assessments')
-      .update(updates)
-      .eq('id', assessmentId)
-      .select()
-      .single();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
 
-    if (error) throw error;
+    // Use RPC function to bypass RLS recursion (42P17) on class_assessments UPDATE
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('update_class_assessment', {
+      p_assessment_id: assessmentId,
+      p_user_id: user.id,
+      p_title: updates.title ?? null,
+      p_description: updates.description ?? null,
+      p_status: updates.status ?? null,
+      p_due_date: updates.due_date ?? null,
+    });
 
-    return { success: true, data: data as Assessment };
+    if (rpcError) {
+      // If the RPC function doesn't exist yet (migration not applied), fall back to direct update
+      if (rpcError.message?.includes('function') || rpcError.code === '42883') {
+        const { data, error } = await supabase
+          .from('class_assessments')
+          .update(updates)
+          .eq('id', assessmentId)
+          .eq('user_id', user.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return { success: true, data: data as Assessment };
+      }
+      throw rpcError;
+    }
+
+    // RPC returns { success, data } or { success, error }
+    if (rpcResult && !rpcResult.success) {
+      throw new Error(rpcResult.error || 'Failed to update assessment');
+    }
+
+    return { success: true, data: rpcResult?.data as Assessment };
   } catch (error: any) {
     console.error('Error updating assessment:', error);
     return { success: false, error: error.message };
@@ -95,10 +121,15 @@ export const updateAssessment = async (assessmentId: string, updates: UpdateAsse
 
 export const deleteAssessment = async (assessmentId: string) => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Add user_id filter to avoid RLS recursion through classes table
     const { error } = await supabase
       .from('class_assessments')
       .delete()
-      .eq('id', assessmentId);
+      .eq('id', assessmentId)
+      .eq('user_id', user.id);
 
     if (error) throw error;
 
