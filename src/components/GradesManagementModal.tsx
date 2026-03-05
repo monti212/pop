@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Plus, TrendingUp, Award, Calendar, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { X, Save, Plus, TrendingUp, Award, Calendar, Trash2, ChevronDown, ChevronRight, Edit2, FileText, Download } from 'lucide-react';
 import {
   Assignment,
   StudentGrade,
@@ -16,6 +16,13 @@ import {
   bulkCreateGrades,
   getClassGradesWithDetails
 } from '../services/gradeService';
+import {
+  Assessment,
+  getClassAssessments,
+  deleteAssessment,
+  downloadAssessmentDocument
+} from '../services/assessmentService';
+import AssessmentManagementModal from './AssessmentManagementModal';
 
 interface GradesManagementModalProps {
   isOpen: boolean;
@@ -26,7 +33,7 @@ interface GradesManagementModalProps {
   students: Student[];
 }
 
-type ViewMode = 'entry' | 'history' | 'distribution';
+type ViewMode = 'entry' | 'assessments' | 'history' | 'distribution';
 
 const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   isOpen,
@@ -60,6 +67,11 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   const [endDate, setEndDate] = useState<string>('');
   const [expandedAssessments, setExpandedAssessments] = useState<Set<string>>(new Set());
 
+  // Assessment management state
+  const [assessmentsList, setAssessmentsList] = useState<Assessment[]>([]);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [selectedAssessmentItem, setSelectedAssessmentItem] = useState<Assessment | null>(null);
+
   // Distribution view fields
   const [distributionGrades, setDistributionGrades] = useState<any[]>([]);
   const [distributionFilter, setDistributionFilter] = useState<'week' | 'month' | 'year' | 'term' | 'all'>('month');
@@ -84,6 +96,90 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
       loadDistributionData();
     }
   }, [isOpen, viewMode, distributionFilter, distributionYear, distributionMonth, distributionTerm]);
+
+  useEffect(() => {
+    if (isOpen && viewMode === 'assessments') {
+      loadAssessments();
+    }
+  }, [isOpen, viewMode, classId]);
+
+  const loadAssessments = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await getClassAssessments(classId);
+
+      if (result.success && result.data) {
+        setAssessmentsList(result.data);
+      } else {
+        setError(result.error || 'Failed to load assessments');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load assessments');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateAssessment = () => {
+    setSelectedAssessmentItem(null);
+    setShowAssessmentModal(true);
+  };
+
+  const handleEditAssessment = (assessment: Assessment) => {
+    setSelectedAssessmentItem(assessment);
+    setShowAssessmentModal(true);
+  };
+
+  const handleDeleteAssessment = async (assessmentId: string) => {
+    if (!confirm('Are you sure you want to delete this assessment?')) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await deleteAssessment(assessmentId);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete assessment');
+      }
+
+      setSuccessMessage('Assessment deleted successfully!');
+      loadAssessments();
+
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete assessment');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDownloadAssessmentDocument = async (assessment: Assessment) => {
+    if (!assessment.document_url || !assessment.document_name) return;
+
+    try {
+      const blob = await downloadAssessmentDocument(assessment.document_url);
+      if (!blob) throw new Error('Failed to download document');
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = assessment.document_name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      setError(err.message || 'Failed to download document');
+    }
+  };
+
+  const handleAssessmentModalSuccess = () => {
+    loadAssessments();
+    setShowAssessmentModal(false);
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -517,6 +613,16 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
               Grade Entry
             </button>
             <button
+              onClick={() => setViewMode('assessments')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                viewMode === 'assessments'
+                  ? 'bg-teal-100 text-teal-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Assessments
+            </button>
+            <button
               onClick={() => setViewMode('history')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 viewMode === 'history'
@@ -678,6 +784,159 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                 <div className="text-center py-12">
                   <Award className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-600">No students in this class yet</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {viewMode === 'assessments' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Manage Assessments</h3>
+                  <p className="text-sm text-gray-600">Create, edit, and manage assessments for this class with document uploads</p>
+                </div>
+                <button
+                  onClick={handleCreateAssessment}
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center space-x-2 font-medium shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Assessment</span>
+                </button>
+              </div>
+
+              {/* Assessment Statistics */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-green-700">Active</span>
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  </div>
+                  <p className="text-2xl font-bold text-green-900">
+                    {assessmentsList.filter(a => a.status === 'active').length}
+                  </p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-blue-700">Upcoming</span>
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-900">
+                    {assessmentsList.filter(a => a.status === 'upcoming').length}
+                  </p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-red-700">Due</span>
+                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  </div>
+                  <p className="text-2xl font-bold text-red-900">
+                    {assessmentsList.filter(a => a.status === 'due').length}
+                  </p>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-gray-700">Completed</span>
+                    <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {assessmentsList.filter(a => a.status === 'completed').length}
+                  </p>
+                </div>
+              </div>
+
+              {/* Assessments List */}
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-gray-600">Loading assessments...</p>
+                </div>
+              ) : assessmentsList.length === 0 ? (
+                <div className="text-center py-12">
+                  <Award className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">No Assessments Yet</h4>
+                  <p className="text-gray-600 mb-6">Create your first assessment to start tracking student progress</p>
+                  <button
+                    onClick={handleCreateAssessment}
+                    className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center space-x-2 mx-auto font-medium shadow-sm"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span>Create First Assessment</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {assessmentsList.map(assessment => {
+                    const getStatusColor = (status: string) => {
+                      switch (status) {
+                        case 'active': return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-100' };
+                        case 'upcoming': return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', badge: 'bg-blue-100' };
+                        case 'due': return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100' };
+                        case 'completed': return { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', badge: 'bg-gray-100' };
+                        default: return { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', badge: 'bg-gray-100' };
+                      }
+                    };
+
+                    const colors = getStatusColor(assessment.status);
+
+                    return (
+                      <div key={assessment.id} className={`${colors.bg} border ${colors.border} rounded-lg p-4 hover:shadow-md transition-all`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="text-lg font-semibold text-gray-900">{assessment.title}</h4>
+                              <span className={`px-3 py-1 text-xs font-medium rounded-full ${colors.badge} ${colors.text}`}>
+                                {assessment.status.charAt(0).toUpperCase() + assessment.status.slice(1)}
+                              </span>
+                              {assessment.document_name && (
+                                <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-teal-100 text-teal-700">
+                                  <FileText className="w-3 h-3 mr-1" />
+                                  Document attached
+                                </span>
+                              )}
+                            </div>
+                            {assessment.description && (
+                              <p className="text-sm text-gray-600 mb-2">{assessment.description}</p>
+                            )}
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              {assessment.due_date && (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-4 h-4" />
+                                  <span>Due: {new Date(assessment.due_date).toLocaleDateString()}</span>
+                                </div>
+                              )}
+                              {assessment.document_name && (
+                                <button
+                                  onClick={() => handleDownloadAssessmentDocument(assessment)}
+                                  className="flex items-center gap-1 text-teal-600 hover:text-teal-700 font-medium"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  <span>{assessment.document_name}</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2 ml-4">
+                            <button
+                              onClick={() => handleEditAssessment(assessment)}
+                              className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                              title="Edit assessment"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAssessment(assessment.id)}
+                              disabled={isLoading}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                              title="Delete assessment"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1216,6 +1475,19 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
           )}
         </div>
       </div>
+
+      {showAssessmentModal && (
+        <AssessmentManagementModal
+          isOpen={showAssessmentModal}
+          onClose={() => {
+            setShowAssessmentModal(false);
+            setSelectedAssessmentItem(null);
+          }}
+          onSuccess={handleAssessmentModalSuccess}
+          classId={classId}
+          assessment={selectedAssessmentItem}
+        />
+      )}
     </div>
   );
 };
