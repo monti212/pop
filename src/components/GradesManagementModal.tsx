@@ -72,6 +72,11 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   const [endDate, setEndDate] = useState<string>('');
   const [expandedAssessments, setExpandedAssessments] = useState<Set<string>>(new Set());
 
+  // Assessment management state
+  const [assessmentsList, setAssessmentsList] = useState<Assessment[]>([]);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [selectedAssessmentItem, setSelectedAssessmentItem] = useState<Assessment | null>(null);
+
   // Distribution view fields
   const [distributionGrades, setDistributionGrades] = useState<any[]>([]);
   const [distributionFilter, setDistributionFilter] = useState<'week' | 'month' | 'year' | 'term' | 'all'>('month');
@@ -509,12 +514,12 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
       totalPercentage += percentage;
 
       // Track by assessment type
-      const type = grade.assignment?.assignment_type || 'other';
+      const type = entry.assignment?.assignment_type || 'other';
       assessmentTypes[type] = (assessmentTypes[type] || 0) + 1;
 
       // Track by student
-      const studentId = grade.student?.id;
-      const studentName = grade.student?.student_name || 'Unknown';
+      const studentId = entry.student?.id;
+      const studentName = entry.student?.student_name || 'Unknown';
       if (studentId) {
         if (!studentGrades[studentId]) {
           studentGrades[studentId] = { name: studentName, grades: [] };
@@ -721,7 +726,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
 
                   <div className="grid grid-cols-12 gap-4 font-medium text-sm text-gray-700 border-b border-gray-200 pb-2">
                     <div className="col-span-5">Student Name</div>
-                    <div className="col-span-3">Grade (out of {totalPoints || '—'})</div>
+                    <div className="col-span-3">Score (out of {totalPoints || '—'})</div>
                     <div className="col-span-2">Percentage</div>
                     <div className="col-span-2">Grade</div>
                   </div>

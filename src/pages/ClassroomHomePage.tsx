@@ -289,9 +289,13 @@ const ClassroomHomePage: React.FC = () => {
                   <span className="text-sm text-greyed-black/70">average</span>
                 </div>
                 <h3 className="text-3xl font-bold text-greyed-navy mb-1">
-                  {overview.averageGrade > 0 ? `${overview.averageGrade}%` : '—'}
+                  {overview.averageGrade > 0
+                    ? `Grade ${overview.averageGrade >= 90 ? '1' : overview.averageGrade >= 80 ? '2' : overview.averageGrade >= 70 ? '3' : overview.averageGrade >= 60 ? '4' : overview.averageGrade >= 55 ? '5' : overview.averageGrade >= 50 ? '6' : overview.averageGrade >= 40 ? '7' : overview.averageGrade >= 35 ? '8' : '9'}`
+                    : '—'}
                 </h3>
-                <p className="text-sm text-greyed-black/70">Class Grade</p>
+                <p className="text-sm text-greyed-black/70">
+                  {overview.averageGrade > 0 ? `Class Average: ${overview.averageGrade}%` : 'Class Grade'}
+                </p>
               </motion.div>
 
               <motion.div

@@ -544,7 +544,18 @@ const StudentProfilePage: React.FC = () => {
                       <p className="text-sm text-gray-600">{new Date(grade.graded_date).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-gray-900">{Math.round(grade.percentage)}%</p>
+                      <div className="flex items-center space-x-2 justify-end">
+                        <p className="text-lg font-bold text-gray-900">{Math.round(grade.percentage)}%</p>
+                        <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+                          parseInt(getGradeNumber(grade.percentage)) <= 2 ? 'bg-green-100 text-green-800' :
+                          parseInt(getGradeNumber(grade.percentage)) <= 4 ? 'bg-blue-100 text-blue-800' :
+                          parseInt(getGradeNumber(grade.percentage)) <= 6 ? 'bg-yellow-100 text-yellow-800' :
+                          parseInt(getGradeNumber(grade.percentage)) <= 8 ? 'bg-orange-100 text-orange-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {getGradeNumber(grade.percentage)}
+                        </span>
+                      </div>
                       <p className="text-sm text-gray-600">
                         Grade {getGradeNumber(grade.percentage)} • {grade.grade_value}/{grade.points_possible}
                       </p>
