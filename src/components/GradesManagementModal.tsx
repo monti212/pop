@@ -68,11 +68,6 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   const [endDate, setEndDate] = useState<string>('');
   const [expandedAssessments, setExpandedAssessments] = useState<Set<string>>(new Set());
 
-  // Assessment management state
-  const [assessmentsList, setAssessmentsList] = useState<Assessment[]>([]);
-  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
-  const [selectedAssessmentItem, setSelectedAssessmentItem] = useState<Assessment | null>(null);
-
   // Distribution view fields
   const [distributionGrades, setDistributionGrades] = useState<any[]>([]);
   const [distributionFilter, setDistributionFilter] = useState<'week' | 'month' | 'year' | 'term' | 'all'>('month');
