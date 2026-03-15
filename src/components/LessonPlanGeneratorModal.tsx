@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Sparkles, Users, Book, Clock, Target, CheckCircle, AlertCircle, FileText, ExternalLink } from 'lucide-react';
+import { X, Sparkles, Users, Book, CheckCircle, AlertCircle, FileText, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Student } from '../types/attendance';
 import { CreateLessonPlanRequestData } from '../types/studentProfile';
@@ -194,7 +194,7 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
           await updateLessonPlanRequest(requestId, {
             status: 'failed' as any,
             error_message: saveResult.error || 'Failed to save lesson plan'
-          });
+          } as any);
         }
       }
 
@@ -209,7 +209,7 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
         await updateLessonPlanRequest(lessonPlanRequestId, {
           status: 'failed' as any,
           error_message: err.message || 'Failed to generate lesson plan'
-        });
+        } as any);
       }
     }
   };
@@ -526,7 +526,7 @@ Include:
               {generatedContent && (
                 <div className="bg-gray-50 rounded-lg p-6 max-h-[500px] overflow-y-auto">
                   <div className="prose prose-sm max-w-none">
-                    <StreamMarkdown content={generatedContent} />
+                    <StreamMarkdown text={generatedContent} />
                   </div>
                 </div>
               )}

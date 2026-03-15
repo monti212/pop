@@ -19,8 +19,8 @@ const ProtectedRoute: React.FC = () => {
     
     checkAuth();
     
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      if (_event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         navigate('/login');
       } else if (session) {

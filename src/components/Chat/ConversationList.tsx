@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PenSquare, Search, Trash2, Crown, X, LogOut, LayoutGrid, Layout, Check, FileEdit as Edit3, FileText, Grid2x2 as Grid, Building, ChevronDown, MessageSquare, BookOpen, FolderOpen, Settings, MoreVertical, Shield, GraduationCap, PanelLeft } from 'lucide-react';
+import { PenSquare, Search, Trash2, Crown, X, Layout, Check, FileEdit as Edit3, FileText, Settings, MoreVertical, Shield, GraduationCap, PanelLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useConversations } from '../../context/ConversationContext';
 import { updateConversationTitle } from '../../services/chatService';
 import Logo from '../Logo';
+import SubscriptionModal from '../SubscriptionModal';
 
 interface ConversationListProps {
   onClose?: () => void;
@@ -23,9 +24,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
   onClose,
   darkMode = true,
   isCollapsed = false,
-  onSignOut,
-  onShowAgentGallery,
-  onOpenPlansModal,
   onOpenSettings,
   onToggleCollapse
 }) => {
@@ -44,7 +42,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   const isSupaAdmin = user?.email === 'monti@orionx.xyz' || user?.email === 'gaone@orionx.xyz';
 
   // Check if current user is admin or supa admin (both have access to admin dashboard)
-  const isAdmin = profile?.team_role === 'optimus_prime' || profile?.team_role === 'admin' || profile?.team_role === 'prime' || profile?.team_role === 'supa_admin';
+  const isAdmin = (profile?.team_role as string) === 'optimus_prime' || profile?.team_role === 'admin' || profile?.team_role === 'prime' || profile?.team_role === 'supa_admin';
 
   const {
     conversations,
@@ -197,7 +195,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   // State for dropdown menu
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  // menuButtonRef removed - unused
 
   // U Craft state variables removed
 

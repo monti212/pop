@@ -1,24 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
 import { Activity, Users, Database, AlertTriangle, Zap, TrendingUp, Clock, ArrowLeft } from 'lucide-react';
 
-interface SystemMetric {
-  metric_type: string;
-  metric_value: number;
-  metadata: any;
-  recorded_at: string;
-}
-
-interface DatabaseMetric {
-  active_connections: number;
-  max_connections: number;
-  database_size_mb: number;
-  cache_hit_ratio: number;
-  cpu_usage_percent: number;
-  memory_usage_percent: number;
-  recorded_at: string;
-}
 
 interface RecentError {
   id: string;

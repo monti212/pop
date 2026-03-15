@@ -23,7 +23,33 @@ export interface InputFileContent {
   mimeType?: string;
 }
 
-export type MessageContent = string | (TextContent | ImageUrlContent | InputFileContent)[];
+export interface DiagramLabel {
+  name: string;
+  description: string;
+  x: number; // 0-1000
+  y: number; // 0-1000
+}
+
+export interface DiagramData {
+  diagram_title: string;
+  topic: string;
+  difficulty_level: string;
+  labels: DiagramLabel[];
+}
+
+export interface EducationalData {
+  key_concepts: string[];
+  teacher_notes: string;
+}
+
+export interface DiagramContent {
+  type: 'diagram';
+  image_url: string;
+  diagramData?: DiagramData;
+  educationalData?: EducationalData;
+}
+
+export type MessageContent = string | (TextContent | ImageUrlContent | InputFileContent | DiagramContent)[];
 
 export interface Message {
   id: string;
@@ -38,7 +64,7 @@ export interface Conversation {
   id: string;
   title: string;
   isTemporary?: boolean; // Flag to indicate if conversation is not yet saved to database
-  messages: ({
+  messages: {
     id?: string;
     role: 'user' | 'assistant' | 'system' | 'thinking';
     content: MessageContent;
@@ -47,7 +73,6 @@ export interface Conversation {
     isLongResponse?: boolean; // Flag for long responses that can be edited in canvas
     timestamp: Date;
   }[];
-  )
   createdAt: Date;
   updatedAt: Date;
 }

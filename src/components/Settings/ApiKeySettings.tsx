@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Key, 
-  Copy, 
-  Check, 
-  Trash2, 
-  Eye, 
-  EyeOff, 
-  AlertTriangle, 
+  Key,
+  Copy,
+  Check,
+  Trash2,
+  AlertTriangle,
   Plus,
-  Calendar,
   Globe,
   Shield,
   RefreshCw
@@ -139,7 +136,7 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
       const keyHash = await hashApiKey(newKey);
 
       // Insert into database
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('api_keys')
         .insert({
           user_id: user.id,
@@ -202,6 +199,7 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
     }
   };
 
+  // @ts-ignore TS6133
   const handleDeleteKey = async (keyId: string) => {
     if (!confirm(getTranslation('deleteConfirm'))) return;
 

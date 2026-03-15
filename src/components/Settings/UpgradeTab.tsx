@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
-import { CheckCircle, Zap, Shield, Globe, AlertTriangle, ArrowRight } from 'lucide-react';
+import { CheckCircle, Zap, Shield, Globe, AlertTriangle, ArrowRight, Crown } from 'lucide-react';
 import { createCheckoutSession } from '../../services/stripeService';
 import { useAuth } from '../../context/AuthContext';
 import { getProductDisplayInfo } from '../../stripe-config';
 
-const UpgradeTab: React.FC<UpgradeTabProps> = ({ 
+interface UpgradeTabProps {
+  darkMode?: boolean;
+  onSuccess?: () => void;
+  teamRole?: 'supa_admin' | 'admin' | 'prime' | 'free';
+}
+
+const UpgradeTab: React.FC<UpgradeTabProps> = ({
   darkMode = false,
-  onSuccess,
+  onSuccess: _onSuccess,
   teamRole = 'free'
 }) => {
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile: _refreshProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -242,7 +248,7 @@ const UpgradeTab: React.FC<UpgradeTabProps> = ({
         <div className="mb-6">
           <div className={`flex justify-between items-center p-4 rounded-lg mb-2 ${
             darkMode ? 'bg-teal/10 border border-teal/30' : 'bg-teal/5 border border-teal/20'
-          }`}/>
+          }`}>
             <div>
               <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 {plusProduct.name}

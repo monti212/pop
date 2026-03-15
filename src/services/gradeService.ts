@@ -262,7 +262,7 @@ export const getClassAverageGrade = async (
       return { success: true, data: 0 };
     }
 
-    const average = data.reduce((sum, grade) => sum + grade.percentage, 0) / data.length;
+    const average = data.reduce((sum: any, grade: any) => sum + grade.percentage, 0) / data.length;
 
     return { success: true, data: Math.round(average * 100) / 100 };
   } catch (error: any) {

@@ -99,7 +99,7 @@ const CostBreakdownMaker: React.FC = () => {
     }
   };
 
-  const buildPremiumLayout = (html: string, text: string, outline: any) => {
+  const buildPremiumLayout = (html: string, text: string, _outline: any) => {
     const lines = text.split('\n').filter(l => l.trim());
     const title = lines[0]?.trim() || 'Document';
     const subtitle = new Date().toLocaleDateString();

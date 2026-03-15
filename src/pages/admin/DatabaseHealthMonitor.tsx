@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
 import {
-  Database, HardDrive, Zap, Activity, AlertTriangle, CheckCircle,
-  ArrowLeft, RefreshCw, Download, Clock, TrendingUp, Server
+  Database, HardDrive, Zap, AlertTriangle, CheckCircle,
+  ArrowLeft, RefreshCw, Download, Server
 } from 'lucide-react';
 
 interface DatabaseMetrics {

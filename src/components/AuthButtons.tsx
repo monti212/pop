@@ -15,7 +15,7 @@ const AuthButtons: React.FC<AuthButtonsProps> = ({
   onSignUp,
   heroMode = false,
 }) => {
-  const [showTooltip, setShowTooltip] = useState(false);
+  const [, _setShowTooltip] = useState(false);
 
   if (isAuthenticated) {
     return (

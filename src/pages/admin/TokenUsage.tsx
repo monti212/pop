@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, RefreshCw, Zap, Users, AlertTriangle, TrendingUp,
-  Clock, Calendar, Activity, DollarSign, Package, ChevronRight,
-  Image as ImageIcon, Download, Plus, Settings, Info
+  ArrowLeft, RefreshCw, Zap, Users, AlertTriangle,
+  Clock, Activity, Package,
+  Image as ImageIcon, Plus, Settings
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -65,7 +65,7 @@ interface TokenRefill {
 }
 
 const TokenUsage: React.FC = () => {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview');
   const [metrics, setMetrics] = useState<TokenMetrics | null>(null);
   const [userUsage, setUserUsage] = useState<UserTokenUsage[]>([]);
@@ -75,8 +75,8 @@ const TokenUsage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddRefillModal, setShowAddRefillModal] = useState(false);
-  const [showAdjustCapModal, setShowAdjustCapModal] = useState(false);
+  const [, setShowAddRefillModal] = useState(false);
+  const [, setShowAdjustCapModal] = useState(false);
 
   const isSuperAdmin = profile?.team_role === 'supa_admin';
 
@@ -129,15 +129,15 @@ const TokenUsage: React.FC = () => {
 
       if (error) throw error;
 
-      const userIds = [...new Set(data?.map(r => r.added_by_user_id).filter(Boolean) || [])];
+      const userIds = [...new Set(data?.map((r: any) => r.added_by_user_id).filter(Boolean) || [])];
       const { data: userData } = await supabase
         .from('user_profiles')
         .select('id, email')
         .in('id', userIds);
 
-      const refillsWithEmails = data?.map(refill => ({
+      const refillsWithEmails = data?.map((refill: any) => ({
         ...refill,
-        added_by_email: userData?.find(u => u.id === refill.added_by_user_id)?.email || 'Unknown'
+        added_by_email: userData?.find((u: any) => u.id === refill.added_by_user_id)?.email || 'Unknown'
       })) || [];
 
       setRefills(refillsWithEmails);

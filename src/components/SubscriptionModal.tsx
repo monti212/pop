@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, CheckCircle, Shield, Zap, Globe, ArrowRight, MessageSquare, FileText } from 'lucide-react';
+import { X, CheckCircle, Shield, Zap, Globe, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { createCheckoutSession } from '../services/stripeService';
-import { STRIPE_PRODUCTS, getProductDisplayInfo } from '../stripe-config';
+import { getProductDisplayInfo } from '../stripe-config';
 import SignUpModal from './SignUpModal';
 
-const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onClose, onSuccess, darkMode = false }) => {
+interface SubscriptionModalProps {
+  onClose: () => void;
+  onSuccess?: () => void;
+  darkMode?: boolean;
+}
+
+const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onClose, onSuccess: _onSuccess, darkMode = false }) => {
   const { user } = useAuth();
-  const [step, setStep] = useState<'plans' | 'checkout' | 'success'>('plans');
+  const [step, _setStep] = useState<'plans' | 'checkout' | 'success'>('plans');
   const [selectedPlan, setSelectedPlan] = useState<'pro'>('pro');
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSignUpModal, setShowSignUpModal] = useState(false);
 
@@ -193,16 +199,9 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onClose, onSucces
                       <button
                         onClick={() => handleSelectPlan('pro')}
                         disabled={true} // Temporarily disabled
-                        className={`w-full py-2.5 rounded-lg ${
-                          plan.isCurrent
-                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        } transition-colors duration-200 text-sm font-medium flex items-center justify-center gap-1.5`}
+                        className={`w-full py-2.5 rounded-lg bg-gray-300 text-gray-500 cursor-not-allowed transition-colors duration-200 text-sm font-medium flex items-center justify-center gap-1.5`}
                       >
-                        {plan.isCurrent && plan.id === 'free' ? (
-                          <Check className="w-4 h-4 mr-1" />
-                        ) : null}
-                        {plan.id === 'pro' ? 'Coming Soon' : plan.buttonText}
+                        {plan.id === 'pro' ? 'Coming Soon' : 'Get Started'}
                       </button>
                     </motion.div>
                   ))}

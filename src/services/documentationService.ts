@@ -286,7 +286,7 @@ export const getFavorites = async (userId: string): Promise<DocumentationPage[]>
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data?.map(f => (f as any).documentation_pages).filter(Boolean) || [];
+  return data?.map((f: any) => (f as any).documentation_pages).filter(Boolean) || [];
 };
 
 export const addFavorite = async (userId: string, pageId: string): Promise<void> => {
@@ -322,7 +322,7 @@ export const getRecentPages = async (userId: string, limit: number = 5): Promise
 
   if (!activityData || activityData.length === 0) return [];
 
-  const pageIds = [...new Set(activityData.map(a => a.page_id))];
+  const pageIds = [...new Set(activityData.map((a: any) => a.page_id))];
 
   const { data, error } = await supabase
     .from('documentation_pages')
@@ -332,7 +332,7 @@ export const getRecentPages = async (userId: string, limit: number = 5): Promise
 
   if (error) throw error;
 
-  const pageMap = new Map(data?.map(p => [p.id, p]) || []);
+  const pageMap = new Map(data?.map((p: any) => [p.id, p]) || []);
   return pageIds.map(id => pageMap.get(id)).filter(Boolean) as DocumentationPage[];
 };
 
@@ -350,7 +350,7 @@ export const sendChatMessage = async (
   content: string,
   contextSnapshot: Record<string, any>
 ): Promise<ChatMessage> => {
-  const userMessage = await createChatMessage({
+  await createChatMessage({
     page_id: pageId,
     user_id: userId,
     role: 'user',

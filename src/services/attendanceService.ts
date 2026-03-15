@@ -255,7 +255,7 @@ export const getStudentAttendanceStats = async (
     }
 
     const total_days = data.length;
-    const present_days = data.filter(r => r.is_present).length;
+    const present_days = data.filter((r: any) => r.is_present).length;
     const absent_days = total_days - present_days;
     const attendance_rate = total_days > 0 ? (present_days / total_days) * 100 : 0;
 
@@ -309,7 +309,7 @@ export const getClassAttendanceStats = async (
     }
 
     const total_days = data.length;
-    const present_days = data.filter(r => r.is_present).length;
+    const present_days = data.filter((r: any) => r.is_present).length;
     const absent_days = total_days - present_days;
     const attendance_rate = total_days > 0 ? (present_days / total_days) * 100 : 0;
 
@@ -363,7 +363,7 @@ export const getAttendanceDatesForClass = async (
       throw new Error(error.message);
     }
 
-    const uniqueDates = [...new Set(data.map(r => r.attendance_date))];
+    const uniqueDates: string[] = Array.from(new Set<string>(data.map((r: any) => r.attendance_date as string)));
 
     return {
       success: true,

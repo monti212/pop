@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Search, Folder } from 'lucide-react';
+import { Plus, Search, Folder } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getPagesByUserId, createPage } from '../../services/documentationService';
 import type { DocumentationPage } from '../../services/documentationService';

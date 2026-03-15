@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { Brain, Sparkles, Zap, ChevronDown, Check, Map, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { Brain, Check } from "lucide-react";
 
 type ModelVer = "2.0";
 type Verbosity = "low" | "medium"; // low=Default, medium=Extra Long
@@ -19,9 +19,7 @@ interface Props {
   anchorEl?: HTMLElement | null;
 }
 
-interface MobileProps {
-  isMobile: boolean;
-}
+// MobileProps - kept for future use
 
 const MODELS = [
   { id: "2.0", name: "Uhuru 2.0", tagline: "Advanced Reasoning", icon: <Brain className="w-4 h-4" />, accent: "indigo" },
@@ -34,7 +32,7 @@ const accents = {
 };
 
 // Get verbosity labels based on model version
-const getVerbosityLabels = (modelVersion: ModelVer) => {
+const getVerbosityLabels = (_modelVersion: ModelVer) => {
   return {
     low: "Default",
     medium: "Extra Long"
@@ -42,7 +40,7 @@ const getVerbosityLabels = (modelVersion: ModelVer) => {
 };
 
 // Get mode label based on model version
-const getModeLabel = (modelVersion: ModelVer) => {
+const getModeLabel = (_modelVersion: ModelVer) => {
   return "Response Length";
 };
 
@@ -53,9 +51,9 @@ export default function ModelSelector({
   setModelVersion, 
   deepThinkMap, 
   setDeepThinkMap, 
-  isAdmin = false, 
-  disabled = false, 
-  collapsed = false,
+  isAdmin: _isAdmin = false,
+  disabled: _disabled = false,
+  collapsed: _collapsed = false,
   open = false,
   onClose,
   anchorEl
@@ -79,7 +77,7 @@ export default function ModelSelector({
   const popRef = useRef<HTMLDivElement>(null);
   const firstFocusableRef = useRef<HTMLButtonElement>(null);
   const lastFocusableRef = useRef<HTMLButtonElement>(null);
-  const [showTooltip, setShowTooltip] = useState(false);
+  const [showTooltip, _setShowTooltip] = useState(false);
 
   const selectedObj = useMemo(
     () => MODELS.find((m) => m.id === modelVersion) ?? MODELS[0], // Default to 2.0
@@ -198,7 +196,7 @@ export default function ModelSelector({
       const firstElement = focusableElements[0] as HTMLElement;
       const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
       
-      if (e.shiftTab) {
+      if ((e as any).shiftKey) {
         if (document.activeElement === firstElement) {
           e.preventDefault();
           lastElement.focus();
@@ -285,7 +283,7 @@ export default function ModelSelector({
     onClose?.();
   };
 
-  const accent = accents[selectedObj.accent as keyof typeof accents];
+  void accents[selectedObj.accent as keyof typeof accents]; // accent - kept for future use
 
   // Generate tooltip text
   const tooltipText = `${selectedObj.name} · ${verbosityLabels[currentVerbosity]}`;

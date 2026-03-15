@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Copy, RefreshCw, Check, Download, FileText, Grid2x2 as Grid, FileEdit as Edit3, MessageCircle, X, Search } from 'lucide-react';
+import { Copy, Check, Download, FileText, FileEdit as Edit3, MessageCircle, Search } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import atomDark from 'react-syntax-highlighter/dist/esm/styles/prism/atom-dark';
 import oneLight from 'react-syntax-highlighter/dist/esm/styles/prism/one-light';
@@ -9,8 +9,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useNavigate } from 'react-router-dom';
 import { detectTableInContent } from '../../utils/tableDetection';
-import { convertMarkdownToHtml, stripMarkdown } from '../../utils/markdownConverter';
-import { MessageContent, TextContent, ImageUrlContent, InputFileContent } from '../../types/chat';
+import { convertMarkdownToHtml } from '../../utils/markdownConverter';
+import { MessageContent, TextContent, ImageUrlContent, InputFileContent, DiagramContent, DiagramLabel } from '../../types/chat';
 import StreamMarkdown from '../StreamMarkdown';
 import FileAttachment from './FileAttachment';
 import { containsLessonPlanKeywords } from '../../utils/lessonPlanDetection';
@@ -37,6 +37,7 @@ const extractTextFromMessageContent = (content: MessageContent): string => {
 };
 
 // Helper function to count words in a string
+// @ts-ignore TS6133
 const countWords = (text: string): number => {
   const trimmedText = text.trim();
   return trimmedText === '' ? 0 : trimmedText.split(/\s+/).length;
@@ -78,7 +79,7 @@ interface MessageBubbleProps {
 }
 
 // Helper function to auto-save table data to Uhuru Sheets
-const autoSaveToUhuruSheets = (tableData: any, sourceContent: string) => {
+const autoSaveToUhuruSheets = (tableData: any, _sourceContent: string) => {
   try {
     const sheetData = {
       id: crypto.randomUUID(),
@@ -117,7 +118,6 @@ const userMarkdownComponents = {
 const MessageBubble: React.FC<MessageBubbleProps> = ({
   role,
   content,
-  timestamp,
   isLongResponse = false,
   messageId,
   messageIndex,
@@ -130,9 +130,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   onSave, // Keeping this prop as it's still in the interface, but removing the button
   onEdit,
   onInlineEditCompleteAndResend,
-  onOpenCanvas,
   darkMode, // Add darkMode prop here
-  onAssistantEdit,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -173,12 +171,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   // Detect search intent for command styling
   const isSearchIntent = rawText.toLowerCase().startsWith('search: ');
-  const searchQuery = isSearchIntent ? rawText.substring(rawText.indexOf(':') + 1).trim() : '';
+  void (isSearchIntent ? rawText.substring(rawText.indexOf(':') + 1).trim() : ''); // searchQuery - kept for future use
   
   const [showActions, setShowActions] = useState(false); // Controls hover actions for the whole bubble
-  const [showMobileActions, setShowMobileActions] = useState(false);
+  const [, _setShowMobileActions] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [htmlContent, setHtmlContent] = useState<string | null>(null);
+  const [, setHtmlContent] = useState<string | null>(null);
   const [isEditingInline, setIsEditingInline] = useState(false);
   const [editedContent, setEditedContent] = useState(parsedContent);
   
@@ -189,7 +187,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   // selection popover
   const [showSelTools, setShowSelTools] = useState(false);
-  const [selBox, setSelBox] = useState<{top:number;left:number} | null>(null);
+  const [selBox, _setSelBox] = useState<{top:number;left:number} | null>(null);
   const [replaceMode, setReplaceMode] = useState(false);
   const [replaceText, setReplaceText] = useState('');
 
@@ -228,7 +226,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       const result = await autoSaveLessonPlan(
         rawText,
         user.id,
-        conversationId,
+        conversationId ?? '',
         messageId
       );
 
@@ -345,7 +343,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   // Don't render system messages or thinking messages
-  if (role === 'system' || role === 'thinking') {
+  if (role === 'system' || (role as string) === 'thinking') {
     return null;
   }
   
@@ -357,14 +355,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   }, [isLongResponse, role, parsedContent]);
 
   // Check if the message contains a table
+  // @ts-ignore TS6133
   const hasTable = role === 'assistant' && detectTableInContent(extractTextFromMessageContent(parsedContent));
-  
+
+  // @ts-ignore TS6133
   const handleCopy = () => {
     navigator.clipboard.writeText(extractTextFromMessageContent(parsedContent)); // Copies the entire message bubble content
     setIsCopied(true); // This state is for the overall message bubble copy button
     setTimeout(() => setIsCopied(false), 2000); // Reset copy status after 2 seconds
   };
 
+  // @ts-ignore TS6133
   const handleEdit = () => { // This is for the main edit button, not inline
     if (onEdit && messageIndex !== undefined) {
      console.log('🔍 [DEBUG] handleEdit called for messageIndex:', messageIndex);
@@ -372,6 +373,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
+  // @ts-ignore TS6133
   const handleRegenerate = () => {
     if (onRegenerate) {
       onRegenerate(extractTextFromMessageContent(parsedContent)); // Regenerates the assistant's response
@@ -510,6 +512,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     });
   };
 
+  // @ts-ignore TS6133
   const handleOpenUhuruSheets = (messageContent?: string) => {
     // Find table data in the content
     const tableData = detectTableInContent(messageContent || extractTextFromMessageContent(parsedContent));
@@ -685,8 +688,118 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
   const channelInfo = getChannelInfo();
   
+  // Diagram viewer with SVG label overlay
+  const DiagramViewer = ({ part }: { part: DiagramContent }) => {
+    const [activeLabel, setActiveLabel] = useState<DiagramLabel | null>(null);
+    const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
+    const imgRef = useRef<HTMLImageElement>(null);
+
+    const onImgLoad = () => {
+      if (imgRef.current) {
+        setImgSize({ w: imgRef.current.offsetWidth, h: imgRef.current.offsetHeight });
+      }
+    };
+
+    const labels = part.diagramData?.labels ?? [];
+    const keyConceptsList = part.educationalData?.key_concepts ?? [];
+    const teacherNotes = part.educationalData?.teacher_notes ?? '';
+
+    return (
+      <div className="space-y-3">
+        {part.diagramData?.diagram_title && (
+          <p className="font-semibold text-sm text-[#002F4B]">{part.diagramData.diagram_title}</p>
+        )}
+        {/* Image + SVG overlay */}
+        <div className="relative inline-block w-full">
+          <img
+            ref={imgRef}
+            src={part.image_url}
+            alt={part.diagramData?.diagram_title ?? 'Scientific diagram'}
+            className="w-full rounded-lg"
+            onLoad={onImgLoad}
+          />
+          {imgSize.w > 0 && labels.length > 0 && (
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              viewBox="0 0 1000 1000"
+              preserveAspectRatio="none"
+            >
+              {labels.map((label, i) => (
+                <g key={i}>
+                  {/* Leader dot */}
+                  <circle cx={label.x} cy={label.y} r={14} fill="#1a56db" fillOpacity={0.85} />
+                  <text
+                    x={label.x}
+                    y={label.y + 5}
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize="14"
+                    fontWeight="bold"
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                  >
+                    {i + 1}
+                  </text>
+                </g>
+              ))}
+            </svg>
+          )}
+          {/* Hover tooltip positioned absolutely */}
+          {activeLabel && (
+            <div className="absolute bottom-2 left-2 right-2 bg-black/75 text-white text-xs rounded-lg p-2 z-10">
+              <span className="font-semibold">{activeLabel.name}:</span> {activeLabel.description}
+            </div>
+          )}
+        </div>
+
+        {/* Numbered label key */}
+        {labels.length > 0 && (
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+            <p className="text-xs font-semibold text-blue-800 mb-2">Diagram Labels</p>
+            <div className="grid grid-cols-1 gap-1">
+              {labels.map((label, i) => (
+                <div
+                  key={i}
+                  className="flex gap-2 items-start text-xs cursor-pointer hover:bg-blue-100 rounded px-1 py-0.5 transition-colors"
+                  onMouseEnter={() => setActiveLabel(label)}
+                  onMouseLeave={() => setActiveLabel(null)}
+                >
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#1a56db] text-white flex items-center justify-center font-bold text-[10px]">
+                    {i + 1}
+                  </span>
+                  <span className="text-[#002F4B]"><strong>{label.name}</strong> — {label.description}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Key concepts */}
+        {keyConceptsList.length > 0 && (
+          <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+            <p className="text-xs font-semibold text-emerald-800 mb-2">Key Concepts</p>
+            <ul className="space-y-0.5">
+              {keyConceptsList.map((concept, i) => (
+                <li key={i} className="text-xs text-emerald-900 flex gap-1.5 items-start">
+                  <span className="mt-0.5 text-emerald-500">•</span>{concept}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Teacher notes */}
+        {teacherNotes && (
+          <div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
+            <p className="text-xs font-semibold text-amber-800 mb-1">Teacher Notes</p>
+            <p className="text-xs text-amber-900">{teacherNotes}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render multimodal content (text + images + files)
-  const renderMultimodalContent = (content: (TextContent | ImageUrlContent | InputFileContent)[]) => {
+  const renderMultimodalContent = (content: (TextContent | ImageUrlContent | InputFileContent | DiagramContent)[]) => {
     return (
       <div className="space-y-3">
         {content.map((part, index) => {
@@ -708,7 +821,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                     li: ({node, ...props}) => <li {...props} />,
                     a: ({node, ...props}) => <a {...props} />,
                     blockquote: ({node, ...props}) => <blockquote {...props} />,
-                    pre: ({ children, ...props }: any) => {
+                    pre: ({ children }: any) => {
                       const child: any = Array.isArray(children) ? children[0] : children;
                       const className = child?.props?.className || '';
                       const match = /language-(\w+)/.exec(className);
@@ -765,10 +878,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             return (
               <div key={index} className="my-2">
                 <FileAttachment
-                  filename={part.filename}
-                  fileUrl={part.file_url}
-                  mimeType={part.mimeType}
+                  filename={(part as InputFileContent).filename}
+                  fileUrl={(part as InputFileContent).file_url}
+                  mimeType={(part as InputFileContent).mimeType}
                 />
+              </div>
+            );
+          } else if (part.type === 'diagram') {
+            return (
+              <div key={index} className="my-2">
+                <DiagramViewer part={part as DiagramContent} />
               </div>
             );
           }
@@ -779,6 +898,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   // Save cursor position when content changes
+  // @ts-ignore TS6133
   const saveCaretPosition = () => {
     if (editableRef.current) {
       const selection = window.getSelection();
@@ -790,6 +910,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   // Restore cursor position
+  // @ts-ignore TS6133
   const restoreCaretPosition = () => {
     if (editableRef.current) {
       const range = document.createRange();
@@ -991,7 +1112,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                         h3: ({node, ...props}) => <h3 className="text-sm font-bold text-[#002F4B] mb-2" {...props} />,
                         h4: ({node, ...props}) => <h4 className="text-sm font-bold text-[#002F4B] mb-1" {...props} />,
                         strong: ({node, ...props}) => <strong className="font-semibold text-[#002F4B]" {...props} />,
-                        pre: ({ children, ...props }: any) => {
+                        pre: ({ children }: any) => {
                           const child: any = Array.isArray(children) ? children[0] : children;
                           const className = child?.props?.className || '';
                           const match = /language-(\w+)/.exec(className);
@@ -1108,11 +1229,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                   </div>
                 </div>
               ) : isStreaming ? (
-                <StreamMarkdown content={rawText} />
+                <StreamMarkdown text={rawText} />
               ) : Array.isArray(parsedContent) ? (
                 // Render multimodal content (images + text + files) for assistant
                 <div className="prose prose-sm max-w-none text-[#002F4B]">
-                   {renderMultimodalContent(parsedContent as (TextContent | ImageUrlContent | InputFileContent)[])}
+                   {renderMultimodalContent(parsedContent as (TextContent | ImageUrlContent | InputFileContent | DiagramContent)[])}
                 </div>
               ) : (
                 // Fallback for text-only assistant messages

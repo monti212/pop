@@ -262,7 +262,7 @@ export const getClassDocumentsStorageUsed = async (
 
     if (error) throw error;
 
-    const totalBytes = data?.reduce((sum, doc) => sum + (doc.file_size || 0), 0) || 0;
+    const totalBytes = data?.reduce((sum: any, doc: any) => sum + (doc.file_size || 0), 0) || 0;
 
     return { success: true, data: totalBytes };
   } catch (error: any) {
@@ -288,7 +288,7 @@ export const getTotalStorageUsed = async (
 
     if (classDocsError) throw classDocsError;
 
-    const classDocsBytes = classDocsData?.reduce((sum, doc) => sum + (doc.file_size || 0), 0) || 0;
+    const classDocsBytes = classDocsData?.reduce((sum: any, doc: any) => sum + (doc.file_size || 0), 0) || 0;
     const userFilesBytes = userStorageResult.bytesUsed || 0;
     const totalBytes = classDocsBytes + userFilesBytes;
 
@@ -374,7 +374,7 @@ export const uploadClassDocuments = async (
         const fileExtension = sanitizedName.split('.').pop() || '';
         const storagePath = `${userId}/class-documents/${classId}/${timestamp}-${sanitizedName}`;
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: _uploadData, error: uploadError } = await supabase.storage
           .from(STORAGE_BUCKET)
           .upload(storagePath, file, {
             cacheControl: '3600',

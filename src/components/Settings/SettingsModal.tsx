@@ -3,29 +3,20 @@ import { motion } from 'framer-motion';
 import {
   X,
   User,
-  Bell,
   Shield,
   Globe,
   HelpCircle,
   Save,
   Check,
   LogOut,
-  Key,
   Search,
   Zap,
-  Brush,
-  Bot,
   CreditCard
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import PasswordChangeForm from './PasswordChangeForm';
 import PrivacySettings from './PrivacySettings';
-import SubscriptionSettings from './SubscriptionSettings';
-import UpgradeTab from './UpgradeTab';
-import PaymentMethodSettings from './PaymentMethodSettings';
-import PersonalizationSettings from './PersonalizationSettings';
-import ApiKeySettings from './ApiKeySettings';
 import { supabase } from '../../services/authService';
 
 interface SettingsModalProps {
@@ -46,23 +37,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   interfaceLanguage = 'english',
   responseLanguage = 'english',
   onLanguageChange = () => {},
-  onUpgradeClick = () => {},
   userSubscription
 }) => {
   const { user } = useAuth();
-  const { theme, setAppTheme } = useTheme();
+  const { setAppTheme } = useTheme();
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [isUpdatingName, setIsUpdatingName] = useState(false);
   const [nameUpdateSuccess, setNameUpdateSuccess] = useState(false);
   const [nameUpdateError, setNameUpdateError] = useState<string | null>(null);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [, _setShowMobileMenu] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'account' | 'language' | 'subscription' | 'upgrade' | 'privacy' | 'help'>('account');
   
-  // Available languages for interface and response
-  const availableLanguages = ['english', 'setswana', 'french', 'twi', 'ewe', 'fante', 'ga'];
+  // Available languages for interface and response - kept for future use
+  void ['english', 'setswana', 'french', 'twi', 'ewe', 'fante', 'ga'];
   
   // Check if URL has tab parameter
   useEffect(() => {

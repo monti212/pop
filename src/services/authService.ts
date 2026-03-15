@@ -1,5 +1,5 @@
-import { createClient, User, UserResponse } from '@supabase/supabase-js';
-import { validateSession, validateJWTClaims, waitForSessionReady, isJWTExpired as checkJWTExpired } from '../utils/sessionValidator';
+import { createClient, User } from '@supabase/supabase-js';
+import { validateSession, isJWTExpired as checkJWTExpired } from '../utils/sessionValidator';
 
 // Helper function to clear Supabase auth tokens from localStorage
 const clearSupabaseAuthTokens = () => {
@@ -102,7 +102,7 @@ if (isSupabaseConfigured()) {
     );
     
     // Add global error handler for auth errors
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange((event: any, session: any) => {
       if (event === 'TOKEN_REFRESHED' && !session) {
         console.warn('Token refresh failed, clearing local session...');
         clearSupabaseAuthTokens();
@@ -144,7 +144,7 @@ if (isSupabaseConfigured()) {
       signInWithPassword: () => Promise.resolve({ data: null, error: { message: configErrorMessage } }),
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
       getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-      onAuthStateChange: (callback) => {
+      onAuthStateChange: (callback: any) => {
         // Call callback immediately with null user for mock mode
         setTimeout(() => callback('SIGNED_OUT', null), 0);
         return { data: { subscription: { unsubscribe: () => {} } } };
@@ -154,8 +154,8 @@ if (isSupabaseConfigured()) {
       updateUser: () => Promise.resolve({ error: { message: configErrorMessage } }),
       signInWithOAuth: () => Promise.resolve({ data: null, error: { message: configErrorMessage } })
     },
-    from: (table) => ({
-      select: (columns) => ({
+    from: (_table: any) => ({
+      select: (_columns: any) => ({
         eq: () => ({
           single: () => Promise.resolve({ data: null, error: null }),
           maybeSingle: () => Promise.resolve({ data: null, error: null }),
@@ -170,19 +170,19 @@ if (isSupabaseConfigured()) {
           order: () => Promise.resolve({ data: [], error: null })
         })
       }),
-      insert: (data) => ({ 
-        select: () => ({ 
+      insert: (_data: any) => ({
+        select: () => ({
           single: () => Promise.resolve({ data: null, error: null })
         }),
         eq: () => Promise.resolve({ data: null, error: null })
       }),
-      update: (data) => ({ 
+      update: (_data: any) => ({
         eq: () => Promise.resolve({ data: null, error: null })
       }),
-      delete: () => ({ 
-        eq: () => Promise.resolve({ data: null, error: null }) 
+      delete: () => ({
+        eq: () => Promise.resolve({ data: null, error: null })
       }),
-      upsert: (data, options) => ({ 
+      upsert: (_data: any, _options: any) => ({
         select: () => ({ 
           single: () => Promise.resolve({ data: null, error: null }) 
         }) 
@@ -668,7 +668,7 @@ export const onAuthStateChange = (
     return () => {};
   }
 
-  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+  const { data } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
     callback(session?.user || null);
   });
   
@@ -761,7 +761,7 @@ export const checkEmailExists = async (
   try {
     // This is just a simple way to check if an email exists
     // A more robust solution would use a server-side function for this check
-    const { data, error } = await supabase.auth.signInWithOtp({
+    const { data: _data1, error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: false
@@ -801,7 +801,7 @@ export const signInWithGoogle = async (): Promise<{ success: boolean; error?: st
   }
 
   try {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { data: _data2, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/`,
@@ -833,6 +833,6 @@ export const signInWithGoogle = async (): Promise<{ success: boolean; error?: st
 };
 
 // Helper function to determine team role based on email
-const determineTeamRole = (email: string): TeamRoleEnum => {
+const determineTeamRole = (_email: string): TeamRoleEnum => {
   return 'free';
 };

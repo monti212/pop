@@ -2,12 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import Logo from './Logo';
 import { Link } from 'react-router-dom';
-import { Mail, MapPin, MessageSquare, Heart, Linkedin, FileText } from 'lucide-react';
+import { Mail, MapPin, Heart, Linkedin } from 'lucide-react';
 
 interface NewFooterProps {
 }
 
-const NewFooter: React.FC<NewFooterProps> = ({ onDemoChatAccess }) => {
+const NewFooter: React.FC<NewFooterProps> = () => {
   return (
     <footer className="py-8 sm:py-12 lg:py-16 bg-sand-200 border-t border-borders">
       <div className="container mx-auto px-4 sm:px-6">

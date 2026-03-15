@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Calendar, CheckCircle, MessageSquare, FileText, Globe, Bot,
-  User,
-  Heart,
-  Key
+import React from 'react';
+import {
+  CheckCircle, MessageSquare, FileText, Globe, Bot,
+  User
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -13,21 +11,13 @@ interface SubscriptionSettingsProps {
   teamRole?: 'supa_admin' | 'admin' | 'prime' | 'free';
 }
 
-const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({ 
+const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
   darkMode = false,
-  userSubscription,
+  userSubscription: _userSubscription,
   teamRole = 'free'
 }) => {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
 
   // Check if user is a team member
   const isTeamMember = teamRole === 'supa_admin' || teamRole === 'admin' || teamRole === 'prime';
@@ -186,24 +176,24 @@ const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
         darkMode ? 'bg-navy/20 border border-navy/30' : isTeamMember ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200' : 'bg-navy/5 border border-navy/20'
       }`}>
         <div className="flex items-start gap-2">
-          <Globe className={\`w-5 h-5 flex-shrink-0 ${
+          <Globe className={`w-5 h-5 flex-shrink-0 ${
             darkMode ? 'text-navy/70' : isTeamMember ? 'text-blue-600' : 'text-navy'
           }`} />
           <div>
-            <h3 className={\`text-sm font-medium ${darkMode ? 'text-white' : 'text-navy'}`}>
+            <h3 className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-navy'}`}>
               {isTeamMember ? 'OrionX Team Member' : 'Our Mission'}
             </h3>
-            <p className={\`text-xs mt-1 ${darkMode ? 'text-white/70' : 'text-navy/70'}`}>
+            <p className={`text-xs mt-1 ${darkMode ? 'text-white/70' : 'text-navy/70'}`}>
               {isTeamMember ? (
-                \`As an OrionX ${getTeamRoleDisplayName(teamRole)}, you have full access to all Uhuru capabilities and advanced AI models. Your usage helps us refine the platform for all users across Africa.`
+                `As an OrionX ${getTeamRoleDisplayName(teamRole)}, you have full access to all Uhuru capabilities and advanced AI models. Your usage helps us refine the platform for all users across Africa.`
               ) : (
                 <>
-                  Uhuru is committed to democratizing access to advanced AI technology for every African. 
+                  Uhuru is committed to democratizing access to advanced AI technology for every African.
                   All features are free because we believe everyone deserves access to intelligent assistance.
                   For support, contact us at{' '}
-                  <a 
-                    href="mailto:support@orionx.xyz" 
-                    className={\`underline ${darkMode ? 'text-teal' : 'text-teal'}`}
+                  <a
+                    href="mailto:support@orionx.xyz"
+                    className={`underline ${darkMode ? 'text-teal' : 'text-teal'}`}
                   >
                     support@orionx.xyz
                   </a>

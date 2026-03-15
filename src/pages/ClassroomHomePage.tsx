@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Edit, Users, Award, Activity, BarChart3, FolderOpen,
+  ArrowLeft, Users, Award, Activity, BarChart3, FolderOpen,
   Sparkles, ClipboardCheck, UserPlus, TrendingUp, AlertCircle,
-  Calendar, BookOpen, Brain, Loader, X, RefreshCw, GraduationCap, Trash2
+  Calendar, BookOpen, Loader, RefreshCw, Trash2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getClassroomOverview, ClassroomOverview } from '../services/classService';
@@ -29,8 +29,8 @@ const ClassroomHomePage: React.FC = () => {
   const [overview, setOverview] = useState<ClassroomOverview | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [overviewLoading, setOverviewLoading] = useState(true);
-  const [studentsLoading, setStudentsLoading] = useState(true);
+  const [_overviewLoading, setOverviewLoading] = useState(true);
+  const [_studentsLoading, setStudentsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'overview' | 'students' | 'documents'>('overview');
 
@@ -649,7 +649,7 @@ const ClassroomHomePage: React.FC = () => {
         <LessonPlanGeneratorModal
           isOpen={showLessonPlanModal}
           onClose={() => setShowLessonPlanModal(false)}
-          onSuccess={(lessonPlan: string, documentId?: string) => {
+          onSuccess={(_lessonPlan: string, documentId?: string) => {
             console.log('Generated lesson plan saved with document ID:', documentId);
             handleModalSuccess();
             setShowLessonPlanModal(false);

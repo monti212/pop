@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Key, Lock, Code, RefreshCw, AlertTriangle, Copy, Check, Cpu, Search } from 'lucide-react';
+import { ArrowLeft, Key, Lock, Code, AlertTriangle, Copy, Check, Cpu, Search } from 'lucide-react';
 import Logo from '../components/Logo';
 import NewFooter from '../components/NewFooter';
 

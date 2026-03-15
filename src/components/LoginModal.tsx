@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Mail, Lock, Eye, EyeOff, AlertCircle, Smartphone } from 'lucide-react';
+import { X, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { signIn, resetPassword } from '../services/authService';
 import Particles from './Particles';
 import Logo from './Logo';
-import SocialAuthButton from './SocialAuthButton';
 import PhoneAuthModal from './PhoneAuthModal';
 
 interface LoginModalProps {
