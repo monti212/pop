@@ -11,9 +11,7 @@ export const convertMarkdownToHtml = async (markdown: string): Promise<string> =
     marked.setOptions({
       breaks: true, // Convert line breaks to <br>
       gfm: true, // Enable GitHub Flavored Markdown
-      headerIds: false, // Disable header IDs for cleaner output
-      mangle: false, // Don't mangle autolinked email addresses
-    });
+    } as any);
 
     // Convert markdown to HTML
     const html = await marked.parse(markdown);

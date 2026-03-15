@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
 import { ArrowLeft, RefreshCw, Zap, Activity, Globe, Clock } from 'lucide-react';
@@ -16,7 +16,7 @@ export default function APINetworkPerformance() {
   const [endpoints, setEndpoints] = useState<EndpointPerformance[]>([]);
   const [totalRequests, setTotalRequests] = useState(0);
   const [avgResponseTime, setAvgResponseTime] = useState(0);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [, setLastUpdate] = useState<Date>(new Date());
 
   const fetchAPIMetrics = async () => {
     try {

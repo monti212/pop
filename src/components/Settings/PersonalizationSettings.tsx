@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Save, Check, AlertTriangle, Loader } from 'lucide-react';
+import { Save, Check, AlertTriangle, Loader } from 'lucide-react';
 import { supabase } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 

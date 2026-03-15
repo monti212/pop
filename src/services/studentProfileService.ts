@@ -30,13 +30,13 @@ export const getEnhancedStudentProfile = async (
       return { success: false, error: 'Student not found' };
     }
 
-    const { data: personality, error: personalityError } = await supabase
+    const { data: personality, error: _personalityError } = await supabase
       .from('student_personality_traits')
       .select('*')
       .eq('student_id', studentId)
       .maybeSingle();
 
-    const { data: grades, error: gradesError } = await supabase
+    const { data: grades, error: _gradesError } = await supabase
       .from('student_grades')
       .select('*')
       .eq('student_id', studentId)
@@ -338,12 +338,12 @@ export const getClassBehaviorSummary = async (
     const summary = {
       total_incidents: data.length,
       by_severity: {
-        minor: data.filter(log => log.severity === 'minor').length,
-        moderate: data.filter(log => log.severity === 'moderate').length,
-        major: data.filter(log => log.severity === 'major').length
+        minor: data.filter((log: any) => log.severity === 'minor').length,
+        moderate: data.filter((log: any) => log.severity === 'moderate').length,
+        major: data.filter((log: any) => log.severity === 'major').length
       },
-      requiring_followup: data.filter(log => log.follow_up_needed && !log.follow_up_completed).length,
-      parent_notifications: data.filter(log => log.parent_notified).length
+      requiring_followup: data.filter((log: any) => log.follow_up_needed && !log.follow_up_completed).length,
+      parent_notifications: data.filter((log: any) => log.parent_notified).length
     };
 
     return { success: true, data: summary };

@@ -1,6 +1,5 @@
 import { supabase } from './authService';
 import { parseDocumentContent } from '../utils/documentParser';
-import { User } from '@supabase/supabase-js';
 
 export interface UserFile {
   id: string;
@@ -78,43 +77,6 @@ const sanitizeFilename = (filename: string): string => {
   }
 };
 
-/**
- * Robust base64 to Blob converter that handles Unicode strings properly
- * Uses modern Blob API instead of atob to avoid Unicode escape sequence errors
- */
-const base64ToBlob = (base64Data: string, contentType: string = 'image/png'): Blob => {
-  try {
-    // Remove data URL prefix if present
-    const base64String = base64Data.replace(/^data:[^;]+;base64,/, '');
-
-    // Validate base64 format
-    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(base64String)) {
-      throw new Error('Invalid base64 format');
-    }
-
-    // Use fetch API to decode base64 (more robust than atob)
-    const dataUrl = `data:${contentType};base64,${base64String}`;
-    return fetch(dataUrl)
-      .then(res => res.blob())
-      .then(blob => blob)
-      .catch(err => {
-        // Fallback to atob method with proper error handling
-        try {
-          const binaryString = atob(base64String);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          return new Blob([bytes], { type: contentType });
-        } catch (atobError) {
-          throw new Error(`Failed to decode base64 data: ${atobError}`);
-        }
-      });
-  } catch (error: any) {
-    console.error('Error converting base64 to blob:', error);
-    throw new Error(`Base64 conversion failed: ${error.message}`);
-  }
-};
 
 /**
  * Validate and refresh the user session before file operations
@@ -206,7 +168,7 @@ export const getUserStorageUsed = async (
       throw new Error(`I couldn't check your storage usage. ${error.message}`);
     }
 
-    const totalBytes = data?.reduce((sum, file) => sum + (file.file_size || 0), 0) || 0;
+    const totalBytes = data?.reduce((sum: any, file: any) => sum + (file.file_size || 0), 0) || 0;
 
     return {
       success: true,
@@ -282,7 +244,7 @@ export const uploadBase64Image = async (
     });
 
     // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: _uploadData, error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(filePath, blob, {
         cacheControl: '3600',
@@ -387,7 +349,7 @@ export const uploadChatImage = async (
     console.log('[uploadChatImage] Uploading to storage:', { filePath, bucket: STORAGE_BUCKET, fileSize: file.size });
 
     // Upload file directly to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: _uploadData, error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -492,7 +454,6 @@ export const uploadChatDocument = async (
     // Generate unique filename with robust sanitization
     const timestamp = Date.now();
     const sanitizedName = sanitizeFilename(file.name);
-    const extension = sanitizedName.split('.').pop() || 'bin';
     const documentFilename = `chat-document-${timestamp}-${sanitizedName}`;
     const filePath = `${validatedUserId}/chat-documents/${documentFilename}`;
 
@@ -505,7 +466,7 @@ export const uploadChatDocument = async (
     console.log('[uploadChatDocument] Uploading to storage:', { filePath, bucket: STORAGE_BUCKET, fileSize: file.size, fileType: file.type });
 
     // Upload file directly to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: _uploadData, error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -598,11 +559,10 @@ export const uploadFile = async (
 
     // Generate unique file path
     const timestamp = Date.now();
-    const fileExtension = file.name.split('.').pop() || '';
     const fileName = `${userId}/${timestamp}-${file.name}`;
 
     // Upload file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: _uploadData, error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(fileName, file, {
         cacheControl: '3600',

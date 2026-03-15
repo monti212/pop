@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Copy, RefreshCw, Check, Download, FileText, Grid2x2 as Grid, FileEdit as Edit3, MessageCircle, X, Search } from 'lucide-react';
+import { Copy, Check, Download, FileText, FileEdit as Edit3, MessageCircle, Search } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import atomDark from 'react-syntax-highlighter/dist/esm/styles/prism/atom-dark';
 import oneLight from 'react-syntax-highlighter/dist/esm/styles/prism/one-light';
@@ -9,7 +9,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useNavigate } from 'react-router-dom';
 import { detectTableInContent } from '../../utils/tableDetection';
-import { convertMarkdownToHtml, stripMarkdown } from '../../utils/markdownConverter';
+import { convertMarkdownToHtml } from '../../utils/markdownConverter';
 import { MessageContent, TextContent, ImageUrlContent, InputFileContent } from '../../types/chat';
 import StreamMarkdown from '../StreamMarkdown';
 import FileAttachment from './FileAttachment';
@@ -37,6 +37,7 @@ const extractTextFromMessageContent = (content: MessageContent): string => {
 };
 
 // Helper function to count words in a string
+// @ts-ignore TS6133
 const countWords = (text: string): number => {
   const trimmedText = text.trim();
   return trimmedText === '' ? 0 : trimmedText.split(/\s+/).length;
@@ -78,7 +79,7 @@ interface MessageBubbleProps {
 }
 
 // Helper function to auto-save table data to Uhuru Sheets
-const autoSaveToUhuruSheets = (tableData: any, sourceContent: string) => {
+const autoSaveToUhuruSheets = (tableData: any, _sourceContent: string) => {
   try {
     const sheetData = {
       id: crypto.randomUUID(),
@@ -117,7 +118,6 @@ const userMarkdownComponents = {
 const MessageBubble: React.FC<MessageBubbleProps> = ({
   role,
   content,
-  timestamp,
   isLongResponse = false,
   messageId,
   messageIndex,
@@ -130,9 +130,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   onSave, // Keeping this prop as it's still in the interface, but removing the button
   onEdit,
   onInlineEditCompleteAndResend,
-  onOpenCanvas,
   darkMode, // Add darkMode prop here
-  onAssistantEdit,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -173,12 +171,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   // Detect search intent for command styling
   const isSearchIntent = rawText.toLowerCase().startsWith('search: ');
-  const searchQuery = isSearchIntent ? rawText.substring(rawText.indexOf(':') + 1).trim() : '';
+  void (isSearchIntent ? rawText.substring(rawText.indexOf(':') + 1).trim() : ''); // searchQuery - kept for future use
   
   const [showActions, setShowActions] = useState(false); // Controls hover actions for the whole bubble
-  const [showMobileActions, setShowMobileActions] = useState(false);
+  const [, _setShowMobileActions] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [htmlContent, setHtmlContent] = useState<string | null>(null);
+  const [, setHtmlContent] = useState<string | null>(null);
   const [isEditingInline, setIsEditingInline] = useState(false);
   const [editedContent, setEditedContent] = useState(parsedContent);
   
@@ -189,7 +187,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   // selection popover
   const [showSelTools, setShowSelTools] = useState(false);
-  const [selBox, setSelBox] = useState<{top:number;left:number} | null>(null);
+  const [selBox, _setSelBox] = useState<{top:number;left:number} | null>(null);
   const [replaceMode, setReplaceMode] = useState(false);
   const [replaceText, setReplaceText] = useState('');
 
@@ -228,7 +226,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       const result = await autoSaveLessonPlan(
         rawText,
         user.id,
-        conversationId,
+        conversationId ?? '',
         messageId
       );
 
@@ -345,7 +343,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   // Don't render system messages or thinking messages
-  if (role === 'system' || role === 'thinking') {
+  if (role === 'system' || (role as string) === 'thinking') {
     return null;
   }
   
@@ -357,14 +355,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   }, [isLongResponse, role, parsedContent]);
 
   // Check if the message contains a table
+  // @ts-ignore TS6133
   const hasTable = role === 'assistant' && detectTableInContent(extractTextFromMessageContent(parsedContent));
-  
+
+  // @ts-ignore TS6133
   const handleCopy = () => {
     navigator.clipboard.writeText(extractTextFromMessageContent(parsedContent)); // Copies the entire message bubble content
     setIsCopied(true); // This state is for the overall message bubble copy button
     setTimeout(() => setIsCopied(false), 2000); // Reset copy status after 2 seconds
   };
 
+  // @ts-ignore TS6133
   const handleEdit = () => { // This is for the main edit button, not inline
     if (onEdit && messageIndex !== undefined) {
      console.log('🔍 [DEBUG] handleEdit called for messageIndex:', messageIndex);
@@ -372,6 +373,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
+  // @ts-ignore TS6133
   const handleRegenerate = () => {
     if (onRegenerate) {
       onRegenerate(extractTextFromMessageContent(parsedContent)); // Regenerates the assistant's response
@@ -510,6 +512,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     });
   };
 
+  // @ts-ignore TS6133
   const handleOpenUhuruSheets = (messageContent?: string) => {
     // Find table data in the content
     const tableData = detectTableInContent(messageContent || extractTextFromMessageContent(parsedContent));
@@ -708,7 +711,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                     li: ({node, ...props}) => <li {...props} />,
                     a: ({node, ...props}) => <a {...props} />,
                     blockquote: ({node, ...props}) => <blockquote {...props} />,
-                    pre: ({ children, ...props }: any) => {
+                    pre: ({ children }: any) => {
                       const child: any = Array.isArray(children) ? children[0] : children;
                       const className = child?.props?.className || '';
                       const match = /language-(\w+)/.exec(className);
@@ -779,6 +782,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   // Save cursor position when content changes
+  // @ts-ignore TS6133
   const saveCaretPosition = () => {
     if (editableRef.current) {
       const selection = window.getSelection();
@@ -790,6 +794,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   // Restore cursor position
+  // @ts-ignore TS6133
   const restoreCaretPosition = () => {
     if (editableRef.current) {
       const range = document.createRange();
@@ -991,7 +996,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                         h3: ({node, ...props}) => <h3 className="text-sm font-bold text-[#002F4B] mb-2" {...props} />,
                         h4: ({node, ...props}) => <h4 className="text-sm font-bold text-[#002F4B] mb-1" {...props} />,
                         strong: ({node, ...props}) => <strong className="font-semibold text-[#002F4B]" {...props} />,
-                        pre: ({ children, ...props }: any) => {
+                        pre: ({ children }: any) => {
                           const child: any = Array.isArray(children) ? children[0] : children;
                           const className = child?.props?.className || '';
                           const match = /language-(\w+)/.exec(className);
@@ -1108,7 +1113,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                   </div>
                 </div>
               ) : isStreaming ? (
-                <StreamMarkdown content={rawText} />
+                <StreamMarkdown text={rawText} />
               ) : Array.isArray(parsedContent) ? (
                 // Render multimodal content (images + text + files) for assistant
                 <div className="prose prose-sm max-w-none text-[#002F4B]">

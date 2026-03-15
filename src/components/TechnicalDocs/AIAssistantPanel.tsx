@@ -39,7 +39,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ pageId, onClose }) 
     setIsLoading(true);
 
     try {
-      const response = await sendChatMessage(pageId, user.id, userMessage, {});
+      await sendChatMessage(pageId, user.id, userMessage, {});
       await loadChatHistory();
     } catch (error) {
       console.error('Error sending message:', error);

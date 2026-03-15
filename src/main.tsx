@@ -56,9 +56,9 @@ window.addEventListener('unhandledrejection', (e) => {
   logger.error('Unhandled Promise Rejection', e.reason);
 });
 
-if (isDevelopment && performance.memory) {
+if (isDevelopment && (performance as any).memory) {
   setInterval(() => {
-    const memory = performance.memory;
+    const memory = (performance as any).memory;
     const used = (memory.usedJSHeapSize / 1048576).toFixed(2);
     const limit = (memory.jsHeapSizeLimit / 1048576).toFixed(2);
     const percent = ((memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100).toFixed(1);

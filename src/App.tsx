@@ -1,7 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import AuthButtons from './components/AuthButtons';
-import Logo from './components/Logo'; // Keep this import if it's used elsewhere
 import NewFooter from './components/NewFooter';
 import Hero from './components/Hero';
 import LoginModal from './components/LoginModal';
@@ -11,25 +9,14 @@ import { ConversationProvider } from './context/ConversationContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { logger } from './utils/logger';
-import { HeroSkeleton, LoadingSpinner } from './components/SkeletonLoader';
-import DemoChatLogin from './components/DemoChatLogin';
-import MeetHilousAI from './components/MeetHilousAI';
-import WhatHilousCanDo from './components/WhatHilousCanDo';
-import HowItWorksSection from './components/HowItWorksSection';
-import CommunityImpactSection from './components/CommunityImpactSection';
-import MeetPaxSection from './components/MeetPaxSection';
-import FAQSection from './components/FAQSection';
+import { HeroSkeleton } from './components/SkeletonLoader';
 import WhyUhuruSection from './components/WhyUhuruSection';
 import ProductTiersSection from './components/ProductTiersSection';
 import UhuruLLMSection from './components/UhuruLLMSection';
 import TermsAndConditions from './pages/TermsAndConditions';
-import HowPaxPowersHilous from './pages/HowPaxPowersHilous';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import { User, LogIn } from 'lucide-react';
-import { supabase } from './services/authService';
-import { signIn, signUp, signOut } from './services/authService';
-import ProtectedRoute from './components/ProtectedRoute';
+import { signOut } from './services/authService';
 import ApiDocumentation from './pages/ApiDocumentation';
 import AdminLogin from './pages/AdminLogin';
 import AdminRoute from './components/AdminRoute';
@@ -63,14 +50,13 @@ function App() {
 }
 
 const AppContentInner: React.FC = () => {
-  const { user, profile, isLoading, isAuthenticated, refreshProfile } = useAuth();
-  
+  const { profile, isLoading, isAuthenticated, refreshProfile } = useAuth();
+
   // Define userSubscription from profile or default
-  const userSubscription = profile?.subscription_tier || 'free';
+  const userSubscription = profile?.team_role || 'free';
   
   // Add states for initial chat question flow
   const [initialChatQuestion, setInitialChatQuestion] = useState<string | null>(null);
-  const [shouldShowSignUpAfterInitialMessage, setShouldShowSignUpAfterInitialMessage] = useState(false);
 
   // Add states for initial chat question flow
   const [showSignupModalForHeroInput, setShowSignupModalForHeroInput] = useState(false);
@@ -82,7 +68,7 @@ const AppContentInner: React.FC = () => {
     showChatInterface: false
   });
   
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -91,7 +77,6 @@ const AppContentInner: React.FC = () => {
 
   // Page detection - must be defined before useEffect hooks that reference them
   const isTermsPage = location.pathname === '/terms';
-  const isHowPaxPowersHilousPage = location.pathname === '/how-pax-powers-hilous';
   const isPrivacyPolicyPage = location.pathname === '/privacy';
   const isResetPasswordPage = location.pathname === '/reset-password';
   const isApiDocsPage = location.pathname === '/api-docs';
@@ -233,7 +218,6 @@ const AppContentInner: React.FC = () => {
 
     setInitialChatQuestion(null);
     setPostSignupInitialQuestion(null);
-    setShouldShowSignUpAfterInitialMessage(false);
     setShowSignupModalForHeroInput(false);
     setChatIntentOpen(false);
     sessionStorage.removeItem('uhuru_chat_open');
@@ -275,19 +259,6 @@ const AppContentInner: React.FC = () => {
               <ChatInterface
                 onClose={handleSignOut}
                 userSubscription={userSubscription}
-                initialChatQuestion={initialChatQuestion}
-                shouldShowSignUpAfterInitialMessage={shouldShowSignUpAfterInitialMessage}
-                onShowSignUpModal={handleOpenSignUpModal}
-                onInitialMessageProcessed={() => {
-                  logger.debug('onInitialMessageProcessed called - clearing initial chat state');
-                  setInitialChatQuestion(null);
-                  setShouldShowSignUpAfterInitialMessage(false);
-                }}
-                postSignupInitialQuestion={postSignupInitialQuestion}
-                onPostSignupMessageSent={() => {
-                  logger.debug('onPostSignupMessageSent called - clearing postSignupInitialQuestion');
-                  setPostSignupInitialQuestion(null);
-                }}
               />
             </Suspense>
           ) : (
@@ -340,22 +311,9 @@ const AppContentInner: React.FC = () => {
                 {(isAuthenticated || authState.showChatInterface) && !isTermsPage && !isPrivacyPolicyPage && !isResetPasswordPage && !isApiDocsPage && !isAdminLoginPage && !isAdminPage && !isSupaAdminPage && !isChatPage && !isUPage ? (
                   <Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}>
                     <ChatInterface
-                    onClose={handleSignOut}
-                    userSubscription={userSubscription} // Keep this prop for now, will be removed later
-                    initialChatQuestion={initialChatQuestion}
-                    shouldShowSignUpAfterInitialMessage={shouldShowSignUpAfterInitialMessage}
-                    onShowSignUpModal={handleOpenSignUpModal}
-                    onInitialMessageProcessed={() => {
-                      logger.debug('onInitialMessageProcessed called - clearing initial chat state');
-                      setInitialChatQuestion(null);
-                      setShouldShowSignUpAfterInitialMessage(false);
-                    }}
-                    postSignupInitialQuestion={postSignupInitialQuestion}
-                    onPostSignupMessageSent={() => {
-                      logger.debug('onPostSignupMessageSent called - clearing postSignupInitialQuestion');
-                      setPostSignupInitialQuestion(null);
-                    }}
-                  />
+                      onClose={handleSignOut}
+                      userSubscription={userSubscription}
+                    />
                   </Suspense>
                 ) : (
                   <>

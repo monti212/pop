@@ -84,7 +84,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ isOpen, onClose, onSucc
       const result = await updateClass(classData.id, {
         class_name: formData.name.trim(),
         grade_level: formData.grade_level.trim(),
-        description: formData.description.trim() || null,
+        description: formData.description.trim() || undefined,
         active_status: formData.is_active
       });
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Sparkles, Image, Check } from "lucide-react";
 
 type ImageModel = "craft-1" | "craft-2";
@@ -208,7 +208,7 @@ export default function ImageModelSelector({
     onClose?.();
   };
 
-  const accent = accents[selectedObj.accent as keyof typeof accents];
+  void accents[selectedObj.accent as keyof typeof accents]; // accent - kept for future use
 
   return (
     <>

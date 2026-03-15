@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, ArrowRight, CloudLightning as Lightning, MessageSquare, FileText, Globe } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import SubscriptionModal from './SubscriptionModal';
-import { STRIPE_PRODUCTS, getProductDisplayInfo } from '../stripe-config';
+import { getProductDisplayInfo } from '../stripe-config';
 
 interface PricingSectionProps {
   onSignUp: () => void;

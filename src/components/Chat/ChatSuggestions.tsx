@@ -8,9 +8,9 @@ interface ChatSuggestionsProps {
   selectedModel?: '2.0';
 }
 
-const ChatSuggestions: React.FC<ChatSuggestionsProps> = ({ suggestions, onSelect, selectedModel = '2.0' }) => {
+const ChatSuggestions: React.FC<ChatSuggestionsProps> = ({ onSelect, selectedModel = '2.0' }) => {
   const getSuggestions = () => {
-    if (selectedModel === '2.1') {
+    if ((selectedModel as string) === '2.1') {
       return [
         "Explain photosynthesis and help me prepare for my biology test",
         "Search for: best study techniques for memorizing historical dates",

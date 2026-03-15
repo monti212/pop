@@ -10,7 +10,6 @@ import {
   getFolderDocuments,
   deleteDocument,
   ClassFolder,
-  ClassDocument,
   DocumentWithFolder,
   uploadClassDocuments,
   getTotalStorageUsed,
@@ -653,7 +652,7 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
                                 <p className="text-xs text-gray-600">{formatFileSize(file.size)}</p>
                               </div>
                             </div>
-                            {progress?.status === 'completed' && (
+                            {(progress?.status as string) === 'completed' && (
                               <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
                             )}
                             {progress?.status === 'error' && (
@@ -670,7 +669,7 @@ const ClassDocumentsView: React.FC<ClassDocumentsViewProps> = ({ classId, classN
                                 <div
                                   className={`h-1.5 rounded-full transition-all duration-300 ${
                                     progress.status === 'error' ? 'bg-red-500' :
-                                    progress.status === 'completed' ? 'bg-green-500' : 'bg-teal'
+                                    (progress.status as string) === 'completed' ? 'bg-green-500' : 'bg-teal'
                                   }`}
                                   style={{ width: `${progress.progress}%` }}
                                 ></div>

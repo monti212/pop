@@ -160,7 +160,7 @@ export const autoSaveLessonPlan = async (
         }
       };
 
-      const { data: userDocData, error: userDocError } = await supabase
+      const { data: _userDocData, error: userDocError } = await supabase
         .from('user_documents')
         .insert(userDocumentRecord)
         .select('id')

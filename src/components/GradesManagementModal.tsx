@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Plus, TrendingUp, Award, Calendar, Trash2, ChevronDown, ChevronRight, Edit2, FileText, Download } from 'lucide-react';
 import {
   Assignment,
-  StudentGrade,
   CreateGradeData,
   GradeCategory
 } from '../types/grades';
@@ -10,9 +9,6 @@ import { Student } from '../types/attendance';
 import {
   getClassAssignments,
   getClassGradeCategories,
-  createGrade,
-  updateGrade,
-  deleteGrade,
   bulkCreateGrades,
   getClassGradesWithDetails
 } from '../services/gradeService';
@@ -44,9 +40,9 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
   students
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('entry');
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [categories, setCategories] = useState<GradeCategory[]>([]);
-  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [, setAssignments] = useState<Assignment[]>([]);
+  const [, setCategories] = useState<GradeCategory[]>([]);
+  const [, setSelectedAssignment] = useState<Assignment | null>(null);
   const [gradeEntries, setGradeEntries] = useState<{ [studentId: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -526,7 +522,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
     const average = totalPercentage / distributionGrades.length;
 
     // Calculate student averages
-    const studentAverages = Object.entries(studentGrades).map(([id, data]) => ({
+    const studentAverages = Object.entries(studentGrades).map(([, data]) => ({
       student: data.name,
       average: data.grades.reduce((sum, g) => sum + g, 0) / data.grades.length
     }));
@@ -550,6 +546,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
     };
   };
 
+  // @ts-ignore TS6133
   const getWeekLabel = () => {
     const now = new Date();
     const weekStart = new Date(now);
@@ -559,6 +556,7 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
     return `${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
   };
 
+  // @ts-ignore TS6133
   const getTermLabel = () => {
     const labels: { [key: string]: string } = {
       '1': 'Spring (Jan-May)',
@@ -1048,12 +1046,11 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {groupGradesByAssessment().map((group, index) => {
+                  {groupGradesByAssessment().map((group) => {
                     const assignment = group.assignment;
                     const grades = group.grades;
                     const isExpanded = expandedAssessments.has(assignment.id);
-                    const averageGrade = grades.reduce((sum: number, g: any) => sum + (g.grade_value || 0), 0) / grades.length;
-                    const averagePercentage = grades.reduce((sum: number, g: any) => sum + calculatePercentage(g.grade_value || 0, g.points_possible || 100), 0) / grades.length;
+                    const averagePercentage = (grades || []).reduce((sum: number, g: any) => sum + calculatePercentage(g.grade_value || 0, g.points_possible || 100), 0) / ((grades || []).length || 1);
 
                     return (
                       <div key={assignment.id} className="border border-gray-200 rounded-lg overflow-hidden">

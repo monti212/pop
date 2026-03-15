@@ -198,7 +198,7 @@ const parseExcelDocument = async (file: File): Promise<string> => {
     // Process only first 10 sheets to avoid memory issues
     const sheetNames = workbook.SheetNames.slice(0, 10);
     
-    sheetNames.forEach(sheetName => {
+    sheetNames.forEach((sheetName: any) => {
       result += `Sheet: ${sheetName}\n`;
       const worksheet = workbook.Sheets[sheetName];
       

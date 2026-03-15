@@ -5,8 +5,6 @@ import { CreateBehaviorLogData, StudentBehaviorLog } from '../types/studentProfi
 import {
   createBehaviorLog,
   getStudentBehaviorLogs,
-  updateBehaviorLog,
-  deleteBehaviorLog
 } from '../services/studentProfileService';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,7 +29,7 @@ const BehaviorLogModal: React.FC<BehaviorLogModalProps> = ({
   students,
   preSelectedStudent
 }) => {
-  const { user } = useAuth();
+  useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('create');
   const [formData, setFormData] = useState<CreateBehaviorLogData>({
     student_id: preSelectedStudent?.id || '',

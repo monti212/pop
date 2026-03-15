@@ -62,8 +62,8 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSucces
       const result = await createClass(user.id, {
         class_name: formData.name.trim(),
         grade_level: formData.grade_level.trim(),
-        description: formData.description.trim() || null,
-        subject: null
+        description: formData.description.trim() || undefined,
+        subject: undefined
       });
 
       if (!result.success) {

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, Loader, Eye, Trash2, RefreshCw, AlertCircle, X as XIcon, Search, Filter, Download, Archive, TrendingUp, Database, DollarSign, Clock, Zap } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, Loader, Eye, Trash2, RefreshCw, AlertCircle, X as XIcon, Search, TrendingUp, Database, Clock, Zap } from 'lucide-react';
 import { supabase } from '../../services/authService';
 import AdminSidebar from '../../components/AdminSidebar';
-import { processAndChunkDocument, getDocumentChunkingStats } from '../../services/knowledgeBaseChunkingService';
+import { processAndChunkDocument } from '../../services/knowledgeBaseChunkingService';
 
 const Brand = {
   sand: '#F7F5F2',
@@ -70,7 +70,7 @@ const AIKnowledgeBase: React.FC = () => {
   const [viewingDocument, setViewingDocument] = useState<KnowledgeDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
-  const [showUploadZone, setShowUploadZone] = useState(false);
+  const [, setShowUploadZone] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -226,7 +226,7 @@ const AIKnowledgeBase: React.FC = () => {
           prev.map(f => f.id === uploadFile.id ? { ...f, progress: 20 } : f)
         );
 
-        const { data: storageData, error: storageError } = await supabase.storage
+        const { error: storageError } = await supabase.storage
           .from('user-files')
           .upload(storagePath, uploadFile.file, {
             cacheControl: '3600',
@@ -500,10 +500,7 @@ const AIKnowledgeBase: React.FC = () => {
 
   const totalDocuments = documents.length;
   const activeDocuments = documents.filter(d => d.is_active && d.processing_status === 'completed').length;
-  const totalSize = documents.reduce((sum, d) => sum + (d.file_size || 0), 0);
-  const totalCost = documents.reduce((sum, d) => sum + (d.estimated_cost || 0), 0);
   const totalTokens = documents.reduce((sum, d) => sum + (d.token_count || 0), 0);
-  const avgTokensPerDoc = totalDocuments > 0 ? Math.round(totalTokens / totalDocuments) : 0;
 
   // Token efficiency metrics
   const totalMicroTokens = documents.reduce((sum, d) => sum + (d.micro_token_count || 0), 0);

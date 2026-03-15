@@ -19,10 +19,10 @@ export interface ChunkProcessingResult {
  * since chunking will be implemented server-side in the process-knowledge-document edge function
  */
 export async function processAndChunkDocument(
-  file: File,
+  _file: File,
   documentId: string,
-  documentTitle: string,
-  options: any = {}
+  _documentTitle: string,
+  _options: any = {}
 ): Promise<ChunkProcessingResult> {
   // Placeholder implementation
   // The actual chunking will be implemented in the edge function

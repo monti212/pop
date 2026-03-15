@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import AuthButtons from './AuthButtons';
 import Particles from './Particles';
 import Logo from './Logo';
@@ -18,9 +18,9 @@ const Hero: React.FC<HeroProps> = ({
   onSignUp,
   isAuthenticated = false
 }) => {
-  const [animateBackground, setAnimateBackground] = useState(true);
+  const [, setAnimateBackground] = useState(true);
   const [question, setQuestion] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
+  const [, setIsFocused] = useState(false);
   
   // Disable animation for reduced motion preference
   useEffect(() => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
 import {
-  MessageSquare, FileText, Table, Edit, Image, Phone, Book,
+  MessageSquare, FileText, Table, Phone,
   ArrowLeft, RefreshCw, Download, TrendingUp, Users, Activity
 } from 'lucide-react';
 
@@ -57,7 +57,7 @@ export default function FeatureUsageDashboard() {
         .eq('organization_name', 'Pencils of Promise')
         .gte('created_at', startDate.toISOString());
 
-      const chatUsers = new Set(chatData?.map(m => m.user_id)).size;
+      const chatUsers = new Set(chatData?.map((m: any) => m.user_id)).size;
       const chatUsage = chatData?.length || 0;
 
       const { data: filesData } = await supabase
@@ -66,7 +66,7 @@ export default function FeatureUsageDashboard() {
         .eq('organization_name', 'Pencils of Promise')
         .gte('created_at', startDate.toISOString());
 
-      const filesUsers = new Set(filesData?.map(f => f.user_id)).size;
+      const filesUsers = new Set(filesData?.map((f: any) => f.user_id)).size;
       const filesUsage = filesData?.length || 0;
 
       const { data: sheetsData } = await supabase
@@ -75,7 +75,7 @@ export default function FeatureUsageDashboard() {
         .eq('organization_name', 'Pencils of Promise')
         .gte('created_at', startDate.toISOString());
 
-      const sheetsUsers = new Set(sheetsData?.map(s => s.user_id)).size;
+      const sheetsUsers = new Set(sheetsData?.map((s: any) => s.user_id)).size;
       const sheetsUsage = sheetsData?.length || 0;
 
       const { data: whatsappData } = await supabase
@@ -84,7 +84,7 @@ export default function FeatureUsageDashboard() {
         .eq('organization_name', 'Pencils of Promise')
         .gte('created_at', startDate.toISOString());
 
-      const whatsappUsers = new Set(whatsappData?.map(w => w.from_number)).size;
+      const whatsappUsers = new Set(whatsappData?.map((w: any) => w.from_number)).size;
       const whatsappUsage = whatsappData?.length || 0;
 
       const featureUsageData: FeatureUsage[] = [

@@ -242,13 +242,13 @@ class ErrorLogService {
 
       const stats = {
         total: data.length,
-        unresolved: data.filter((log) => !log.resolved).length,
+        unresolved: data.filter((log: any) => !log.resolved).length,
         byType: {} as Record<string, number>,
         bySeverity: {} as Record<string, number>,
         byEnvironment: {} as Record<string, number>,
       };
 
-      data.forEach((log) => {
+      data.forEach((log: any) => {
         stats.byType[log.error_type] = (stats.byType[log.error_type] || 0) + 1;
         stats.bySeverity[log.severity] = (stats.bySeverity[log.severity] || 0) + 1;
         stats.byEnvironment[log.environment] = (stats.byEnvironment[log.environment] || 0) + 1;

@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Menu, X, ChevronRight, Eye } from 'lucide-react';
+import { ArrowLeft, Menu, Eye } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import NavigationSidebar from '../components/TechnicalDocs/NavigationSidebar';
 import ContentArea from '../components/TechnicalDocs/ContentArea';
-import AIAssistantPanel from '../components/TechnicalDocs/AIAssistantPanel';
-import { getPageById, getPageBySlug, incrementViewCount, logActivity } from '../services/documentationService';
+import { getPageById, incrementViewCount, logActivity } from '../services/documentationService';
 import type { DocumentationPage } from '../services/documentationService';
 
 const TechnicalDocumentationSystem: React.FC = () => {

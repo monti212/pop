@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { X, Save, Download, FileText, File, ArrowLeft, Plus, Folder, Trash2, Copy, Check, Sparkles } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
@@ -13,7 +12,7 @@ import {
   getUserDocuments,
   updateDocument,
   deleteDocument,
-  UserDocument as DBUserDocument
+  UserDocument as _DBUserDocument
 } from '../services/documentService';
 
 interface UhuruDocument {
@@ -37,12 +36,11 @@ const UhuruDocsPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [showAutoSavedOnly, setShowAutoSavedOnly] = useState(false);
   const [documentFilter, setDocumentFilter] = useState<'all' | 'office' | 'lesson-plans'>('all');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [_isLoading, setIsLoading] = useState(false);
+  const [_error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const { user, profile } = useAuth();
+  const { user, profile: _profile } = useAuth();
   const quillRef = useRef<ReactQuill>(null);
 
   // Get initial content from navigation state or URL parameters

@@ -11,8 +11,8 @@ interface PhoneLinkingSettingsProps {
 }
 
 const PhoneLinkingSettings: React.FC<PhoneLinkingSettingsProps> = ({
-  darkMode = false,
-  interfaceLanguage = 'english'
+  darkMode: _darkMode = false,
+  interfaceLanguage: _interfaceLanguage = 'english'
 }) => {
   const { user } = useAuth();
   const [phoneNumber, setPhoneNumber] = useState('');

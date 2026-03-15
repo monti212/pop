@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Conversation } from '../types/chat';
 import { useAuth } from './AuthContext';
-import { createConversation, getConversations, getConversationMessages, deleteConversation as deleteConversationService, addMessage } from '../services/chatService';
-import { filterSystemMessages, sanitizeMessages } from '../components/MessageFilter';
+import { getConversations, getConversationMessages, deleteConversation as deleteConversationService, addMessage } from '../services/chatService';
 import { MessageContent } from '../types/chat';
 
 interface ConversationContextType {
@@ -37,7 +36,6 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const { user, isAuthenticated } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-  const [pendingConversation, setPendingConversation] = useState<Conversation | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const currentConversationIdRef = React.useRef<string | null>(null);
@@ -67,7 +65,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const messages = await getConversationMessages(conversation.id, user.id, 100);
 
       // Filter out system messages
-      const filteredMessages = messages.filter(msg => msg.role !== 'system');
+      const filteredMessages = messages.filter((msg: any) => msg.role !== 'system');
 
       // Update conversation with loaded messages
       const updatedConversation = {
@@ -106,7 +104,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           // Restore saved conversation if available
           if (currentConversationIdRef.current && userConversations.length > 0) {
             const savedConversation = userConversations.find(
-              c => c.id === currentConversationIdRef.current
+              (c: Conversation) => c.id === currentConversationIdRef.current
             );
             if (savedConversation) {
               // Load messages for the saved conversation
@@ -316,8 +314,9 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setCurrentConversationWithCleanup(remainingConversations[0]);
       } else {
         // If no conversations left, create a new one
-        const newConversation = createNewConversation();
-        setCurrentConversationWithCleanup(newConversation);
+        createNewConversation().then(newConversation => {
+          setCurrentConversationWithCleanup(newConversation);
+        });
       }
     }
   };

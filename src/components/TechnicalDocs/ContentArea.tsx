@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { createPage, updatePage, logActivity } from '../../services/documentationService';
 import type { DocumentationPage } from '../../services/documentationService';

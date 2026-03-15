@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  ArrowLeft, RefreshCw, Users, MessageSquare, Activity, TrendingUp,
-  Clock, Calendar, Zap, Database, ChevronLeft, ChevronRight, AlertTriangle,
-  CheckCircle, XCircle, Loader, Eye, Search, Filter
+  ArrowLeft, RefreshCw, Users, MessageSquare, Activity,
+  Zap, AlertTriangle,
+  Loader, Search
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -50,7 +50,7 @@ interface PlatformMetrics {
 }
 
 const ComprehensiveAdminDashboard: React.FC = () => {
-  const { user } = useAuth();
+  useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'per-account' | 'topics'>('overview');
   const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics | null>(null);
   const [userMetrics, setUserMetrics] = useState<UserUsageMetrics[]>([]);
@@ -58,7 +58,6 @@ const ComprehensiveAdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(10);
@@ -74,7 +73,7 @@ const ComprehensiveAdminDashboard: React.FC = () => {
 
       // Get active users today
       const today = new Date().toISOString().split('T')[0];
-      const { count: activeUsersToday } = await supabase
+      await supabase
         .from('usage_events')
         .select('user_id', { count: 'exact', head: true })
         .gte('created_at', today);
@@ -85,7 +84,7 @@ const ComprehensiveAdminDashboard: React.FC = () => {
         .select('user_id')
         .gte('created_at', today);
 
-      const uniqueActiveUsers = new Set(activeUsersData?.map(e => e.user_id) || []).size;
+      const uniqueActiveUsers = new Set(activeUsersData?.map((e: any) => e.user_id) || []).size;
 
       // Get total messages
       const { count: totalMessages } = await supabase
@@ -109,7 +108,7 @@ const ComprehensiveAdminDashboard: React.FC = () => {
         .from('usage_metrics')
         .select('token_count');
 
-      const totalTokens = tokenData?.reduce((sum, row) => sum + (row.token_count || 0), 0) || 0;
+      const totalTokens = tokenData?.reduce((sum: any, row: any) => sum + (row.token_count || 0), 0) || 0;
 
       // Get tokens in last 24h
       const { data: tokens24hData } = await supabase
@@ -117,14 +116,14 @@ const ComprehensiveAdminDashboard: React.FC = () => {
         .select('token_count')
         .gte('created_at', yesterday);
 
-      const tokensLast24h = tokens24hData?.reduce((sum, row) => sum + (row.token_count || 0), 0) || 0;
+      const tokensLast24h = tokens24hData?.reduce((sum: any, row: any) => sum + (row.token_count || 0), 0) || 0;
 
       // Get knowledge base tokens
       const { data: kbTokenData } = await supabase
         .from('admin_knowledge_documents')
         .select('token_count');
 
-      const knowledgeBaseTokens = kbTokenData?.reduce((sum, row) => sum + (row.token_count || 0), 0) || 0;
+      const knowledgeBaseTokens = kbTokenData?.reduce((sum: any, row: any) => sum + (row.token_count || 0), 0) || 0;
 
       setPlatformMetrics({
         totalUsers: totalUsers || 0,
@@ -154,7 +153,7 @@ const ComprehensiveAdminDashboard: React.FC = () => {
       if (userError) throw userError;
 
       // For each user, count their conversations and messages
-      const userMetricsPromises = (userData || []).map(async (user) => {
+      const userMetricsPromises = (userData || []).map(async (user: any) => {
         const [conversationsResult, messagesResult] = await Promise.all([
           supabase
             .from('conversations')
@@ -164,7 +163,7 @@ const ComprehensiveAdminDashboard: React.FC = () => {
             .from('messages')
             .select('id', { count: 'exact', head: true })
             .in('conversation_id',
-              (await supabase.from('conversations').select('id').eq('user_id', user.id)).data?.map(c => c.id) || []
+              (await supabase.from('conversations').select('id').eq('user_id', user.id)).data?.map((c: any) => c.id) || []
             )
         ]);
 
@@ -205,14 +204,14 @@ const ComprehensiveAdminDashboard: React.FC = () => {
       if (convError) throw convError;
 
       // Get user emails
-      const userIds = [...new Set(conversations?.map(c => c.user_id) || [])];
+      const userIds = [...new Set(conversations?.map((c: any) => c.user_id) || [])];
       const { data: userData } = await supabase
         .from('user_profiles')
         .select('id, email')
         .in('id', userIds);
 
       // For each conversation, count messages and get first message as summary
-      const topicsPromises = (conversations || []).map(async (conv) => {
+      const topicsPromises = (conversations || []).map(async (conv: any) => {
         const { count: messageCount } = await supabase
           .from('messages')
           .select('id', { count: 'exact', head: true })
@@ -227,7 +226,7 @@ const ComprehensiveAdminDashboard: React.FC = () => {
           .limit(1)
           .maybeSingle();
 
-        const userEmail = userData?.find(u => u.id === conv.user_id)?.email || 'Unknown';
+        const userEmail = userData?.find((u: any) => u.id === conv.user_id)?.email || 'Unknown';
 
         // Extract text content from JSONB
         let summaryText = conv.title || 'Untitled Conversation';

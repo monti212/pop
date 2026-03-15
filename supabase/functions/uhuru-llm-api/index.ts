@@ -716,12 +716,19 @@ Deno.serve(async (req) => {
       console.log('🎓 [IMAGE] Educational content detected, checking for reference images');
 
       // Initialize Supabase client for knowledge base access
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      if (!supabaseUrl || !supabaseServiceKey) {
+        console.warn('⚠️ [IMAGE] Supabase env vars missing, skipping knowledge base lookup');
+        // Fall through to generate image without KB context
+      }
+      const supabase = supabaseUrl && supabaseServiceKey
+        ? createClient(supabaseUrl, supabaseServiceKey)
+        : null;
 
       // Check if we have actual reference images in the knowledge base
       try {
+        if (!supabase) throw new Error('Supabase client not available');
         const { data: imageDocuments, error: imageError } = await supabase
           .from('admin_knowledge_documents')
           .select('id, title, file_name, storage_path, original_content')
@@ -777,6 +784,7 @@ Deno.serve(async (req) => {
 
       // Fetch relevant knowledge base content for context
       try {
+        if (!supabase) throw new Error('Supabase client not available');
         const { content: knowledgeContext } = await fetchRelevantKnowledgeBase(
           supabase,
           prompt,
@@ -788,50 +796,52 @@ Deno.serve(async (req) => {
           console.log('📚 [IMAGE] Found relevant educational reference material');
           // Extract key information from knowledge base
           const contextSummary = knowledgeContext.substring(0, 500); // Use first 500 chars as context
-          enhancedPrompt = `Create a detailed, accurate educational diagram showing ${prompt}.
+          enhancedPrompt = `Create a detailed, accurate educational diagram of ${prompt}.
 
-CRITICAL ACCURACY REQUIREMENTS:
-- All anatomical parts must be correctly labeled with their proper scientific names
-- Parts must be positioned anatomically accurately
-- Include all major components and structures
-- Use clear, readable labels with leader lines pointing to each part
-- Follow standard medical/scientific illustration conventions
+VISUAL REQUIREMENTS:
+- Show all major anatomical/structural components clearly
+- Use distinct colors to differentiate each structure
+- Mark each distinct structure with a small numbered circle: ①②③④⑤⑥⑦⑧⑨⑩
+- Do NOT include any text, words, letters or written labels anywhere in the image
+- Numbers only — no text at all
+- Clean, professional illustration style suitable for textbooks
+- Accurate proportions and spatial relationships
 - Color-code different structures for clarity
-- Ensure proportions and spatial relationships are anatomically correct
-- Style: Clean, professional educational diagram suitable for textbooks
 
 Reference context: ${contextSummary}
 
-Remember: Accuracy is paramount for educational content.`;
+Important: Use numbered markers only. All text labels will be provided separately.`;
         } else {
           // No knowledge base content, but still enhance for accuracy
-          enhancedPrompt = `Create a detailed, accurate educational diagram showing ${prompt}.
+          enhancedPrompt = `Create a detailed, accurate educational diagram of ${prompt}.
 
-CRITICAL ACCURACY REQUIREMENTS:
-- All parts must be correctly labeled with proper scientific/technical names
-- Parts must be positioned accurately according to scientific knowledge
-- Include all major components and structures
-- Use clear, readable labels with leader lines pointing to each part
-- Follow standard scientific illustration conventions
+VISUAL REQUIREMENTS:
+- Show all major anatomical/structural components clearly
+- Use distinct colors to differentiate each structure
+- Mark each distinct structure with a small numbered circle: ①②③④⑤⑥⑦⑧⑨⑩
+- Do NOT include any text, words, letters or written labels anywhere in the image
+- Numbers only — no text at all
+- Clean, professional illustration style suitable for textbooks
+- Accurate proportions and spatial relationships
 - Color-code different structures for clarity
-- Ensure accurate proportions and spatial relationships
-- Style: Clean, professional educational diagram suitable for textbooks
 
-This is for educational purposes - accuracy and proper labeling are essential.`;
+Important: Use numbered markers only. All text labels will be provided separately.`;
         }
       } catch (kbError) {
         console.warn('⚠️ [IMAGE] Could not fetch knowledge base context:', kbError);
         // Fallback to basic enhancement
-        enhancedPrompt = `Create a detailed, accurate educational diagram showing ${prompt}.
+        enhancedPrompt = `Create a detailed, accurate educational diagram of ${prompt}.
 
-ACCURACY REQUIREMENTS:
-- Correctly label all parts with proper scientific names
-- Position all elements accurately
-- Use clear labels with leader lines
-- Follow standard scientific illustration style
-- Professional educational diagram quality
+VISUAL REQUIREMENTS:
+- Show all major components and structures clearly
+- Use distinct colors to differentiate each structure
+- Mark each distinct structure with a small numbered circle: ①②③④⑤⑥⑦⑧⑨⑩
+- Do NOT include any text, words, letters or written labels anywhere in the image
+- Numbers only — no text at all
+- Clean, professional illustration style
+- Accurate proportions and spatial relationships
 
-Educational accuracy is critical.`;
+Important: Use numbered markers only. All text labels will be provided separately.`;
       }
 
       console.log('✅ [IMAGE] Enhanced educational prompt:', enhancedPrompt.substring(0, 200) + '...');
@@ -920,7 +930,55 @@ Educational accuracy is critical.`;
       }
 
       console.log('✅ [IMAGE] Successfully generated images:', { count: images.length });
-      return j({ images }, 200, origin);
+
+      // For educational diagrams, generate a text key for the numbered structures
+      let diagramKey: string | undefined;
+      if (isEducational && images.length > 0 && API_URL && MODEL_20) {
+        try {
+          console.log('📋 [IMAGE] Generating diagram key for educational content');
+          const keyResponse = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({
+              model: MODEL_20,
+              messages: [
+                {
+                  role: 'user',
+                  content: `You are a science educator. A student requested a diagram of: "${prompt}".
+
+Generate a numbered key listing all major structures that would appear in a standard educational diagram of this topic. Start numbering from ①.
+
+Format exactly like this:
+**Diagram Key**
+① [Structure name] — [one-sentence description]
+② [Structure name] — [one-sentence description]
+...
+
+Include all major structures visible in such a diagram. Use proper scientific terminology. Do not add any other text before or after the key.`
+                }
+              ],
+              stream: false,
+              max_tokens: 600
+            })
+          });
+
+          if (keyResponse.ok) {
+            const keyData = await keyResponse.json();
+            const keyText = keyData.choices?.[0]?.message?.content || keyData.response || '';
+            if (keyText) {
+              diagramKey = keyText.trim();
+              console.log('✅ [IMAGE] Diagram key generated successfully');
+            }
+          }
+        } catch (keyError) {
+          console.warn('⚠️ [IMAGE] Could not generate diagram key:', keyError);
+        }
+      }
+
+      return j({ images, diagramKey }, 200, origin);
     } catch (error: any) {
       console.error('❌ [IMAGE] Exception in image generation:', {
         message: error.message,

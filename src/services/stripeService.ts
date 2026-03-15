@@ -1,9 +1,9 @@
 import { supabase } from './authService';
-import { STRIPE_PRODUCTS, getProductById } from '../stripe-config';
+import { getProductById } from '../stripe-config';
 
 // Create a Stripe checkout session
-export const createCheckoutSession = async (  
-  userId: string,
+export const createCheckoutSession = async (
+  _userId: string,
   plan: 'plus' | 'free', 
   successUrl: string,
   cancelUrl: string = window.location.origin
@@ -84,7 +84,7 @@ export const createCheckoutSession = async (
 
 // Cancel a subscription
 export const cancelSubscription = async (
-  userId: string
+  _userId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // Get the session and access token properly
