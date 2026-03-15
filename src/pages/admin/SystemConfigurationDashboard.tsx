@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Settings, Bell, Shield, Database } from 'lucide-react';
+import { ArrowLeft, Bell, Database } from 'lucide-react';
 
 export default function SystemConfigurationDashboard() {
   const [alertThreshold, setAlertThreshold] = useState(80);

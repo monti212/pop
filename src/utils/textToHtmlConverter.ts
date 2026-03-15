@@ -83,7 +83,6 @@ export const convertTextToStructuredHtml = (plainText: string): string => {
     // Detect numbered lists (1. 2. 3. or 1) 2) 3))
     const numberedMatch = line.match(/^(\d+)[.)]\s+(.+)$/);
     if (numberedMatch) {
-      const itemNumber = parseInt(numberedMatch[1]);
       const itemText = numberedMatch[2];
 
       if (!inList || listType !== 'ol') {

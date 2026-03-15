@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Edit, Save, X, User, GraduationCap, Heart, Brain,
-  Phone, Mail, AlertCircle, TrendingUp, Calendar, CheckCircle,
+  Phone, AlertCircle, TrendingUp, Calendar, CheckCircle,
   FileText, Plus, Activity
 } from 'lucide-react';
 import { getEnhancedStudentProfile, updateStudentProfile, getStudentBehaviorLogs } from '../services/studentProfileService';

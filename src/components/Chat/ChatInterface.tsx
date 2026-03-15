@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, PanelLeft, ArrowDown, Menu, Image, X } from 'lucide-react';
+import { ArrowDown, Menu } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { UserFile, searchFiles, uploadChatImage, uploadChatDocument } from '../../services/fileService';
+import { UserFile, searchFiles, uploadChatImage, uploadChatDocument, getFileContent } from '../../services/fileService';
 
 import ConversationList from './ConversationList';
 import MessageBubble from './MessageBubble';
@@ -29,12 +29,18 @@ import {
 } from '../../services/chatService';
 import { LONG_RESPONSE_THRESHOLD, REGIONS } from '../../utils/constants';
 import { Conversation } from '../../types/chat';
-import { supabase } from '../../services/authService';
 import { saveChatStateBackup, clearChatStateBackup } from '../../utils/chatStateRecovery';
 
 interface TypingState {
   isTyping: boolean;
   message: string;
+}
+
+interface AgentConfig {
+  id: string;
+  name: string;
+  description?: string;
+  systemPrompt?: string;
 }
 
 interface ChatInterfaceProps {
@@ -55,8 +61,8 @@ export default function ChatInterface({
 
   const [showSidebar, setShowSidebar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const { theme } = useTheme(); // Get theme from context
-  const [selectedAgent, setSelectedAgent] = useState<AgentConfig | null>(null);
+  useTheme(); // Get theme from context
+  const [selectedAgent,] = useState<AgentConfig | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const [abortController, setAbortController] = useState<AbortController | null>(null);
@@ -68,7 +74,7 @@ export default function ChatInterface({
     status: '',
   });
   const [editingUserMessage, setEditingUserMessage] = useState<{ content: string; index: number; id?: string } | null>(null);
-  const [showUserCancellationMessage, setShowUserCancellationMessage] = useState(false);
+  const [showUserCancellationMessage, _setShowUserCancellationMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUserMessage, setLastUserMessage] = useState<string>('');
   
@@ -141,7 +147,7 @@ export default function ChatInterface({
   const assistantLocalIdRef = useRef<string | null>(null);
   
   // Detect admin status from profile team_role
-  const isAdmin = profile?.team_role === 'supa_admin' || profile?.team_role === 'optimus_prime' || profile?.team_role === 'admin' || profile?.team_role === 'prime';
+  const isAdmin = profile?.team_role === 'supa_admin' || (profile?.team_role as string) === 'optimus_prime' || profile?.team_role === 'admin' || profile?.team_role === 'prime';
 
   // Update sidebar width when collapse state changes
   useEffect(() => {
@@ -159,10 +165,9 @@ export default function ChatInterface({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const isTeamAccount =
-    profile?.team_role === 'supa_admin' ||
+  void (profile?.team_role === 'supa_admin' || // isTeamAccount - kept for future use
     profile?.team_role === 'admin' ||
-    profile?.team_role === 'prime';
+    profile?.team_role === 'prime');
 
   // Generate model label for the trigger button
   const getModelLabel = () => {
@@ -345,7 +350,7 @@ export default function ChatInterface({
         user.id,
         '1024x1024',
         'white',
-        backendModelId
+        backendModelId as any
       );
 
       if (!result.success || !result.images) {
@@ -370,10 +375,23 @@ export default function ChatInterface({
         isLongResponse: false
       };
 
-      // Update conversation with the new message
+      const newMessages: Array<{ id: string; role: 'assistant'; content: any; timestamp: Date; isLongResponse: boolean }> = [assistantMessage];
+
+      // If a diagram key was returned, add it as a follow-up text message
+      if (result.diagramKey) {
+        newMessages.push({
+          id: crypto?.randomUUID?.() ?? `${Date.now()}-key-${Math.random()}`,
+          role: 'assistant' as const,
+          content: result.diagramKey,
+          timestamp: new Date(),
+          isLongResponse: false
+        });
+      }
+
+      // Update conversation with the new messages
       const updatedConversation = {
         ...conversationToUse,
-        messages: [...conversationToUse.messages, assistantMessage],
+        messages: [...conversationToUse.messages, ...newMessages],
         updatedAt: new Date()
       };
 
@@ -382,8 +400,12 @@ export default function ChatInterface({
 
       // Save to database
       if (user) {
-        addMessage(conversationToUse.id, 'assistant', imageContent, user.id)
+        addMessage(conversationToUse.id, 'assistant', imageContent as any, user.id)
           .catch(error => console.error('Error saving image generation message:', error));
+        if (result.diagramKey) {
+          addMessage(conversationToUse.id, 'assistant', result.diagramKey, user.id)
+            .catch(error => console.error('Error saving diagram key message:', error));
+        }
       }
 
       // Reset image prompt and hide input
@@ -574,7 +596,7 @@ export default function ChatInterface({
     payload: any,
     assistantIndexRef: React.MutableRefObject<number | null>,
     completionSeenRef: React.MutableRefObject<boolean>,
-    conversationForUpdate: Conversation,
+    _conversationForUpdate: Conversation,
     isEditingUserMessage: boolean
   ) => {
     if (type === 'message.delta') {
@@ -597,7 +619,7 @@ export default function ChatInterface({
         pendingDeltaRef.current = ''; // Reset accumulated delta
         updateScheduledRef.current = null;
 
-        setCurrentConversation((prev) => {
+        (setCurrentConversation as any)((prev: any) => {
           if (!prev) return prev;
 
           // Create shallow copy of conversation
@@ -654,7 +676,7 @@ export default function ChatInterface({
 
       let finalConversation: Conversation | null = null;
 
-      setCurrentConversation(prev => {
+      (setCurrentConversation as any)((prev: any) => {
         if (!prev) return prev;
         const conv = { ...prev };
 
@@ -686,26 +708,27 @@ export default function ChatInterface({
       });
       
       // Save message to database and update sidebar (outside of state update)
-      if (user && finalConversation && assistantIndexRef.current !== null) {
-        const messageToSave = finalConversation.messages[assistantIndexRef.current].content;
+      const finalConversationTyped = finalConversation as Conversation | null;
+      if (user && finalConversationTyped && assistantIndexRef.current !== null) {
+        const messageToSave = finalConversationTyped.messages[assistantIndexRef.current].content;
         const localAssistantId = assistantLocalIdRef.current;
-        
+
         console.log('🔍 [PROCESSSTREAM] About to save assistant message to database:', {
-          conversationId: finalConversation.id.substring(0, 8) + '...',
+          conversationId: finalConversationTyped.id.substring(0, 8) + '...',
           messageIndex: assistantIndexRef.current,
           contentLength: typeof messageToSave === 'string' ? messageToSave.length : Array.isArray(messageToSave) ? JSON.stringify(messageToSave).length : 0,
           localId: localAssistantId,
-          isTemporary: finalConversation.isTemporary || false
+          isTemporary: finalConversationTyped.isTemporary || false
         });
 
         // Pass the isTemporary flag (should be false by now since user message would have persisted it)
-        addMessage(finalConversation.id, 'assistant', messageToSave, user.id, finalConversation.isTemporary || false)
+        addMessage(finalConversationTyped.id, 'assistant', messageToSave, user.id, finalConversationTyped.isTemporary || false)
           .then((result) => {
             console.log('🔍 [PROCESSSTREAM] addMessage result for assistant:', result);
             if (result.success && result.messageId && assistantIndexRef.current !== null) {
               console.log('🔍 [PROCESSSTREAM] ✅ Assistant message saved successfully, updating local ID');
               // Update the message with the database-assigned ID (but keep localId stable)
-              setCurrentConversation((current) => {
+              (setCurrentConversation as any)((current: any) => {
                 if (!current || assistantIndexRef.current === null) return current;
                 const updatedConv = { ...current };
                 const messageToUpdate = { ...updatedConv.messages[assistantIndexRef.current] };
@@ -762,7 +785,7 @@ export default function ChatInterface({
   // New function to start streaming, consolidating logic
   const startStreamingResponse = useCallback(async (
     conversationToStream: Conversation,
-    userMessageContent: string,
+    _userMessageContent: string,
     isEditing: boolean
   ) => {
     // Cancel any existing stream first
@@ -791,12 +814,12 @@ export default function ChatInterface({
 
     try {
       await streamResponse({
-        conversation: conversationToStream.messages,
+        conversation: conversationToStream.messages as any,
         language: selectedLanguage,
         region: selectedRegion,
         modelVersion,
         verbosity,
-        displayName: user?.user_metadata?.name || profile?.full_name || undefined,
+        displayName: user?.user_metadata?.name || (profile as any)?.full_name || undefined,
         signal: ac.signal,
         onEvent: (type, payload) => processStreamEvent(
           type,
@@ -824,7 +847,7 @@ export default function ChatInterface({
   const handleSendMessage = useCallback(async (data: { text: string; files: File[]; isWebSearchActive: boolean }) => {
     if (!currentConversation || !user) return;
 
-    const { text: message, files, isWebSearchActive } = data;
+    const { text: message, files } = data;
 
     // Store user message for loading insights
     setLastUserMessage(message);
@@ -964,10 +987,7 @@ export default function ChatInterface({
             });
 
             // Show error to user but continue processing other files
-            setNotification({
-              message: `Failed to load image "${file.name}": ${fileError.message}`,
-              type: 'error'
-            });
+            console.error(`Failed to load image "${file.name}": ${fileError.message}`);
 
             // Skip this file and continue with others
             continue;
@@ -1077,10 +1097,8 @@ export default function ChatInterface({
               // Add document as input_file type with filename and mime type
               updatedMultimodalContent.push({
                 type: 'input_file',
-                file_url: uploadResult.url,
-                filename: file.name,
-                mimeType: file.type
-              });
+                text: uploadResult.url,
+              } as any);
             } else {
               console.error('[ChatInterface] Failed to upload document:', {
                 fileName: file.name,
@@ -1120,7 +1138,7 @@ export default function ChatInterface({
       }
 
       // Update the conversation state with uploaded file URLs
-      setCurrentConversation(prev => {
+      (setCurrentConversation as any)((prev: any) => {
         if (!prev) return prev;
         const updatedConv = { ...prev };
         const messages = [...updatedConv.messages];
@@ -1149,11 +1167,11 @@ export default function ChatInterface({
         const contentForDb = updatedMultimodalContent;
 
         // Pass the isTemporary flag to handle temporary conversation persistence
-        addMessage(currentConversation.id, 'user', contentForDb, user.id, currentConversation.isTemporary || false)
+        addMessage(currentConversation.id, 'user', contentForDb as any, user.id, currentConversation.isTemporary || false)
           .then((result) => {
             if (result.success && result.messageId) {
               // Update the message with the database-assigned ID (but keep localId stable)
-              setCurrentConversation((current) => {
+              (setCurrentConversation as any)((current: any) => {
                 if (!current) return current;
                 const updatedConv = { ...current };
                 const messages = [...updatedConv.messages];
@@ -1198,11 +1216,11 @@ export default function ChatInterface({
         const contentForDb = newUserMessage.content;
 
         // Pass the isTemporary flag to handle temporary conversation persistence
-        addMessage(currentConversation.id, 'user', contentForDb, user.id, currentConversation.isTemporary || false)
+        addMessage(currentConversation.id, 'user', contentForDb as any, user.id, currentConversation.isTemporary || false)
           .then((result) => {
             if (result.success && result.messageId) {
               // Update the message with the database-assigned ID (but keep localId stable)
-              setCurrentConversation((current) => {
+              (setCurrentConversation as any)((current: any) => {
                 if (!current) return current;
                 const updatedConv = { ...current };
                 const messages = [...updatedConv.messages];
@@ -1243,7 +1261,7 @@ export default function ChatInterface({
     // Stream assistant response using the consolidated function
     // Get the current conversation state for streaming
     const conversationForStreaming = await new Promise<Conversation>((resolve) => {
-      setCurrentConversation((current) => {
+      (setCurrentConversation as any)((current: any) => {
         if (current) resolve(current);
         return current;
       });
@@ -1256,7 +1274,8 @@ export default function ChatInterface({
     );
   }, [currentConversation, user, editingUserMessage, startStreamingResponse, setCurrentConversation, updateConversation, setEditingUserMessage, setTypingState, setWebFetchingState, setAbortController, setError]);
 
-  const availableLanguages = ['english', 'setswana', 'french', 'twi', 'ewe', 'fante', 'ga'];
+  // availableLanguages kept for future use
+  void ['english', 'setswana', 'french', 'twi', 'ewe', 'fante', 'ga'];
 
 
   return (
@@ -1406,7 +1425,7 @@ export default function ChatInterface({
                   <MessageBubble
                     key={String(stableKey)}
                     messageId={(message as any).id}
-                    role={message.role}
+                    role={message.role as 'user' | 'assistant' | 'system'}
                     content={message.content}
                     timestamp={message.timestamp}
                     isLongResponse={message.isLongResponse}
@@ -1446,7 +1465,7 @@ export default function ChatInterface({
                         await updateMessage((message as any).id, newContent, user.id);
                       }
                       // reflect in local conversation immediately
-                      setCurrentConversation(prev => {
+                      (setCurrentConversation as any)((prev: any) => {
                         if (!prev) return prev;
                         const conv = { ...prev };
                         const msgs = [...conv.messages];
@@ -1484,7 +1503,7 @@ export default function ChatInterface({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-                onClick={scrollToBottom}
+                onClick={() => scrollToBottom()}
                 className="p-2 bg-white border border-[#0170b9]/20 rounded-full shadow-lg text-[#002F4B] hover:bg-[#FEF7E8] hover:border-[#f5b233]/40 transition-all duration-150 ease-out"
               >
                 <ArrowDown className="w-5 h-5" />
@@ -1493,7 +1512,7 @@ export default function ChatInterface({
           )}
 
           {/* Loading insights - positioned above chat input */}
-          {(typingState.isTyping || webFetchingState.isFetching) && currentConversation?.messages.length > 0 && (
+          {(typingState.isTyping || webFetchingState.isFetching) && (currentConversation?.messages?.length ?? 0) > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1579,8 +1598,8 @@ export default function ChatInterface({
         <ModelSelector
           modelVersion={modelVersion}
           setModelVersion={setModelVersion}
-          deepThinkMap={deepThinkMap}
-          setDeepThinkMap={setDeepThinkMap}
+          deepThinkMap={deepThinkMap as any}
+          setDeepThinkMap={setDeepThinkMap as any}
           isAdmin={isAdmin}
           disabled={false}
           open={modelSelectorOpen}

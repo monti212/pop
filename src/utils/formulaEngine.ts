@@ -21,11 +21,9 @@ export interface FormulaResult {
 
 export class FormulaEngine {
   private data: any[][];
-  private headers: string[];
 
-  constructor(data: any[][], headers: string[]) {
+  constructor(data: any[][], _headers: string[]) {
     this.data = data;
-    this.headers = headers;
   }
 
   // Convert column letter to index (A=0, B=1, etc.)
@@ -35,16 +33,6 @@ export class FormulaEngine {
       result = result * 26 + (letter.charCodeAt(i) - 'A'.charCodeAt(0) + 1);
     }
     return result - 1;
-  }
-
-  // Convert column index to letter (0=A, 1=B, etc.)
-  private columnIndexToLetter(index: number): string {
-    let result = '';
-    while (index >= 0) {
-      result = String.fromCharCode((index % 26) + 'A'.charCodeAt(0)) + result;
-      index = Math.floor(index / 26) - 1;
-    }
-    return result;
   }
 
   // Parse cell reference like "A1" to {row: 0, col: 0}
@@ -182,7 +170,7 @@ export class FormulaEngine {
       
       // Handle ranges first (A1:B5)
       const rangeRegex = /([A-Z]+\d+):([A-Z]+\d+)/g;
-      processedFormula = processedFormula.replace(rangeRegex, (match, start, end) => {
+      processedFormula = processedFormula.replace(rangeRegex, (match, _start, _end) => {
         const range = this.parseRange(match);
         if (range) {
           const values = this.getRangeValues(range);
@@ -204,22 +192,22 @@ export class FormulaEngine {
 
       // Handle function calls
       const functionRegex = /([A-Z]+)\(([^)]*)\)/g;
-      processedFormula = processedFormula.replace(functionRegex, (match, funcName, args) => {
-        if (this.functions[funcName]) {
+      processedFormula = processedFormula.replace(functionRegex, (_match, funcName, args) => {
+        if ((this.functions as any)[funcName]) {
           try {
             // Parse arguments
             let parsedArgs;
             if (args.startsWith('[') && args.endsWith(']')) {
               // Handle array arguments (from ranges)
               const arrayContent = args.slice(1, -1);
-              parsedArgs = arrayContent ? arrayContent.split(',').map(arg => {
+              parsedArgs = arrayContent ? arrayContent.split(',').map((arg: any) => {
                 const trimmed = arg.trim();
                 const num = parseFloat(trimmed);
                 return isNaN(num) ? trimmed.replace(/"/g, '') : num;
               }) : [];
             } else {
               // Handle individual arguments
-              parsedArgs = args.split(',').map(arg => {
+              parsedArgs = args.split(',').map((arg: any) => {
                 const trimmed = arg.trim();
                 if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
                   return trimmed.slice(1, -1);
@@ -229,10 +217,10 @@ export class FormulaEngine {
               });
             }
 
-            const result = this.functions[funcName](parsedArgs);
+            const result = (this.functions as any)[funcName](parsedArgs);
             return result.toString();
           } catch (error) {
-            throw new Error(`Error in ${funcName}: ${error.message}`);
+            throw new Error(`Error in ${funcName}: ${(error as any).message}`);
           }
         } else {
           throw new Error(`Unknown function: ${funcName}`);
@@ -254,13 +242,13 @@ export class FormulaEngine {
           dependencies
         };
       } catch (error) {
-        throw new Error(`Formula evaluation error: ${error.message}`);
+        throw new Error(`Formula evaluation error: ${(error as any).message}`);
       }
 
     } catch (error) {
       return {
         value: `#ERROR!`,
-        error: error.message,
+        error: (error as any).message,
         dependencies: []
       };
     }
@@ -277,9 +265,8 @@ export class FormulaEngine {
   }
 
   // Update data reference (called when spreadsheet data changes)
-  public updateData(data: any[][], headers: string[]): void {
+  public updateData(data: any[][], _headers: string[]): void {
     this.data = data;
-    this.headers = headers;
   }
 }
 

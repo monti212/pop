@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  CreditCard, 
-  ExternalLink, 
-  Check, 
-  AlertTriangle, 
+import {
+  CreditCard,
+  ExternalLink,
+  Check,
+  AlertTriangle,
   Loader,
   Shield,
-  Calendar
+  Calendar,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { updatePaymentMethod } from '../../services/stripeService';

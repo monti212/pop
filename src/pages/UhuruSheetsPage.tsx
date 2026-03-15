@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { X, Save, Download, FileSpreadsheet, File, ArrowLeft, Plus, Folder, Trash2, Edit3, Copy, Check, Calculator, Grid, FunctionSquare as Function } from 'lucide-react';
+import { X, Save, Download, FileSpreadsheet, File, ArrowLeft, Plus, Folder, Trash2, Copy, Check, Calculator, Grid, FunctionSquare as Function } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { FormulaEngine, getCellAddress } from '../utils/formulaEngine';
@@ -46,7 +45,7 @@ const UhuruSheetsPage: React.FC = () => {
   const [showAutoSavedOnly, setShowAutoSavedOnly] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const formulaBarRef = useRef<HTMLInputElement | null>(null);
-  const { profile } = useAuth();
+  const { profile: _profile } = useAuth();
 
   // Default spreadsheet with 20 rows and 10 columns
   const initializeEmptySheet = () => {
@@ -122,8 +121,8 @@ const UhuruSheetsPage: React.FC = () => {
     const formulaEngineToUse = engine || formulaEngine;
     if (!formulaEngineToUse) return;
 
-    const newCalculatedValues = currentData.map((row, rowIndex) =>
-      row.map((cell, colIndex) => {
+    const newCalculatedValues = currentData.map((row, _rowIndex) =>
+      row.map((cell, _colIndex) => {
         if (typeof cell === 'string' && cell.startsWith('=')) {
           formulaEngineToUse.updateData(currentData, headers);
           const result = formulaEngineToUse.evaluateFormula(cell);

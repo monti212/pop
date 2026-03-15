@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
-import { ArrowLeft, RefreshCw, Users, TrendingUp, Target } from 'lucide-react';
+import { ArrowLeft, Users, TrendingUp, Target } from 'lucide-react';
 
 export default function BusinessIntelligenceDashboard() {
   const [loading, setLoading] = useState(true);

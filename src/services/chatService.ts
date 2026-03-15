@@ -1,5 +1,5 @@
 import { supabase } from './authService';
-import { MessageContent, TextContent, ImageUrlContent } from '../types/chat';
+import { MessageContent, TextContent } from '../types/chat';
 import { uploadBase64Image } from './fileService';
 import { logger } from '../utils/logger';
 import { checkAuthBeforeApiCall } from '../utils/apiGuard';
@@ -184,7 +184,7 @@ export const getConversationMessages = async (
 
 // Helper function to persist a temporary conversation to the database
 export const persistTemporaryConversation = async (
-  tempConversationId: string,
+  _tempConversationId: string,
   userId: string,
   title: string = 'New Conversation',
   firstMessageContent?: MessageContent
@@ -338,8 +338,7 @@ export const addMessage = async (
     };
   } catch (error) {
     logger.error('🔍 [ADDMESSAGE] ❌ Error in addMessage function:', error);
-    return { success: false, error: error.message || 'Uhuru could not add your message. Please try again.' };
-    return { success: false, error: error.message || 'I couldn\'t add that message. Mind trying again?' };
+    return { success: false, error: (error as any).message || 'Uhuru could not add your message. Please try again.' };
   }
 };
 
@@ -395,7 +394,7 @@ export const deleteConversation = async (conversationId: string, userId: string)
 export const updateMessage = async (
   messageId: string,
   content: string,
-  userId: string
+  _userId: string
 ): Promise<void> => {
   try {
     if (!supabase) {
@@ -424,7 +423,7 @@ export const updateMessage = async (
 export const deleteMessagesAfter = async (
   conversationId: string,
   messageId: string,
-  userId: string
+  _userId: string
 ): Promise<void> => {
   try {
     if (!supabase) {
@@ -775,6 +774,7 @@ export const generateResponse = async ({
   region?: string;
   modelVersion?: string;
   displayName?: string;
+  abortSignal?: AbortSignal;
   onStatusUpdate?: (s: string) => void;
 }): Promise<string> => {
   // Use streamResponse internally but collect all content
@@ -812,12 +812,12 @@ export const generateImage = async (
   size: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024',
   background: 'transparent' | 'white' = 'transparent',
   modelVersion: '2.1' | '2.0' = '2.0'
-): Promise<{ success: boolean; images?: string[]; error?: string }> => {
+): Promise<{ success: boolean; images?: string[]; diagramKey?: string; error?: string }> => {
   try {
     if (!supabase) {
       return {
         success: false,
-        error: error.message || 'Image generation isn\'t working right now. Try again?'
+        error: 'Image generation isn\'t working right now. Try again?'
       };
     }
 
@@ -909,10 +909,11 @@ export const generateImage = async (
     }
     
     logger.log('[generateImage] Successfully uploaded images to storage:', { count: persistentUrls.length, urls: persistentUrls });
-    
+
     return {
       success: true,
-      images: persistentUrls
+      images: persistentUrls,
+      diagramKey: data.diagramKey
     };
   } catch (error: any) {
     logger.error('[generateImage] Error in image generation flow:', { error: error.message, stack: error.stack, prompt, userId });

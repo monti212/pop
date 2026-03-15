@@ -40,9 +40,9 @@ const AdminSidebar: React.FC = () => {
 
       const stats: DocumentStats = {
         total: data?.length || 0,
-        processing: data?.filter(d => d.processing_status === 'processing' || d.processing_status === 'pending').length || 0,
-        completed: data?.filter(d => d.processing_status === 'completed').length || 0,
-        failed: data?.filter(d => d.processing_status === 'failed').length || 0,
+        processing: data?.filter((d: { processing_status: string }) => d.processing_status === 'processing' || d.processing_status === 'pending').length || 0,
+        completed: data?.filter((d: { processing_status: string }) => d.processing_status === 'completed').length || 0,
+        failed: data?.filter((d: { processing_status: string }) => d.processing_status === 'failed').length || 0,
       };
 
       setDocumentStats(stats);

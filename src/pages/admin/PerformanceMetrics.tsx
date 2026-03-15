@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
 import { Activity, Clock, Zap, TrendingUp, ArrowLeft, Download, RefreshCw } from 'lucide-react';
@@ -66,7 +66,7 @@ export default function PerformanceMetrics() {
       if (error) throw error;
 
       if (apiLogs && apiLogs.length > 0) {
-        const endpointGroups = apiLogs.reduce((acc, log) => {
+        const endpointGroups = apiLogs.reduce((acc: any, log: any) => {
           if (!acc[log.endpoint]) {
             acc[log.endpoint] = [];
           }
@@ -74,32 +74,32 @@ export default function PerformanceMetrics() {
           return acc;
         }, {} as Record<string, number[]>);
 
-        const endpointStats: PerformanceData[] = Object.entries(endpointGroups).map(([endpoint, times]) => {
-          const sorted = times.sort((a, b) => a - b);
+        const endpointStats: PerformanceData[] = Object.entries(endpointGroups).map(([endpoint, times]: [string, any]) => {
+          const sorted = (times as number[]).sort((a: any, b: any) => a - b);
           return {
             endpoint,
             p50: sorted[Math.floor(sorted.length * 0.5)],
             p95: sorted[Math.floor(sorted.length * 0.95)],
             p99: sorted[Math.floor(sorted.length * 0.99)],
-            avg: sorted.reduce((a, b) => a + b, 0) / sorted.length,
+            avg: sorted.reduce((a: any, b: any) => a + b, 0) / sorted.length,
             count: sorted.length
           };
         });
 
         setPerformanceByEndpoint(endpointStats);
 
-        const allTimes = apiLogs.map(log => log.response_time_ms).sort((a, b) => a - b);
-        const errorCount = apiLogs.filter(log => log.status_code >= 400).length;
+        const allTimes = apiLogs.map((log: any) => log.response_time_ms).sort((a: any, b: any) => a - b);
+        const errorCount = apiLogs.filter((log: any) => log.status_code >= 400).length;
 
         setOverallStats({
-          avgResponseTime: allTimes.reduce((a, b) => a + b, 0) / allTimes.length,
+          avgResponseTime: allTimes.reduce((a: any, b: any) => a + b, 0) / allTimes.length,
           p95ResponseTime: allTimes[Math.floor(allTimes.length * 0.95)],
           p99ResponseTime: allTimes[Math.floor(allTimes.length * 0.99)],
           totalRequests: apiLogs.length,
           errorRate: (errorCount / apiLogs.length) * 100
         });
 
-        const hourGroups = apiLogs.reduce((acc, log) => {
+        const hourGroups = apiLogs.reduce((acc: any, log: any) => {
           const hour = new Date(log.recorded_at).toISOString().slice(0, 13);
           if (!acc[hour]) {
             acc[hour] = [];
@@ -109,8 +109,8 @@ export default function PerformanceMetrics() {
         }, {} as Record<string, number[]>);
 
         const hourlyData: HourlyPerformance[] = Object.entries(hourGroups)
-          .map(([hour, times]) => {
-            const sorted = times.sort((a, b) => a - b);
+          .map(([hour, times]: [string, any]) => {
+            const sorted = (times as number[]).sort((a: any, b: any) => a - b);
             return {
               hour,
               p50: sorted[Math.floor(sorted.length * 0.5)],

@@ -8,7 +8,7 @@ import { Message } from '../types/chat';
  * @returns Filtered array without system messages
  */
 export const filterSystemMessages = (messages: Message[]): Message[] => {
-  return messages.filter(message => message.role !== 'system');
+  return messages.filter(message => (message as any).role !== 'system');
 };
 
 /**

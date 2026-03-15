@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Mail, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Smartphone } from 'lucide-react';
+import { X, Mail, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
 import { signUp } from '../services/authService';
 import Particles from './Particles';
 import Logo from './Logo';
-import SocialAuthButton from './SocialAuthButton';
 import PhoneAuthModal from './PhoneAuthModal';
 
 interface SignUpModalProps {
@@ -92,7 +91,7 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
     setIsLoading(true);
     
     try {
-      const { success, error, user } = await signUp(
+      const { success, error } = await signUp(
         useUsername ? formData.username : formData.email,
         formData.password,
         formData.name,

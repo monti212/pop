@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
 import {
-  DollarSign, Users, Zap, TrendingUp, Image as ImageIcon,
+  DollarSign, Zap, TrendingUp, Image as ImageIcon,
   ArrowLeft, RefreshCw, Download, AlertTriangle, CheckCircle, Clock
 } from 'lucide-react';
 
@@ -85,22 +85,11 @@ export default function TokenCostBreakdown() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   // PoP Constants
-  const COGS_PER_TOKEN = 0.000000295;
-  const COGS_PER_1K = 0.000295;
   const COGS_PER_1M = 0.295;
 
-  const PLAN_PRICE_PER_TOKEN = 0.00025;
   const PLAN_PRICE_PER_1K = 0.25;
-  const PLAN_PRICE_PER_1M = 250;
-
-  const REFILL_PRICES = {
-    '1M': { per_token: 0.00030, per_1k: 0.30 },
-    '5M': { per_token: 0.00028, per_1k: 0.28 },
-    '10M': { per_token: 0.00026, per_1k: 0.26 }
-  };
 
   const DAILY_HARD_CAP = 30000;
-  const CHAT_DAILY_CAP = 7500;
   const MONTHLY_BASE = 833333;
   const PLAN_TOTAL = 10250000;
   const IMAGE_CREDITS = 250000;
@@ -160,22 +149,20 @@ export default function TokenCostBreakdown() {
 
       if (balanceData) {
         const now = new Date();
-        const today_start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const month_start = new Date(now.getFullYear(), now.getMonth(), 1);
 
         const { data: todayLogs } = await supabase
           .from('user_token_usage')
           .select('tokens_today')
           .eq('organization_name', 'Pencils of Promise');
 
-        const tokens_used_today = todayLogs?.reduce((sum, u) => sum + (u.tokens_today || 0), 0) || 0;
+        const tokens_used_today = todayLogs?.reduce((sum: any, u: any) => sum + (u.tokens_today || 0), 0) || 0;
 
         const { data: monthLogs } = await supabase
           .from('user_token_usage')
           .select('tokens_this_month')
           .eq('organization_name', 'Pencils of Promise');
 
-        const tokens_used_month = monthLogs?.reduce((sum, u) => sum + (u.tokens_this_month || 0), 0) || 0;
+        const tokens_used_month = monthLogs?.reduce((sum: any, u: any) => sum + (u.tokens_this_month || 0), 0) || 0;
 
         const { data: refillsData } = await supabase
           .from('token_refills')
@@ -184,7 +171,7 @@ export default function TokenCostBreakdown() {
           .gt('expires_at', now.toISOString())
           .order('expires_at', { ascending: true });
 
-        const refills: Refill[] = (refillsData || []).map(r => ({
+        const refills: Refill[] = (refillsData || []).map((r: any) => ({
           id: r.id,
           amount: r.amount,
           consumed: r.consumed || 0,
@@ -193,7 +180,7 @@ export default function TokenCostBreakdown() {
           sku: r.sku || '1M'
         }));
 
-        const refill_balance = refills.reduce((sum, r) => sum + (r.amount - r.consumed), 0);
+        const refill_balance = refills.reduce((sum: any, r: any) => sum + (r.amount - r.consumed), 0);
 
         const prev_month_unused = balanceData.prev_month_unused || 0;
         const rollover_in = Math.min(prev_month_unused, MONTHLY_BASE);
@@ -234,7 +221,7 @@ export default function TokenCostBreakdown() {
           .gte('usage_date', startDate.toISOString().split('T')[0])
           .order('usage_date', { ascending: true });
 
-        const formattedDaily: DailyUsage[] = (dailyData || []).map(day => ({
+        const formattedDaily: DailyUsage[] = (dailyData || []).map((day: any) => ({
           date: day.usage_date,
           tokens_used: day.tokens_used,
           cost_usd: (day.tokens_used / 1000000) * COGS_PER_1M,

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   ArrowLeft, Plus, Loader, AlertTriangle, X, Users, ClipboardCheck,
-  Calendar, Edit, Trash2, UserPlus, BarChart3, School, Archive, FolderOpen,
-  Award, Activity, Sparkles, Brain, TrendingUp, GraduationCap
+  Edit, Trash2, UserPlus, School,
+  Brain, TrendingUp
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -133,10 +133,6 @@ const UhuruFilesPage: React.FC = () => {
     setShowAttendanceModal(true);
   };
 
-  const handleViewAnalytics = (classItem: Class) => {
-    setSelectedClass(classItem);
-    setShowAnalyticsModal(true);
-  };
 
   const handleModalSuccess = () => {
     loadClasses();

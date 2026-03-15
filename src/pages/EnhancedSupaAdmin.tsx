@@ -2,11 +2,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../services/authService';
 import {
-  Users, Activity, Zap, TrendingUp, TrendingDown, Clock, MessageSquare,
+  Users, Activity, Zap, TrendingUp, Clock, MessageSquare,
   FileText, BarChart3, DollarSign, AlertTriangle, CheckCircle, XCircle,
-  RefreshCw, Bell, Download, Settings, Image as ImageIcon, Target,
+  RefreshCw, Bell, Image as ImageIcon, Target,
   Gauge, Sparkles, ArrowUpRight, ArrowDownRight, Minus, Radio,
-  Server, Database, Cpu, HardDrive, Globe, Calendar, Eye, Filter
+  Server, Cpu, Globe, Calendar
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -34,14 +34,6 @@ interface LiveMetrics {
   dailyUsagePercent: number;
 }
 
-interface UserActivity {
-  userId: string;
-  userEmail: string;
-  action: string;
-  tokensUsed: number;
-  timestamp: string;
-}
-
 interface Alert {
   id: string;
   type: 'critical' | 'warning' | 'info' | 'success';
@@ -51,10 +43,6 @@ interface Alert {
   acknowledged: boolean;
 }
 
-interface TokenTrend {
-  hour: string;
-  tokens: number;
-}
 
 const Brand = {
   sand: '#F7F5F2',
@@ -68,9 +56,7 @@ const Brand = {
 export default function EnhancedSupaAdmin() {
   const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
   const [previousMetrics, setPreviousMetrics] = useState<LiveMetrics | null>(null);
-  const [recentActivity, setRecentActivity] = useState<UserActivity[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [tokenTrends, setTokenTrends] = useState<TokenTrend[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
@@ -80,7 +66,7 @@ export default function EnhancedSupaAdmin() {
 
   const fetchLiveMetrics = useCallback(async () => {
     try {
-      const [orgData, usersData, tokensData, conversationsData, messagesData] = await Promise.all([
+      const [orgData, _usersData, _tokensData, conversationsData, messagesData] = await Promise.all([
         supabase
           .from('organization_metrics')
           .select('*')
@@ -136,7 +122,7 @@ export default function EnhancedSupaAdmin() {
     }
   }, [metrics]);
 
-  const checkAndGenerateAlerts = (metrics: LiveMetrics, tokenData: any) => {
+  const checkAndGenerateAlerts = (metrics: LiveMetrics, _tokenData: any) => {
     const newAlerts: Alert[] = [];
 
     if (metrics.monthlyUsagePercent >= 95) {

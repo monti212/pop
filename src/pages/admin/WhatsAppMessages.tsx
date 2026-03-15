@@ -35,7 +35,7 @@ interface UsageData {
 const WhatsAppMessages: React.FC = () => {
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [users, setUsers] = useState<WhatsAppUser[]>([]);
-  const [usage, setUsage] = useState<UsageData[]>([]);
+  const [_usage, setUsage] = useState<UsageData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [filterDirection, setFilterDirection] = useState<'all' | 'inbound' | 'outbound'>('all');

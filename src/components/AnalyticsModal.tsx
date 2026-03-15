@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, TrendingUp, Users, Calendar, Download, AlertCircle } from 'lucide-react';
+import { X, TrendingUp, Users, Calendar, AlertCircle } from 'lucide-react';
 import { getStudentAttendanceHistory } from '../services/attendanceService';
 import { getClassStudents } from '../services/studentService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { format, subDays, parseISO } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 interface AnalyticsModalProps {
   isOpen: boolean;

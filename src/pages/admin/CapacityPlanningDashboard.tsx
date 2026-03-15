@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
-import { ArrowLeft, TrendingUp, Server, Database, HardDrive } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Database, HardDrive } from 'lucide-react';
 
 export default function CapacityPlanningDashboard() {
   const [loading, setLoading] = useState(true);

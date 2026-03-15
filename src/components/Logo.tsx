@@ -6,7 +6,7 @@ interface LogoProps {
   hideText?: boolean;
 }
 
-const Logo: React.FC<LogoProps> = ({ className = "h-8", hideText = false }) => {
+const Logo: React.FC<LogoProps> = ({ className = "h-8" }) => {
   return (
     <img
       src={logoImage}

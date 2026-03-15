@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FolderOpen, Search, FileText, X, ChevronDown } from 'lucide-react';
+import { FolderOpen, Search, FileText, ChevronDown } from 'lucide-react';
 import type { UserFile } from '../../services/fileService';
 
 interface FilesBrowserProps {
@@ -23,14 +23,10 @@ type Side = 'left' | 'right' | 'top' | 'bottom';
 
 const FilesBrowser: React.FC<FilesBrowserProps> = ({
   recentFiles,
-  selectedFiles,
-  onFileSelect,
-  onRemoveFile,
   onFileSearch,
   onOpenFilesPage,
   isLoadingFiles,
   fileSearchResults,
-  fileSearchQuery,
   open = false,
   onClose,
   anchorEl

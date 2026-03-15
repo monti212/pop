@@ -38,7 +38,7 @@ export interface Conversation {
   id: string;
   title: string;
   isTemporary?: boolean; // Flag to indicate if conversation is not yet saved to database
-  messages: ({
+  messages: {
     id?: string;
     role: 'user' | 'assistant' | 'system' | 'thinking';
     content: MessageContent;
@@ -47,7 +47,6 @@ export interface Conversation {
     isLongResponse?: boolean; // Flag for long responses that can be edited in canvas
     timestamp: Date;
   }[];
-  )
   createdAt: Date;
   updatedAt: Date;
 }

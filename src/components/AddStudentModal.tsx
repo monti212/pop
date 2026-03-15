@@ -83,11 +83,11 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
     try {
       const result = await createStudent(classId, {
         student_name: formData.student_name.trim(),
-        student_identifier: formData.student_id.trim() || null,
+        student_identifier: formData.student_id.trim() || undefined,
         has_neurodivergence: !!formData.neurodivergence_type,
-        neurodivergence_type: formData.neurodivergence_type || null,
-        accommodations: formData.accommodations.trim() || null,
-        learning_notes: formData.learning_notes.trim() || null
+        neurodivergence_type: (formData.neurodivergence_type || undefined) as any,
+        accommodations: formData.accommodations.trim() || undefined,
+        learning_notes: formData.learning_notes.trim() || undefined
       });
 
       if (!result.success) {

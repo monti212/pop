@@ -21,7 +21,6 @@ const FAQItem: React.FC<FAQItemProps> = ({
     <motion.div
       className="border-b border-teal/10 last:border-0"
       initial={{ opacity: 0, y: 20 }}
-      transition={{ duration: 0.16 }}
       transition={{ duration: 0.16, delay }}
       viewport={{ once: true }}
     >

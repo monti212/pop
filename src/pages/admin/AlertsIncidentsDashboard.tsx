@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, AlertTriangle, CheckCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 

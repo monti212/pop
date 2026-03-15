@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Globe, Map, Check, Search, X } from 'lucide-react';
+import { ChevronDown, Map, Check, Search, X } from 'lucide-react';
 import { REGIONS, getGroupedRegions } from '../utils/constants';
 
 interface RegionSelectorProps {
@@ -20,7 +20,7 @@ type Side = 'left' | 'right' | 'top' | 'bottom';
 const RegionSelector: React.FC<RegionSelectorProps> = ({
   selectedRegion,
   onChange,
-  darkMode = false,
+  darkMode: _darkMode = false,
   collapsed = false,
   disabled = false,
   open = false,

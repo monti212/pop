@@ -139,7 +139,6 @@ export const convertMarkdownToBlocks = (markdown: string): ContentBlock[] => {
   const blocks: ContentBlock[] = [];
   const lines = markdown.split('\n');
   let order = 0;
-  let currentBlock: ContentBlock | null = null;
   let codeBlockContent: string[] = [];
   let inCodeBlock = false;
   let codeLanguage = '';

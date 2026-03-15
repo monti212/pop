@@ -410,7 +410,7 @@ export const getClassroomOverview = async (
     let completedAssignments = 0;
 
     if (assessments && assessments.length > 0) {
-      assessments.forEach(assessment => {
+      assessments.forEach((assessment: any) => {
         switch (assessment.status) {
           case 'active':
             activeAssignments++;
@@ -431,7 +431,7 @@ export const getClassroomOverview = async (
     const assignmentCount = assessments?.length || 0;
 
     const averageGrade = avgGradeData && avgGradeData.length > 0
-      ? avgGradeData.reduce((sum, g) => sum + (g.percentage || 0), 0) / avgGradeData.length
+      ? avgGradeData.reduce((sum: any, g: any) => sum + (g.percentage || 0), 0) / avgGradeData.length
       : 0;
 
     const lastAttendanceDate = attendanceDates && attendanceDates.length > 0
@@ -441,9 +441,9 @@ export const getClassroomOverview = async (
     const recentActivity: RecentActivity[] = [];
 
     if (recentAttendance) {
-      const uniqueDates = [...new Set(recentAttendance.map(r => r.attendance_date))];
+      const uniqueDates = [...new Set(recentAttendance.map((r: any) => r.attendance_date))];
       uniqueDates.slice(0, 3).forEach(date => {
-        const record = recentAttendance.find(r => r.attendance_date === date);
+        const record = recentAttendance.find((r: any) => r.attendance_date === date);
         if (record) {
           recentActivity.push({
             id: `attendance-${date}`,
@@ -457,7 +457,7 @@ export const getClassroomOverview = async (
     }
 
     if (recentGrades) {
-      recentGrades.forEach(grade => {
+      recentGrades.forEach((grade: any) => {
         recentActivity.push({
           id: `grade-${grade.created_at}`,
           type: 'grade',
@@ -469,7 +469,7 @@ export const getClassroomOverview = async (
     }
 
     if (recentBehavior) {
-      recentBehavior.forEach(behavior => {
+      recentBehavior.forEach((behavior: any) => {
         recentActivity.push({
           id: `behavior-${behavior.created_at}`,
           type: 'behavior',

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Brain, Search, ArrowRight, ExternalLink } from 'lucide-react';
+import { Brain, Search, ExternalLink } from 'lucide-react';
 
 interface Tier {
   version: string;

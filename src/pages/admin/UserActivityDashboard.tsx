@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
 import {
-  Users, TrendingUp, Clock, Calendar, BarChart3, Activity,
-  ArrowLeft, RefreshCw, Download, UserCheck, UserX, Zap
+  Users, TrendingUp, Calendar,
+  ArrowLeft, RefreshCw, Download, UserCheck
 } from 'lucide-react';
 
 interface UserActivityMetrics {
@@ -90,7 +90,7 @@ export default function UserActivityDashboard() {
         .gte('created_at', weekStart.toISOString())
         .eq('organization_name', 'Pencils of Promise');
 
-      const activeThisWeek = new Set(weeklyActiveData?.map(m => m.user_id)).size;
+      const activeThisWeek = new Set(weeklyActiveData?.map((m: any) => m.user_id)).size;
 
       // Get monthly active users
       const { data: monthlyActiveData } = await supabase
@@ -99,7 +99,7 @@ export default function UserActivityDashboard() {
         .gte('created_at', monthStart.toISOString())
         .eq('organization_name', 'Pencils of Promise');
 
-      const activeThisMonth = new Set(monthlyActiveData?.map(m => m.user_id)).size;
+      const activeThisMonth = new Set(monthlyActiveData?.map((m: any) => m.user_id)).size;
 
       // Get new users
       const { count: newUsersToday } = await supabase
@@ -155,7 +155,7 @@ export default function UserActivityDashboard() {
 
       if (userData) {
         const engagementData: UserEngagementData[] = await Promise.all(
-          userData.map(async (user) => {
+          userData.map(async (user: any) => {
             const { count: messageCount } = await supabase
               .from('messages')
               .select('*', { count: 'exact', head: true })
@@ -209,7 +209,7 @@ export default function UserActivityDashboard() {
           .lt('created_at', dayEnd.toISOString())
           .eq('organization_name', 'Pencils of Promise');
 
-        const activeUsers = new Set(dayMessages?.map(m => m.user_id)).size;
+        const activeUsers = new Set(dayMessages?.map((m: any) => m.user_id)).size;
 
         const { count: newUsers } = await supabase
           .from('user_profiles')
