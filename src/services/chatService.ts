@@ -1,5 +1,5 @@
 import { supabase } from './authService';
-import { MessageContent, TextContent } from '../types/chat';
+import { MessageContent, TextContent, DiagramData, EducationalData } from '../types/chat';
 import { uploadBase64Image } from './fileService';
 import { logger } from '../utils/logger';
 import { checkAuthBeforeApiCall } from '../utils/apiGuard';
@@ -812,7 +812,7 @@ export const generateImage = async (
   size: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024',
   background: 'transparent' | 'white' = 'transparent',
   modelVersion: '2.1' | '2.0' = '2.0'
-): Promise<{ success: boolean; images?: string[]; diagramKey?: string; error?: string }> => {
+): Promise<{ success: boolean; images?: string[]; diagramData?: DiagramData; educationalData?: EducationalData; error?: string }> => {
   try {
     if (!supabase) {
       return {
@@ -826,7 +826,6 @@ export const generateImage = async (
     
     if (sessionError) {
       throw new Error("Uhuru's authentication service encountered an issue. Please log in again.");
-      throw new Error("I'm having trouble with authentication. Could you sign in again?");
     }
     
     if (!session) {
@@ -847,7 +846,6 @@ export const generateImage = async (
         endpoint = `https://${projectRef}.functions.supabase.co/uhuru-llm-api`;
       } else {
         throw new Error('Uhuru is experiencing a temporary issue. Please try again later.');
-        throw new Error('I\'m having connection issues. Try again in a moment?');
       }
     }
     logger.log('[generateImage] Calling endpoint:', endpoint);
@@ -878,7 +876,6 @@ export const generateImage = async (
         logger.error('[generateImage] Raw error response from API:', { errorText, endpoint, prompt });
       }
       throw new Error(errorData.error || errorText || 'Uhuru could not generate the image. Please try again.');
-      throw new Error(errorData.error || errorText || 'I couldn\'t generate that image. Want to try again?');
     }
     
     const data = await response.json();
@@ -913,7 +910,8 @@ export const generateImage = async (
     return {
       success: true,
       images: persistentUrls,
-      diagramKey: data.diagramKey
+      diagramData: data.diagramData,
+      educationalData: data.educationalData
     };
   } catch (error: any) {
     logger.error('[generateImage] Error in image generation flow:', { error: error.message, stack: error.stack, prompt, userId });

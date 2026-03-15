@@ -695,177 +695,97 @@ Deno.serve(async (req) => {
       return j({ error: 'Uhuru Image Generation model not configured' }, 500, origin);
     }
 
-    // Detect educational/anatomical/scientific content
-    const educationalKeywords = [
-      'anatomy', 'anatomical', 'digestive', 'system', 'organ', 'biological',
-      'cell', 'tissue', 'skeleton', 'respiratory', 'circulatory', 'nervous',
-      'muscular', 'cardiovascular', 'diagram', 'labeled', 'scientific',
-      'medical', 'structure', 'function', 'human body', 'animal', 'plant',
-      'chemistry', 'molecule', 'atom', 'physics', 'mathematical', 'geometric',
-      'educational', 'learning', 'teaching', 'textbook', 'study'
-    ];
+    // === AI Scientific Illustrator ===
+    // Step 1: Call text LLM to plan the diagram — get image_prompt + structured label data
+    let imagePrompt = prompt;
+    let diagramData: any = null;
+    let educationalData: any = null;
 
-    const isEducational = educationalKeywords.some(keyword =>
-      prompt.toLowerCase().includes(keyword.toLowerCase())
-    );
-
-    let enhancedPrompt = prompt;
-
-    // Enhance educational/scientific prompts for accuracy
-    if (isEducational) {
-      console.log('🎓 [IMAGE] Educational content detected, checking for reference images');
-
-      // Initialize Supabase client for knowledge base access
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.warn('⚠️ [IMAGE] Supabase env vars missing, skipping knowledge base lookup');
-        // Fall through to generate image without KB context
-      }
-      const supabase = supabaseUrl && supabaseServiceKey
-        ? createClient(supabaseUrl, supabaseServiceKey)
-        : null;
-
-      // Check if we have actual reference images in the knowledge base
+    if (MODEL_20 && API_URL) {
       try {
-        if (!supabase) throw new Error('Supabase client not available');
-        const { data: imageDocuments, error: imageError } = await supabase
-          .from('admin_knowledge_documents')
-          .select('id, title, file_name, storage_path, original_content')
-          .in('file_format', ['jpeg', 'jpg', 'png', 'gif', 'webp', 'other'])
-          .eq('processing_status', 'completed')
-          .eq('is_active', true)
-          .or(`title.ilike.%${prompt}%,original_content.ilike.%${prompt}%,key_concepts::text.ilike.%${prompt}%`)
-          .limit(4);
+        console.log('🧠 [IMAGE] Running AI scientific illustrator planning step');
+        const planResponse = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_KEY}`
+          },
+          body: JSON.stringify({
+            model: MODEL_20,
+            messages: [
+              {
+                role: 'system',
+                content: `You are an AI Scientific Illustrator. When given a topic, you plan a clean, accurate educational diagram.
 
-        if (!imageError && imageDocuments && imageDocuments.length > 0) {
-          console.log(`🖼️  [IMAGE] Found ${imageDocuments.length} reference image(s) in knowledge base!`);
-          console.log('📸 [IMAGE] Returning stored reference images instead of generating new ones');
+CRITICAL RULES:
+- The diagram must have NO text, NO labels, NO words embedded in it — only the illustrated structures
+- You provide labels separately as structured data with x,y coordinates (0–1000 scale, top-left origin)
+- The image_prompt must describe purely visual content: shapes, colours, spatial layout — no mention of text or labels
 
-          // Get public URLs for the images
-          const imageUrls: string[] = [];
-          for (const doc of imageDocuments) {
-            if (doc.storage_path) {
-              const { data: { publicUrl } } = supabase.storage
-                .from('user-files')
-                .getPublicUrl(doc.storage_path);
-
-              if (publicUrl) {
-                console.log(`✅ [IMAGE] Retrieved reference image: ${doc.title}`);
-                // Fetch the image and convert to base64
-                try {
-                  const imageResponse = await fetch(publicUrl);
-                  if (imageResponse.ok) {
-                    const imageBuffer = await imageResponse.arrayBuffer();
-                    const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-                    imageUrls.push(base64);
-                  }
-                } catch (fetchError) {
-                  console.warn(`⚠️  [IMAGE] Could not fetch image ${doc.title}:`, fetchError);
-                }
+OUTPUT FORMAT — respond with ONLY valid JSON, no markdown, no explanation:
+{
+  "image_prompt": "string — detailed visual description for the image model, purely visual, no text in image",
+  "diagram_data": {
+    "diagram_title": "string",
+    "topic": "string",
+    "difficulty_level": "beginner | intermediate | advanced",
+    "labels": [
+      { "name": "string", "description": "string — one sentence", "x": 0-1000, "y": 0-1000 }
+    ]
+  },
+  "educational_data": {
+    "key_concepts": ["string", "..."],
+    "teacher_notes": "string — teaching tips and common misconceptions"
+  }
+}`
+              },
+              {
+                role: 'user',
+                content: `Create a scientific illustration plan for: "${prompt}"`
               }
-            } else if (doc.file_name) {
-              // Try to get from assets folder
-              const assetPath = `supabase/assets/${doc.file_name}`;
-              console.log(`📁 [IMAGE] Trying asset path: ${assetPath}`);
-            }
+            ],
+            stream: false,
+            max_tokens: 1200
+          })
+        });
+
+        if (planResponse.ok) {
+          const planData = await planResponse.json();
+          const planText = planData.choices?.[0]?.message?.content || planData.response || '';
+          try {
+            // Strip markdown code fences if present
+            const cleaned = planText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+            const plan = JSON.parse(cleaned);
+            if (plan.image_prompt) imagePrompt = plan.image_prompt;
+            if (plan.diagram_data) diagramData = plan.diagram_data;
+            if (plan.educational_data) educationalData = plan.educational_data;
+            console.log('✅ [IMAGE] Illustration plan generated:', {
+              labelCount: diagramData?.labels?.length ?? 0,
+              promptPreview: imagePrompt.substring(0, 120)
+            });
+          } catch (parseErr) {
+            console.warn('⚠️ [IMAGE] Could not parse illustrator plan JSON, using raw prompt:', parseErr);
           }
-
-          if (imageUrls.length > 0) {
-            console.log(`✅ [IMAGE] Returning ${imageUrls.length} reference image(s) from knowledge base`);
-            return j({ images: imageUrls }, 200, origin);
-          }
-        }
-
-        console.log('📚 [IMAGE] No matching reference images found, will generate new image');
-      } catch (kbImageError) {
-        console.warn('⚠️  [IMAGE] Error checking for reference images:', kbImageError);
-      }
-
-      // Fetch relevant knowledge base content for context
-      try {
-        if (!supabase) throw new Error('Supabase client not available');
-        const { content: knowledgeContext } = await fetchRelevantKnowledgeBase(
-          supabase,
-          prompt,
-          1, // First message - tight budget
-          false
-        );
-
-        if (knowledgeContext && knowledgeContext.length > 0) {
-          console.log('📚 [IMAGE] Found relevant educational reference material');
-          // Extract key information from knowledge base
-          const contextSummary = knowledgeContext.substring(0, 500); // Use first 500 chars as context
-          enhancedPrompt = `Create a detailed, accurate educational diagram of ${prompt}.
-
-VISUAL REQUIREMENTS:
-- Show all major anatomical/structural components clearly
-- Use distinct colors to differentiate each structure
-- Mark each distinct structure with a small numbered circle: ①②③④⑤⑥⑦⑧⑨⑩
-- Do NOT include any text, words, letters or written labels anywhere in the image
-- Numbers only — no text at all
-- Clean, professional illustration style suitable for textbooks
-- Accurate proportions and spatial relationships
-- Color-code different structures for clarity
-
-Reference context: ${contextSummary}
-
-Important: Use numbered markers only. All text labels will be provided separately.`;
         } else {
-          // No knowledge base content, but still enhance for accuracy
-          enhancedPrompt = `Create a detailed, accurate educational diagram of ${prompt}.
-
-VISUAL REQUIREMENTS:
-- Show all major anatomical/structural components clearly
-- Use distinct colors to differentiate each structure
-- Mark each distinct structure with a small numbered circle: ①②③④⑤⑥⑦⑧⑨⑩
-- Do NOT include any text, words, letters or written labels anywhere in the image
-- Numbers only — no text at all
-- Clean, professional illustration style suitable for textbooks
-- Accurate proportions and spatial relationships
-- Color-code different structures for clarity
-
-Important: Use numbered markers only. All text labels will be provided separately.`;
+          console.warn('⚠️ [IMAGE] Illustrator planning request failed:', planResponse.status);
         }
-      } catch (kbError) {
-        console.warn('⚠️ [IMAGE] Could not fetch knowledge base context:', kbError);
-        // Fallback to basic enhancement
-        enhancedPrompt = `Create a detailed, accurate educational diagram of ${prompt}.
-
-VISUAL REQUIREMENTS:
-- Show all major components and structures clearly
-- Use distinct colors to differentiate each structure
-- Mark each distinct structure with a small numbered circle: ①②③④⑤⑥⑦⑧⑨⑩
-- Do NOT include any text, words, letters or written labels anywhere in the image
-- Numbers only — no text at all
-- Clean, professional illustration style
-- Accurate proportions and spatial relationships
-
-Important: Use numbered markers only. All text labels will be provided separately.`;
+      } catch (planErr) {
+        console.warn('⚠️ [IMAGE] Illustrator planning step error, falling back to raw prompt:', planErr);
       }
-
-      console.log('✅ [IMAGE] Enhanced educational prompt:', enhancedPrompt.substring(0, 200) + '...');
     }
 
+    // Step 2: Generate image using the planned prompt (clean, no embedded text)
     const payload: any = {
       model: imageModel,
-      prompt: enhancedPrompt,
-      size
+      prompt: imagePrompt,
+      size,
+      n: 1
     };
 
-    // Configure payload based on model capabilities
-    if (imageModel.includes('craft-1') || imageModelVersion === '2.0') {
-      payload.response_format = 'b64_json';
-      payload.n = 1;
-    } else if (imageModel.includes('craft-2') || imageModelVersion === '2.1') {
-      payload.n = Math.min(Number(n || 1), 4);
-      if (background) {
-        const allowed = ['transparent', 'opaque', 'auto'];
-        payload.background = allowed.includes(background) ? background : 'auto';
-      }
-    } else {
-      payload.response_format = 'b64_json';
-      payload.n = 1;
+    // craft-2 supports background transparency
+    if (imageModelVersion === '2.1' && background) {
+      const allowed = ['transparent', 'opaque', 'auto'];
+      payload.background = allowed.includes(background) ? background : 'auto';
     }
 
     try {
@@ -896,89 +816,63 @@ Important: Use numbered markers only. All text labels will be provided separatel
 
       if (!up.ok) {
         const errorBody = await up.text();
+        let parsedApiError = '';
+        try {
+          const parsed = JSON.parse(errorBody);
+          parsedApiError = parsed.error?.message || parsed.error || parsed.message || errorBody;
+        } catch {
+          parsedApiError = errorBody;
+        }
         console.error('❌ [IMAGE] Upstream API error:', {
           status: up.status,
           statusText: up.statusText,
           body: errorBody,
           url: IMAGES_URL,
-          model: imageModel
+          model: imageModel,
+          payloadKeys: Object.keys(payload)
         });
+        // Return the actual API error so users and developers can debug
         return j({
-          error: 'Uhuru Image Generation encountered an issue. Please try again.',
-          details: `Status ${up.status}: ${errorBody.substring(0, 200)}`
+          error: parsedApiError
+            ? `Image generation failed: ${parsedApiError}`
+            : `Image generation failed (status ${up.status}). Check edge function logs.`
         }, up.status >= 500 ? 503 : 400, origin);
       }
 
-      const data = await up.json();
-      const images = [];
+      const rawData = await up.json();
+      console.log('🔍 [IMAGE] Raw API response keys:', Object.keys(rawData));
 
-      if (data.data && Array.isArray(data.data)) {
-        for (const item of data.data) {
-          if (item.b64_json) {
-            images.push(item.b64_json);
-          } else if (item.url) {
-            try {
-              const imageResponse = await fetch(item.url);
-              const imageBuffer = await imageResponse.arrayBuffer();
-              const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-              images.push(base64);
-            } catch (fetchError) {
-              images.push(item.url);
-            }
+      const images: string[] = [];
+
+      // Handle OpenAI-compatible format: { data: [{ b64_json | url }] }
+      // Also handle direct format: { images: [...] } or { b64_json: "..." }
+      const items: any[] = rawData.data ?? rawData.images ?? (rawData.b64_json ? [rawData] : []);
+      for (const item of items) {
+        if (item.b64_json) {
+          images.push(item.b64_json);
+        } else if (item.url) {
+          try {
+            const imageResponse = await fetch(item.url);
+            const imageBuffer = await imageResponse.arrayBuffer();
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+            images.push(base64);
+          } catch {
+            images.push(item.url); // fallback to URL if download fails
           }
+        } else if (typeof item === 'string') {
+          images.push(item); // raw base64 string
         }
+      }
+
+      if (images.length === 0) {
+        console.error('❌ [IMAGE] No images extracted from response:', JSON.stringify(rawData).substring(0, 300));
+        return j({ error: `Image generation succeeded but returned no image data. Response: ${JSON.stringify(rawData).substring(0, 200)}` }, 500, origin);
       }
 
       console.log('✅ [IMAGE] Successfully generated images:', { count: images.length });
 
-      // For educational diagrams, generate a text key for the numbered structures
-      let diagramKey: string | undefined;
-      if (isEducational && images.length > 0 && API_URL && MODEL_20) {
-        try {
-          console.log('📋 [IMAGE] Generating diagram key for educational content');
-          const keyResponse = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${API_KEY}`
-            },
-            body: JSON.stringify({
-              model: MODEL_20,
-              messages: [
-                {
-                  role: 'user',
-                  content: `You are a science educator. A student requested a diagram of: "${prompt}".
-
-Generate a numbered key listing all major structures that would appear in a standard educational diagram of this topic. Start numbering from ①.
-
-Format exactly like this:
-**Diagram Key**
-① [Structure name] — [one-sentence description]
-② [Structure name] — [one-sentence description]
-...
-
-Include all major structures visible in such a diagram. Use proper scientific terminology. Do not add any other text before or after the key.`
-                }
-              ],
-              stream: false,
-              max_tokens: 600
-            })
-          });
-
-          if (keyResponse.ok) {
-            const keyData = await keyResponse.json();
-            const keyText = keyData.choices?.[0]?.message?.content || keyData.response || '';
-            if (keyText) {
-              diagramKey = keyText.trim();
-              console.log('✅ [IMAGE] Diagram key generated successfully');
-            }
-          }
-        } catch (keyError) {
-          console.warn('⚠️ [IMAGE] Could not generate diagram key:', keyError);
-        }
-      }
-
-      return j({ images, diagramKey }, 200, origin);
+      // Step 3: Return images + structured label data from the planning step
+      return j({ images, diagramData, educationalData }, 200, origin);
     } catch (error: any) {
       console.error('❌ [IMAGE] Exception in image generation:', {
         message: error.message,
