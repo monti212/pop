@@ -778,22 +778,14 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown, no explanation:
     const payload: any = {
       model: imageModel,
       prompt: imagePrompt,
-      size
+      size,
+      n: 1
     };
 
-    // Configure payload based on model capabilities
-    if (imageModel.includes('craft-1') || imageModelVersion === '2.0') {
-      payload.response_format = 'b64_json';
-      payload.n = 1;
-    } else if (imageModel.includes('craft-2') || imageModelVersion === '2.1') {
-      payload.n = Math.min(Number(n || 1), 4);
-      if (background) {
-        const allowed = ['transparent', 'opaque', 'auto'];
-        payload.background = allowed.includes(background) ? background : 'auto';
-      }
-    } else {
-      payload.response_format = 'b64_json';
-      payload.n = 1;
+    // craft-2 supports background transparency
+    if (imageModelVersion === '2.1' && background) {
+      const allowed = ['transparent', 'opaque', 'auto'];
+      payload.background = allowed.includes(background) ? background : 'auto';
     }
 
     try {
@@ -824,37 +816,57 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown, no explanation:
 
       if (!up.ok) {
         const errorBody = await up.text();
+        let parsedApiError = '';
+        try {
+          const parsed = JSON.parse(errorBody);
+          parsedApiError = parsed.error?.message || parsed.error || parsed.message || errorBody;
+        } catch {
+          parsedApiError = errorBody;
+        }
         console.error('❌ [IMAGE] Upstream API error:', {
           status: up.status,
           statusText: up.statusText,
           body: errorBody,
           url: IMAGES_URL,
-          model: imageModel
+          model: imageModel,
+          payloadKeys: Object.keys(payload)
         });
+        // Return the actual API error so users and developers can debug
         return j({
-          error: 'Uhuru Image Generation encountered an issue. Please try again.',
-          details: `Status ${up.status}: ${errorBody.substring(0, 200)}`
+          error: parsedApiError
+            ? `Image generation failed: ${parsedApiError}`
+            : `Image generation failed (status ${up.status}). Check edge function logs.`
         }, up.status >= 500 ? 503 : 400, origin);
       }
 
-      const data = await up.json();
-      const images = [];
+      const rawData = await up.json();
+      console.log('🔍 [IMAGE] Raw API response keys:', Object.keys(rawData));
 
-      if (data.data && Array.isArray(data.data)) {
-        for (const item of data.data) {
-          if (item.b64_json) {
-            images.push(item.b64_json);
-          } else if (item.url) {
-            try {
-              const imageResponse = await fetch(item.url);
-              const imageBuffer = await imageResponse.arrayBuffer();
-              const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-              images.push(base64);
-            } catch (fetchError) {
-              images.push(item.url);
-            }
+      const images: string[] = [];
+
+      // Handle OpenAI-compatible format: { data: [{ b64_json | url }] }
+      // Also handle direct format: { images: [...] } or { b64_json: "..." }
+      const items: any[] = rawData.data ?? rawData.images ?? (rawData.b64_json ? [rawData] : []);
+      for (const item of items) {
+        if (item.b64_json) {
+          images.push(item.b64_json);
+        } else if (item.url) {
+          try {
+            const imageResponse = await fetch(item.url);
+            const imageBuffer = await imageResponse.arrayBuffer();
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+            images.push(base64);
+          } catch {
+            images.push(item.url); // fallback to URL if download fails
           }
+        } else if (typeof item === 'string') {
+          images.push(item); // raw base64 string
         }
+      }
+
+      if (images.length === 0) {
+        console.error('❌ [IMAGE] No images extracted from response:', JSON.stringify(rawData).substring(0, 300));
+        return j({ error: `Image generation succeeded but returned no image data. Response: ${JSON.stringify(rawData).substring(0, 200)}` }, 500, origin);
       }
 
       console.log('✅ [IMAGE] Successfully generated images:', { count: images.length });
