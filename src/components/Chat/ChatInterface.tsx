@@ -28,7 +28,7 @@ import {
   generateImage,
 } from '../../services/chatService';
 import { LONG_RESPONSE_THRESHOLD, REGIONS } from '../../utils/constants';
-import { Conversation } from '../../types/chat';
+import { Conversation, DiagramContent } from '../../types/chat';
 import { saveChatStateBackup, clearChatStateBackup } from '../../utils/chatStateRecovery';
 
 interface TypingState {
@@ -341,8 +341,8 @@ export default function ChatInterface({
     setShowImageInput(false);
 
     try {
-      // Map Craft model to backend model ID
-      const backendModelId = selectedImageModel === 'craft-1' ? 'uhuru-craft-1' : 'uhuru-image-2.1';
+      // Map Craft model selector to backend model version
+      const modelVersion = selectedImageModel === 'craft-2' ? '2.1' : '2.0';
 
       // Generate the image using Uhuru AI with selected Craft model
       const result = await generateImage(
@@ -350,7 +350,7 @@ export default function ChatInterface({
         user.id,
         '1024x1024',
         'white',
-        backendModelId as any
+        modelVersion
       );
 
       if (!result.success || !result.images) {
@@ -360,33 +360,33 @@ export default function ChatInterface({
       // result.images now contains persistent public URLs from Supabase Storage
       const imageUrls = result.images;
 
-      // Create multimodal content with just the generated images (no text prompt)
-      const imageContent = imageUrls.map(url => ({
-        type: 'image_url',
-        image_url: { url }
-      }));
+      // Build the message content — use DiagramContent if structured label data is available
+      let messageContent: any;
+      if (result.diagramData && imageUrls.length > 0) {
+        const diagramPart: DiagramContent = {
+          type: 'diagram',
+          image_url: imageUrls[0],
+          diagramData: result.diagramData,
+          educationalData: result.educationalData
+        };
+        messageContent = [diagramPart];
+      } else {
+        messageContent = imageUrls.map(url => ({
+          type: 'image_url',
+          image_url: { url }
+        }));
+      }
 
-      // Add the generated images as an assistant message
+      // Add the generated image as an assistant message
       const assistantMessage = {
         id: crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
         role: 'assistant' as const,
-        content: imageContent,
+        content: messageContent,
         timestamp: new Date(),
         isLongResponse: false
       };
 
-      const newMessages: Array<{ id: string; role: 'assistant'; content: any; timestamp: Date; isLongResponse: boolean }> = [assistantMessage];
-
-      // If a diagram key was returned, add it as a follow-up text message
-      if (result.diagramKey) {
-        newMessages.push({
-          id: crypto?.randomUUID?.() ?? `${Date.now()}-key-${Math.random()}`,
-          role: 'assistant' as const,
-          content: result.diagramKey,
-          timestamp: new Date(),
-          isLongResponse: false
-        });
-      }
+      const newMessages = [assistantMessage];
 
       // Update conversation with the new messages
       const updatedConversation = {
@@ -400,12 +400,8 @@ export default function ChatInterface({
 
       // Save to database
       if (user) {
-        addMessage(conversationToUse.id, 'assistant', imageContent as any, user.id)
+        addMessage(conversationToUse.id, 'assistant', messageContent as any, user.id)
           .catch(error => console.error('Error saving image generation message:', error));
-        if (result.diagramKey) {
-          addMessage(conversationToUse.id, 'assistant', result.diagramKey, user.id)
-            .catch(error => console.error('Error saving diagram key message:', error));
-        }
       }
 
       // Reset image prompt and hide input

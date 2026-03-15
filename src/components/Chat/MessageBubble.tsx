@@ -10,7 +10,7 @@ import remarkGfm from 'remark-gfm';
 import { useNavigate } from 'react-router-dom';
 import { detectTableInContent } from '../../utils/tableDetection';
 import { convertMarkdownToHtml } from '../../utils/markdownConverter';
-import { MessageContent, TextContent, ImageUrlContent, InputFileContent } from '../../types/chat';
+import { MessageContent, TextContent, ImageUrlContent, InputFileContent, DiagramContent, DiagramLabel } from '../../types/chat';
 import StreamMarkdown from '../StreamMarkdown';
 import FileAttachment from './FileAttachment';
 import { containsLessonPlanKeywords } from '../../utils/lessonPlanDetection';
@@ -688,8 +688,118 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
   const channelInfo = getChannelInfo();
   
+  // Diagram viewer with SVG label overlay
+  const DiagramViewer = ({ part }: { part: DiagramContent }) => {
+    const [activeLabel, setActiveLabel] = useState<DiagramLabel | null>(null);
+    const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
+    const imgRef = useRef<HTMLImageElement>(null);
+
+    const onImgLoad = () => {
+      if (imgRef.current) {
+        setImgSize({ w: imgRef.current.offsetWidth, h: imgRef.current.offsetHeight });
+      }
+    };
+
+    const labels = part.diagramData?.labels ?? [];
+    const keyConceptsList = part.educationalData?.key_concepts ?? [];
+    const teacherNotes = part.educationalData?.teacher_notes ?? '';
+
+    return (
+      <div className="space-y-3">
+        {part.diagramData?.diagram_title && (
+          <p className="font-semibold text-sm text-[#002F4B]">{part.diagramData.diagram_title}</p>
+        )}
+        {/* Image + SVG overlay */}
+        <div className="relative inline-block w-full">
+          <img
+            ref={imgRef}
+            src={part.image_url}
+            alt={part.diagramData?.diagram_title ?? 'Scientific diagram'}
+            className="w-full rounded-lg"
+            onLoad={onImgLoad}
+          />
+          {imgSize.w > 0 && labels.length > 0 && (
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              viewBox="0 0 1000 1000"
+              preserveAspectRatio="none"
+            >
+              {labels.map((label, i) => (
+                <g key={i}>
+                  {/* Leader dot */}
+                  <circle cx={label.x} cy={label.y} r={14} fill="#1a56db" fillOpacity={0.85} />
+                  <text
+                    x={label.x}
+                    y={label.y + 5}
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize="14"
+                    fontWeight="bold"
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                  >
+                    {i + 1}
+                  </text>
+                </g>
+              ))}
+            </svg>
+          )}
+          {/* Hover tooltip positioned absolutely */}
+          {activeLabel && (
+            <div className="absolute bottom-2 left-2 right-2 bg-black/75 text-white text-xs rounded-lg p-2 z-10">
+              <span className="font-semibold">{activeLabel.name}:</span> {activeLabel.description}
+            </div>
+          )}
+        </div>
+
+        {/* Numbered label key */}
+        {labels.length > 0 && (
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+            <p className="text-xs font-semibold text-blue-800 mb-2">Diagram Labels</p>
+            <div className="grid grid-cols-1 gap-1">
+              {labels.map((label, i) => (
+                <div
+                  key={i}
+                  className="flex gap-2 items-start text-xs cursor-pointer hover:bg-blue-100 rounded px-1 py-0.5 transition-colors"
+                  onMouseEnter={() => setActiveLabel(label)}
+                  onMouseLeave={() => setActiveLabel(null)}
+                >
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#1a56db] text-white flex items-center justify-center font-bold text-[10px]">
+                    {i + 1}
+                  </span>
+                  <span className="text-[#002F4B]"><strong>{label.name}</strong> — {label.description}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Key concepts */}
+        {keyConceptsList.length > 0 && (
+          <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+            <p className="text-xs font-semibold text-emerald-800 mb-2">Key Concepts</p>
+            <ul className="space-y-0.5">
+              {keyConceptsList.map((concept, i) => (
+                <li key={i} className="text-xs text-emerald-900 flex gap-1.5 items-start">
+                  <span className="mt-0.5 text-emerald-500">•</span>{concept}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Teacher notes */}
+        {teacherNotes && (
+          <div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
+            <p className="text-xs font-semibold text-amber-800 mb-1">Teacher Notes</p>
+            <p className="text-xs text-amber-900">{teacherNotes}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render multimodal content (text + images + files)
-  const renderMultimodalContent = (content: (TextContent | ImageUrlContent | InputFileContent)[]) => {
+  const renderMultimodalContent = (content: (TextContent | ImageUrlContent | InputFileContent | DiagramContent)[]) => {
     return (
       <div className="space-y-3">
         {content.map((part, index) => {
@@ -768,10 +878,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             return (
               <div key={index} className="my-2">
                 <FileAttachment
-                  filename={part.filename}
-                  fileUrl={part.file_url}
-                  mimeType={part.mimeType}
+                  filename={(part as InputFileContent).filename}
+                  fileUrl={(part as InputFileContent).file_url}
+                  mimeType={(part as InputFileContent).mimeType}
                 />
+              </div>
+            );
+          } else if (part.type === 'diagram') {
+            return (
+              <div key={index} className="my-2">
+                <DiagramViewer part={part as DiagramContent} />
               </div>
             );
           }
@@ -1117,7 +1233,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               ) : Array.isArray(parsedContent) ? (
                 // Render multimodal content (images + text + files) for assistant
                 <div className="prose prose-sm max-w-none text-[#002F4B]">
-                   {renderMultimodalContent(parsedContent as (TextContent | ImageUrlContent | InputFileContent)[])}
+                   {renderMultimodalContent(parsedContent as (TextContent | ImageUrlContent | InputFileContent | DiagramContent)[])}
                 </div>
               ) : (
                 // Fallback for text-only assistant messages
