@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff, AlertCircle, Check, ArrowLeft } from 'lucide-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../services/authService';
 import Logo from '../components/Logo';
 
 const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: ''
@@ -20,40 +19,39 @@ const ResetPasswordPage: React.FC = () => {
   const [isValidating, setIsValidating] = useState(true);
   const [isValidToken, setIsValidToken] = useState(false);
 
-  // Validate the reset token on component mount
+  // Supabase sends reset tokens in the URL hash: #access_token=...&type=recovery
+  // We must listen for the PASSWORD_RECOVERY auth event — getSession() alone won't work
   useEffect(() => {
-    const validateResetToken = async () => {
-      setIsValidating(true);
-      
-      try {
-        // Check if we have a valid recovery session (Supabase automatically parses tokens from URL hash)
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Session error:', error);
-          setError('That reset link doesn\'t look right or has expired. Need a new one?');
-          setIsValidToken(false);
-          return;
-        }
-        
-        if (!session) {
-          setError('I can\'t find a valid reset request. Maybe grab a new link?');
-          setIsValidToken(false);
-          return;
-        }
-        
-        setIsValidToken(true);
-      } catch (err: any) {
-        console.error('Error validating reset token:', err);
-        setError('I\'m having trouble with that reset link. Try again?');
-        setIsValidToken(false);
-      } finally {
+    // Give Supabase a moment to parse the hash and fire the event
+    const timeout = setTimeout(() => {
+      if (isValidating) {
         setIsValidating(false);
+        setError('That reset link has expired or is invalid. Please request a new one.');
       }
-    };
+    }, 5000);
 
-    validateResetToken();
-  }, [searchParams]);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        clearTimeout(timeout);
+        setIsValidToken(true);
+        setIsValidating(false);
+      } else if (event === 'SIGNED_IN' && session) {
+        // Already signed in with a valid session from the hash
+        clearTimeout(timeout);
+        setIsValidToken(true);
+        setIsValidating(false);
+      } else if (!session && !isValidToken) {
+        clearTimeout(timeout);
+        setIsValidating(false);
+        setError('That reset link has expired or is invalid. Please request a new one.');
+      }
+    });
+
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
