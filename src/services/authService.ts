@@ -689,8 +689,10 @@ export const resetPassword = async (
   }
 
   try {
+    // Build redirect URL — must match exactly what's in Supabase Auth → URL Configuration → Redirect URLs
+    const origin = window.location.origin.replace(/\/$/, '');
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`
+      redirectTo: `${origin}/reset-password`
     });
     
     if (error) throw error;

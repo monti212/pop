@@ -505,12 +505,12 @@ const GradesManagementModal: React.FC<GradesManagementModalProps> = ({
       totalPercentage += percentage;
 
       // Track by assessment type
-      const type = entry.assignment?.assignment_type || 'other';
+      const type = grade.assignment?.assignment_type || 'other';
       assessmentTypes[type] = (assessmentTypes[type] || 0) + 1;
 
       // Track by student
-      const studentId = entry.student?.id;
-      const studentName = entry.student?.student_name || 'Unknown';
+      const studentId = grade.student?.id;
+      const studentName = grade.student?.student_name || 'Unknown';
       if (studentId) {
         if (!studentGrades[studentId]) {
           studentGrades[studentId] = { name: studentName, grades: [] };

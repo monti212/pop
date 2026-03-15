@@ -92,28 +92,21 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({
 
     // Check if current password is provided
     if (!formData.currentPassword) {
-      setError('Please enter your current password.');
       setError('I need your current password first.');
       return false;
     }
 
-    // Check if new password is provided
     if (!formData.newPassword) {
-      setError('Please enter your new password.');
       setError('What would you like your new password to be?');
       return false;
     }
 
-    // Check if new password is at least 6 characters
     if (formData.newPassword.length < 6) {
-      setError('Your new password must be at least 6 characters long.');
       setError('That new password\'s a bit short. How about at least 6 characters?');
       return false;
     }
 
-    // Check if passwords match
     if (formData.newPassword !== formData.confirmPassword) {
-      setError('The new passwords you entered do not match.');
       setError('Those new passwords don\'t match. Could you try typing them again?');
       return false;
     }
@@ -134,15 +127,21 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({
     setError(null);
 
     try {
-      // First, verify the current password by attempting to sign in
+      // Get the current user's email from the active session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user?.email) {
+        setError('Could not retrieve your account details. Please sign out and back in.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Verify the current password by re-authenticating
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: '', // We'll get this from the session
+        email: user.email,
         password: formData.currentPassword
       });
 
-      // If there's an error, the current password is incorrect
       if (signInError) {
-        setError('The current password you entered is incorrect.');
         setError('That current password doesn\'t look right. Mind checking it?');
         setIsLoading(false);
         return;
@@ -157,24 +156,14 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({
         throw updateError;
       }
 
-      // Password updated successfully
-      setSuccessMessage('Your password has been updated successfully!');
       setSuccessMessage('Password updated – you\'re all set!');
-      
-      // Reset form
-      setFormData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
+      setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
-      // Notify parent component
       setTimeout(() => {
         onSuccess();
       }, 2000);
     } catch (error: any) {
       console.error('Error changing password:', error);
-      setError(error.message || 'Uhuru could not change your password. Please try again.');
       setError(error.message || 'I couldn\'t update that password. Want to try again?');
     } finally {
       setIsLoading(false);
