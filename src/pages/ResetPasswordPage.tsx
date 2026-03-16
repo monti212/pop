@@ -40,11 +40,9 @@ const ResetPasswordPage: React.FC = () => {
         clearTimeout(timeout);
         setIsValidToken(true);
         setIsValidating(false);
-      } else if (!session && !isValidToken) {
-        clearTimeout(timeout);
-        setIsValidating(false);
-        setError('That reset link has expired or is invalid. Please request a new one.');
       }
+      // Let the 5-second timeout handle the invalid/expired case —
+      // do NOT fail early on null session (that fires on initial state too)
     });
 
     return () => {
