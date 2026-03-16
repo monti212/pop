@@ -377,6 +377,15 @@ export default function ChatInterface({
         }));
       }
 
+      // Build the user prompt message so it appears in the chat and titles the conversation
+      const userMessage = {
+        id: crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+        role: 'user' as const,
+        content: imagePrompt.trim(),
+        timestamp: new Date(),
+        isLongResponse: false
+      };
+
       // Add the generated image as an assistant message
       const assistantMessage = {
         id: crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
@@ -386,7 +395,7 @@ export default function ChatInterface({
         isLongResponse: false
       };
 
-      const newMessages = [assistantMessage];
+      const newMessages = [userMessage, assistantMessage];
 
       // Update conversation with the new messages
       const updatedConversation = {
@@ -400,6 +409,8 @@ export default function ChatInterface({
 
       // Save to database
       if (user) {
+        addMessage(conversationToUse.id, 'user', imagePrompt.trim(), user.id)
+          .catch(error => console.error('Error saving image prompt message:', error));
         addMessage(conversationToUse.id, 'assistant', messageContent as any, user.id)
           .catch(error => console.error('Error saving image generation message:', error));
       }
