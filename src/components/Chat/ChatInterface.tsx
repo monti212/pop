@@ -19,6 +19,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 import { useConversations } from '../../context/ConversationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 import {
   streamResponse,
@@ -135,7 +136,8 @@ export default function ChatInterface({
   });
   
   const verbosity = deepThinkMap[modelVersion] ?? "low";
-  const [selectedLanguage, setSelectedLanguage] = useState('english');
+  const { interfaceLanguage, responseLanguage, setInterfaceLanguage, setResponseLanguage } = useLanguage();
+  const selectedLanguage = responseLanguage;
   const [selectedRegion, setSelectedRegion] = useState('global');
   
   // State to track processed message IDs to prevent duplicates
@@ -1667,10 +1669,11 @@ export default function ChatInterface({
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
-          interfaceLanguage={selectedLanguage}
-          responseLanguage={selectedLanguage}
+          interfaceLanguage={interfaceLanguage}
+          responseLanguage={responseLanguage}
           onLanguageChange={(type, language) => {
-            if (type === 'interface' || type === 'response') setSelectedLanguage(language);
+            if (type === 'interface') setInterfaceLanguage(language as any);
+            else if (type === 'response') setResponseLanguage(language as any);
           }}
           onSignOut={onClose}
           userSubscription={userSubscription}

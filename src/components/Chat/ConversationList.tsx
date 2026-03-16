@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PenSquare, Search, Trash2, Crown, X, Layout, Check, FileEdit as Edit3, FileText, Settings, MoreVertical, Shield, GraduationCap, PanelLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useConversations } from '../../context/ConversationContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { updateConversationTitle } from '../../services/chatService';
 import Logo from '../Logo';
 import SubscriptionModal from '../SubscriptionModal';
@@ -43,6 +44,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
   // Check if current user is admin or supa admin (both have access to admin dashboard)
   const isAdmin = (profile?.team_role as string) === 'optimus_prime' || profile?.team_role === 'admin' || profile?.team_role === 'prime' || profile?.team_role === 'supa_admin';
+
+  const { t } = useLanguage();
 
   const {
     conversations,
@@ -336,7 +339,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search conversations..."
+                placeholder={t('searchPlaceholder')}
                 className="w-full pl-9 pr-3 py-2 rounded-12 bg-white border border-[#EAE7E3] text-[#1A1A1A] placeholder:text-[#8A8A8A] text-sm font-medium focus:ring-2 focus:ring-[#0096B3] focus:ring-offset-0 focus:border-transparent"
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#1A1A1A]" />
@@ -352,7 +355,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
             
             {searchTerm && filteredConversations.length === 0 && (
               <p className="text-xs text-center mt-2 text-[#475766]/50">
-                No conversations found matching "{searchTerm}"
+                {t('noConversationsFound')} "{searchTerm}"
               </p>
             )}
           </div>
@@ -372,7 +375,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
               }`}
             >
               <Search className={`w-4 h-4 ${isSearching ? 'text-[#f5b233]' : 'text-[#f5b233]'}`} />
-              <span className="text-sm font-medium">Search</span>
+              <span className="text-sm font-medium">{t('search')}</span>
             </button>
 
             <button
@@ -380,7 +383,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 className="w-full flex items-center justify-start gap-2 px-3 py-2.5 rounded-12 border border-[#E5E7EB] hover:bg-[#EFEFED] hover:shadow-md hover:text-[#19324A] hover:scale-[1.01] transition-all duration-150 ease-out"
             >
               <Settings className="w-4 h-4 text-[#f5b233]" />
-              <span className="text-sm font-medium">Settings</span>
+              <span className="text-sm font-medium">{t('settings')}</span>
             </button>
             </div>
           )}
@@ -389,10 +392,10 @@ const ConversationList: React.FC<ConversationListProps> = ({
           <button
             onClick={handleNewConversation}
             className={`${isCollapsed ? 'w-10 h-10 rounded-12 flex items-center justify-center' : 'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-12'} border border-[#E5E7EB] hover:bg-[#EFEFED] hover:shadow-md hover:text-[#19324A] hover:scale-[1.01] transition-all duration-150 ease-out`}
-            title={isCollapsed ? "New chat" : undefined}
+            title={isCollapsed ? t('newChat') : undefined}
           >
             <PenSquare className="w-4 h-4 text-[#f5b233]" />
-            {!isCollapsed && <span className="text-sm font-medium">New chat</span>}
+            {!isCollapsed && <span className="text-sm font-medium">{t('newChat')}</span>}
           </button>
 
           {/* U Craft Group - Expanded view when not collapsed */}
@@ -414,7 +417,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.05 }}
               >
                 <GraduationCap className="w-4 h-4 text-[#f5b233]" />
-                <span className="text-sm font-medium">GreyEd Teach</span>
+                <span className="text-sm font-medium">{t('greyedTeach')}</span>
               </motion.button>
 
               <motion.button
@@ -428,7 +431,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.1 }}
               >
                 <FileText className="w-4 h-4 text-[#0096B3]" />
-                <span className="text-sm font-medium">U Docs</span>
+                <span className="text-sm font-medium">{t('uDocs')}</span>
               </motion.button>
 
               {/* Admin Dashboard Button - Only show for admin users */}
@@ -444,7 +447,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.15 }}
                 >
                   <Shield className="w-4 h-4 text-[#FF6A00]" />
-                  <span className="text-sm font-medium">Admin Dashboard</span>
+                  <span className="text-sm font-medium">{t('adminDashboard')}</span>
                 </motion.button>
               )}
 
@@ -461,7 +464,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.2 }}
                 >
                   <Crown className="w-4 h-4 text-red-600" />
-                  <span className="text-sm font-bold text-red-600">Supa Admin</span>
+                  <span className="text-sm font-bold text-red-600">{t('supaAdmin')}</span>
                 </motion.button>
               )}
             </motion.div>
@@ -480,7 +483,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   }}
                 >
                   <Layout className="w-4 h-4 text-[#f5b233]" />
-                  <span className="text-sm font-medium">Website Builder</span>
+                  <span className="text-sm font-medium">{t('websiteBuilder')}</span>
                 </button>
               )}
 
@@ -495,7 +498,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
         {isSearching && searchTerm && !isCollapsed && (
           <div className="px-2 pb-3 mt-3">
             <h3 className="text-[10px] font-medium mb-1 px-2 text-[#7A8996] uppercase tracking-wider">
-              Search Results ({filteredConversations.length})
+              {t('searchResults')} ({filteredConversations.length})
             </h3>
             <div className="space-y-2 px-2">
               {filteredConversations.map(conversation => (
@@ -565,7 +568,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
             {todayConversations.length > 0 && (
               <div className="mt-3 px-2">
                 <h3 className="text-[10px] font-medium mb-1 px-2 text-[#7A8996] uppercase tracking-wider">
-                  TODAY
+                  {t('today').toUpperCase()}
                 </h3>
                 <div className="space-y-2 px-2">
                   {todayConversations.map(conversation => (
@@ -623,7 +626,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
             {yesterdayConversations.length > 0 && (
               <div className="mt-3 px-2">
                 <h3 className="text-[10px] font-medium mb-1 px-2 text-[#7A8996] uppercase tracking-wider">
-                  YESTERDAY
+                  {t('yesterday').toUpperCase()}
                 </h3>
                 <div className="space-y-2 px-2">
                   {yesterdayConversations.map(conversation => (
@@ -681,7 +684,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
             {olderConversations.length > 0 && (
               <div className="mt-3 px-2 pb-3">
                 <h3 className="text-[10px] font-medium mb-1 px-2 text-[#7A8996] uppercase tracking-wider">
-                  PREVIOUS
+                  {t('older').toUpperCase()}
                 </h3>
                 <div className="space-y-2 px-2">
                   {olderConversations.map(conversation => (
