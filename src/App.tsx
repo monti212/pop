@@ -8,6 +8,7 @@ const ChatInterface = lazy(() => import('./components/Chat/ChatInterface'));
 import { ConversationProvider } from './context/ConversationContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { logger } from './utils/logger';
 import { HeroSkeleton } from './components/SkeletonLoader';
 import WhyUhuruSection from './components/WhyUhuruSection';
@@ -43,7 +44,9 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <AppContentInner />
+        <LanguageProvider>
+          <AppContentInner />
+        </LanguageProvider>
       </ThemeProvider>
     </AuthProvider>
   );

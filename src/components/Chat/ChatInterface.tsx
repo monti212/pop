@@ -19,6 +19,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 import { useConversations } from '../../context/ConversationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 import {
   streamResponse,
@@ -135,7 +136,8 @@ export default function ChatInterface({
   });
   
   const verbosity = deepThinkMap[modelVersion] ?? "low";
-  const [selectedLanguage, setSelectedLanguage] = useState('english');
+  const { interfaceLanguage, responseLanguage, setInterfaceLanguage, setResponseLanguage } = useLanguage();
+  const selectedLanguage = responseLanguage;
   const [selectedRegion, setSelectedRegion] = useState('global');
   
   // State to track processed message IDs to prevent duplicates
@@ -377,6 +379,15 @@ export default function ChatInterface({
         }));
       }
 
+      // Build the user prompt message so it appears in the chat and titles the conversation
+      const userMessage = {
+        id: crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+        role: 'user' as const,
+        content: imagePrompt.trim(),
+        timestamp: new Date(),
+        isLongResponse: false
+      };
+
       // Add the generated image as an assistant message
       const assistantMessage = {
         id: crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
@@ -386,7 +397,7 @@ export default function ChatInterface({
         isLongResponse: false
       };
 
-      const newMessages = [assistantMessage];
+      const newMessages = [userMessage, assistantMessage];
 
       // Update conversation with the new messages
       const updatedConversation = {
@@ -400,6 +411,8 @@ export default function ChatInterface({
 
       // Save to database
       if (user) {
+        addMessage(conversationToUse.id, 'user', imagePrompt.trim(), user.id)
+          .catch(error => console.error('Error saving image prompt message:', error));
         addMessage(conversationToUse.id, 'assistant', messageContent as any, user.id)
           .catch(error => console.error('Error saving image generation message:', error));
       }
@@ -1656,10 +1669,11 @@ export default function ChatInterface({
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
-          interfaceLanguage={selectedLanguage}
-          responseLanguage={selectedLanguage}
+          interfaceLanguage={interfaceLanguage}
+          responseLanguage={responseLanguage}
           onLanguageChange={(type, language) => {
-            if (type === 'interface' || type === 'response') setSelectedLanguage(language);
+            if (type === 'interface') setInterfaceLanguage(language as any);
+            else if (type === 'response') setResponseLanguage(language as any);
           }}
           onSignOut={onClose}
           userSubscription={userSubscription}
