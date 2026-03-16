@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, X, Image, FileText, RefreshCw, Mic, MicOff } from 'lucide-react';
 import { UserFile } from '../../services/fileService';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface ChatInputProps {
   onSendMessage: (data: { text: string; files: File[]; isWebSearchActive: boolean }) => void;
@@ -48,6 +49,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onOpenImageModelSelector,
   isImageMode = false,
 }) => {
+  const { t } = useLanguage();
   const [message, setMessage] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [toolsCollapsed,] = useState(false);
@@ -685,7 +687,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             <div className="flex items-start gap-2">
               <Mic className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm text-red-700 font-medium mb-1">Microphone Access Required</p>
+                <p className="text-sm text-red-700 font-medium mb-1">{t('micAccess')}</p>
                 <p className="text-xs text-red-600">{microphonePermissionError}</p>
               </div>
               <button
@@ -712,7 +714,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             <div className="flex items-start gap-2">
               <FileText className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm text-orange-700 font-medium mb-1">Document Limit</p>
+                <p className="text-sm text-orange-700 font-medium mb-1">{t('docLimit')}</p>
                 <p className="text-xs text-orange-600">{fileLimitError}</p>
               </div>
               <button
@@ -749,10 +751,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
                       ? 'bg-[#0170b9]/10 text-[#0170b9] border border-[#0170b9]/20'
                       : 'hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-800'
                   }`}
-                  title="Generate image"
+                  title={t('image')}
                 >
                   <Image className="w-4 h-4" />
-                  <span>Image</span>
+                  <span>{t('image')}</span>
                 </button>
 
                 <button
@@ -765,10 +767,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
                       ? 'bg-[#0170b9]/10 text-[#0170b9] border border-[#0170b9]/20'
                       : 'hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-800'
                   }`}
-                  title="Upload file"
+                  title={t('upload')}
                 >
                   <FileText className="w-4 h-4" />
-                  <span>Upload</span>
+                  <span>{t('upload')}</span>
                   {selectedFiles.length > 0 && (
                     <span className="bg-[#0170b9] text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
                       {selectedFiles.length}
@@ -831,7 +833,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
               <div className="flex items-start gap-3">
                 <div className="flex-1">
                   <label className="text-xs font-medium text-[#0170b9] mb-1 block">
-                    Describe the image you want to create
+                    {t('describeImage')}
                   </label>
                   <input
                     type="text"
@@ -926,7 +928,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           {!message && !editingUserMessage && !showImagePromptInput && selectedFiles.length === 0 && !isFocused && (
             <div className="absolute left-0 top-0 w-full h-full pointer-events-none flex items-center pl-[0.95cm]">
               <span className="text-sm text-[#19324A]/50">
-                Ask me anything...
+                {t('askMeAnything')}
               </span>
             </div>
           )}
@@ -957,7 +959,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           {editingUserMessage && (
             <div className="absolute top-1 right-14 sm:right-16 flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
               <RefreshCw className="w-3 h-3" />
-              <span>Editing</span>
+              <span>{t('editingMessage')}</span>
               <button
                 type="button"
                 onClick={handleCancelEdit}

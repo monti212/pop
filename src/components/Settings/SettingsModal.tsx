@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import PasswordChangeForm from './PasswordChangeForm';
 import PrivacySettings from './PrivacySettings';
 import { supabase } from '../../services/authService';
@@ -41,6 +42,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const { user } = useAuth();
   const { setAppTheme } = useTheme();
+  const { t } = useLanguage();
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [isUpdatingName, setIsUpdatingName] = useState(false);
@@ -51,14 +53,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'account' | 'language' | 'subscription' | 'upgrade' | 'privacy' | 'help'>('account');
   
-  // Available languages for interface and response - kept for future use
-  void ['english', 'setswana', 'french', 'twi', 'ewe', 'fante', 'ga'];
-  
   // Check if URL has tab parameter
   useEffect(() => {
   }, [userSubscription]);
-  
-  // Translations for the UI
+
+  // Translations for the UI — kept only for FAQ fallback strings not yet in LanguageContext
   const translations: Record<string, Record<string, string>> = {
     english: {
       settings: "Settings",
@@ -233,8 +232,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  // Get translation for the current interface language
+  // getTranslation now delegates to the LanguageContext t() function,
+  // falling back to the local translations object for FAQ-only strings.
   const getTranslation = (key: string): string => {
+    const fromContext = t(key);
+    if (fromContext !== key) return fromContext;
     if (!translations[interfaceLanguage]) {
       return translations.english[key] || key;
     }
