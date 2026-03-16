@@ -274,6 +274,7 @@ export default function ChatInterface({
     setCurrentConversation,
     createNewConversation,
     updateConversation,
+    addMessageToConversation,
   } = useConversations();
 
   // Restore state from session storage on mount
@@ -409,12 +410,16 @@ export default function ChatInterface({
       setCurrentConversation(updatedConversation);
       updateConversation(updatedConversation);
 
-      // Save to database
+      // Save to database — use addMessageToConversation so temporary conversations
+      // are persisted and the sidebar conversation list updates with the real DB id.
       if (user) {
-        addMessage(conversationToUse.id, 'user', imagePrompt.trim(), user.id)
-          .catch(error => console.error('Error saving image prompt message:', error));
-        addMessage(conversationToUse.id, 'assistant', messageContent as any, user.id)
-          .catch(error => console.error('Error saving image generation message:', error));
+        const isTemp = !!(conversationToUse as any).isTemporary;
+        addMessageToConversation(conversationToUse.id, 'user', imagePrompt.trim(), user.id, isTemp)
+          .then((userResult) => {
+            const actualConvId = userResult.actualConversationId ?? conversationToUse.id;
+            return addMessageToConversation(actualConvId, 'assistant', messageContent as any, user.id, false);
+          })
+          .catch(error => console.error('Error saving image messages:', error));
       }
 
       // Reset image prompt and hide input

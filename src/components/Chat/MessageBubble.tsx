@@ -531,26 +531,25 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
   
-  // Function to handle image download
-  const handleImageDownload = (url: string, format: 'png' | 'jpeg' = 'png') => {
-    // Create a temporary link element
-    const link = document.createElement('a');
-    
-    // Set the href to the image URL
-    link.href = url;
-    
-    // Set the download attribute with a filename
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    link.download = `uhuru-image-${timestamp}.${format}`;
-    
-    // Append to the document
-    document.body.appendChild(link);
-    
-    // Trigger the download
-    link.click();
-    
-    // Clean up
-    document.body.removeChild(link);
+  // Function to handle image download — fetches as blob first so cross-origin images work
+  const handleImageDownload = async (url: string, format: 'png' | 'jpeg' = 'png') => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.href = blobUrl;
+      link.download = `uhuru-image-${timestamp}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      // Fallback: open in new tab
+      window.open(url, '_blank');
+    }
   };
 
   // Custom component to render images with download button
@@ -706,9 +705,20 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
     return (
       <div className="space-y-3">
-        {part.diagramData?.diagram_title && (
-          <p className="font-semibold text-sm text-[#002F4B]">{part.diagramData.diagram_title}</p>
-        )}
+        {/* Title row with download button */}
+        <div className="flex items-center justify-between gap-2">
+          {part.diagramData?.diagram_title && (
+            <p className="font-semibold text-base text-[#002F4B] leading-snug">{part.diagramData.diagram_title}</p>
+          )}
+          <button
+            onClick={() => handleImageDownload(part.image_url, 'png')}
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-[#0170b9] hover:bg-[#0170b9]/90 text-white text-xs font-medium rounded-lg transition-colors"
+            title="Download image"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Download
+          </button>
+        </div>
         {/* Image + SVG overlay */}
         <div className="relative inline-block w-full">
           <img
