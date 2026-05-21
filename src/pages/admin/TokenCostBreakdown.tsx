@@ -51,6 +51,8 @@ interface DailyUsage {
   price_usd: number;
 }
 
+type ReportingPeriod = 'month' | 'quarter' | 'all-time' | 'custom';
+
 export default function TokenCostBreakdown() {
   const [loading, setLoading] = useState(true);
   const [usageData, setUsageData] = useState<UsageData>({
@@ -81,13 +83,15 @@ export default function TokenCostBreakdown() {
     price_usd_total: 0
   });
   const [dailyUsage, setDailyUsage] = useState<DailyUsage[]>([]);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [timeRange, setTimeRange] = useState<ReportingPeriod>('month');
+  const [customStartDate, setCustomStartDate] = useState('2025-05-01');
+  const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   // PoP Constants
   const COGS_PER_1M = 0.295;
 
-  const PLAN_PRICE_PER_1K = 0.25;
+  const CHAT_PRICE_PER_1M = 8;
 
   const DAILY_HARD_CAP = 30000;
   const MONTHLY_BASE = 833333;
@@ -114,12 +118,12 @@ export default function TokenCostBreakdown() {
     const tokens_from_plan = Math.min(data.tokens_used_month - data.rollover_in, data.monthly_base);
     const tokens_from_rollover = Math.min(data.rollover_in, data.tokens_used_month);
 
-    const price_usd_from_plan = (Math.max(0, tokens_from_plan) / 1000) * PLAN_PRICE_PER_1K;
-    const price_usd_from_rollover = (Math.max(0, tokens_from_rollover) / 1000) * PLAN_PRICE_PER_1K;
+    const price_usd_from_plan = (Math.max(0, tokens_from_plan) / 1000000) * CHAT_PRICE_PER_1M;
+    const price_usd_from_rollover = (Math.max(0, tokens_from_rollover) / 1000000) * CHAT_PRICE_PER_1M;
 
     let price_usd_from_refills = 0;
     data.refills.forEach(refill => {
-      price_usd_from_refills += (refill.consumed / 1000) * refill.price_per_1k;
+      price_usd_from_refills += (refill.consumed / 1000000) * CHAT_PRICE_PER_1M;
     });
 
     const price_usd_total = price_usd_from_plan + price_usd_from_rollover + price_usd_from_refills;
@@ -152,17 +156,17 @@ export default function TokenCostBreakdown() {
 
         const { data: todayLogs } = await supabase
           .from('user_token_usage')
-          .select('tokens_today')
+          .select('used_text_today')
           .eq('organization_name', 'Pencils of Promise');
 
-        const tokens_used_today = todayLogs?.reduce((sum: any, u: any) => sum + (u.tokens_today || 0), 0) || 0;
+        const tokens_used_today = todayLogs?.reduce((sum: any, u: any) => sum + (u.used_text_today || 0), 0) || 0;
 
         const { data: monthLogs } = await supabase
           .from('user_token_usage')
-          .select('tokens_this_month')
+          .select('used_text_this_month')
           .eq('organization_name', 'Pencils of Promise');
 
-        const tokens_used_month = monthLogs?.reduce((sum: any, u: any) => sum + (u.tokens_this_month || 0), 0) || 0;
+        const tokens_used_month = monthLogs?.reduce((sum: any, u: any) => sum + (u.used_text_this_month || 0), 0) || 0;
 
         const { data: refillsData } = await supabase
           .from('token_refills')
@@ -210,22 +214,33 @@ export default function TokenCostBreakdown() {
         setUsageData(usage);
         setCostBreakdown(calculateCosts(usage));
 
-        const daysAgo = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - daysAgo);
+        const chartNow = new Date();
+        const quarterStartMonth = Math.floor(chartNow.getMonth() / 3) * 3;
+        const startDate =
+          timeRange === 'all-time'
+            ? new Date('2025-05-01T00:00:00')
+            : timeRange === 'custom'
+              ? new Date(`${customStartDate}T00:00:00`)
+              : timeRange === 'quarter'
+                ? new Date(chartNow.getFullYear(), quarterStartMonth, 1)
+                : new Date(chartNow.getFullYear(), chartNow.getMonth(), 1);
+        const endDate = timeRange === 'custom' ? new Date(`${customEndDate}T23:59:59.999`) : null;
 
-        const { data: dailyData } = await supabase
+        let dailyQuery = supabase
           .from('organization_token_usage')
           .select('*')
           .eq('organization_name', 'Pencils of Promise')
-          .gte('usage_date', startDate.toISOString().split('T')[0])
-          .order('usage_date', { ascending: true });
+          .gte('usage_date', startDate.toISOString().split('T')[0]);
+        if (endDate) {
+          dailyQuery = dailyQuery.lte('usage_date', endDate.toISOString().split('T')[0]);
+        }
+        const { data: dailyData } = await dailyQuery.order('usage_date', { ascending: true });
 
         const formattedDaily: DailyUsage[] = (dailyData || []).map((day: any) => ({
           date: day.usage_date,
           tokens_used: day.tokens_used,
           cost_usd: (day.tokens_used / 1000000) * COGS_PER_1M,
-          price_usd: (day.tokens_used / 1000) * PLAN_PRICE_PER_1K
+          price_usd: (day.tokens_used / 1000000) * CHAT_PRICE_PER_1M
         }));
 
         setDailyUsage(formattedDaily);
@@ -241,7 +256,7 @@ export default function TokenCostBreakdown() {
 
   useEffect(() => {
     fetchUsageData();
-  }, [timeRange]);
+  }, [customEndDate, customStartDate, timeRange]);
 
   const exportData = () => {
     const csvData = [
@@ -567,15 +582,15 @@ export default function TokenCostBreakdown() {
             </div>
           </div>
           <div className="mt-4 p-3 bg-gray-50 rounded text-xs text-gray-600">
-            Plan: $0.25/1K | Refills: $0.26-$0.30/1K
+            Chat response pricing: flat $8 per 1M tokens
           </div>
         </div>
       </div>
 
       {/* Time Range Selector */}
       <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex space-x-2">
-          {(['7d', '30d', '90d'] as const).map((range) => (
+        <div className="flex flex-wrap gap-2">
+          {(['month', 'quarter', 'all-time', 'custom'] as const).map((range) => (
             <button
               key={range}
               onClick={() => setTimeRange(range)}
@@ -585,11 +600,30 @@ export default function TokenCostBreakdown() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              {range === '7d' && 'Last 7 Days'}
-              {range === '30d' && 'Last 30 Days'}
-              {range === '90d' && 'Last 90 Days'}
+              {range === 'month' && 'Month'}
+              {range === 'quarter' && 'Quarter'}
+              {range === 'all-time' && 'All Time'}
+              {range === 'custom' && 'Custom'}
             </button>
           ))}
+          {timeRange === 'custom' && (
+            <div className="flex items-center gap-2 ml-2">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                aria-label="Custom start date"
+              />
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                aria-label="Custom end date"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -610,7 +644,7 @@ export default function TokenCostBreakdown() {
                   <div>{new Date(day.date).toLocaleDateString()}</div>
                   <div>{(day.tokens_used / 1000).toFixed(1)}K tokens</div>
                   <div>COGS: ${day.cost_usd.toFixed(4)}</div>
-                  <div>Value: ${day.price_usd.toFixed(2)}</div>
+                  <div>Value: ${day.price_usd.toFixed(2)} at $8/M</div>
                 </div>
               </div>
             );
@@ -720,7 +754,7 @@ export default function TokenCostBreakdown() {
                     />
                   </div>
                   <div className="mt-2 text-xs text-gray-600">
-                    ${refill.price_per_1k.toFixed(2)} per 1K tokens
+                    Priced at flat $8 per 1M tokens
                   </div>
                 </div>
               );

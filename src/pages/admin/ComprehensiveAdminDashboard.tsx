@@ -49,6 +49,8 @@ interface PlatformMetrics {
   tokensLast24h: number;
 }
 
+type ReportingPeriod = 'month' | 'quarter' | 'all-time' | 'custom';
+
 const ComprehensiveAdminDashboard: React.FC = () => {
   useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'per-account' | 'topics'>('overview');
@@ -60,12 +62,43 @@ const ComprehensiveAdminDashboard: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(10);
+  const refreshInterval = 10;
+  const [reportingPeriod, setReportingPeriod] = useState<ReportingPeriod>('month');
+  const [customStartDate, setCustomStartDate] = useState('2025-05-01');
+  const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+
+  const getReportingRange = useCallback(() => {
+    const now = new Date();
+    if (reportingPeriod === 'all-time') {
+      return { start: null as string | null, end: null as string | null, label: 'All time' };
+    }
+    if (reportingPeriod === 'custom') {
+      return {
+        start: customStartDate ? new Date(`${customStartDate}T00:00:00`).toISOString() : null,
+        end: customEndDate ? new Date(`${customEndDate}T23:59:59.999`).toISOString() : null,
+        label: 'Custom'
+      };
+    }
+    if (reportingPeriod === 'quarter') {
+      const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+      return {
+        start: new Date(now.getFullYear(), quarterStartMonth, 1).toISOString(),
+        end: null as string | null,
+        label: 'This quarter'
+      };
+    }
+    return {
+      start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+      end: null as string | null,
+      label: 'This month'
+    };
+  }, [customEndDate, customStartDate, reportingPeriod]);
 
   // Fetch platform-wide metrics
   const fetchPlatformMetrics = useCallback(async () => {
     try {
+      const range = getReportingRange();
       // Get total users
       const { count: totalUsers } = await supabase
         .from('user_profiles')
@@ -86,15 +119,21 @@ const ComprehensiveAdminDashboard: React.FC = () => {
 
       const uniqueActiveUsers = new Set(activeUsersData?.map((e: any) => e.user_id) || []).size;
 
-      // Get total messages
-      const { count: totalMessages } = await supabase
+      // Get total messages for selected reporting period
+      let totalMessagesQuery = supabase
         .from('messages')
         .select('*', { count: 'exact', head: true });
+      if (range.start) totalMessagesQuery = totalMessagesQuery.gte('created_at', range.start);
+      if (range.end) totalMessagesQuery = totalMessagesQuery.lte('created_at', range.end);
+      const { count: totalMessages } = await totalMessagesQuery;
 
-      // Get total conversations
-      const { count: totalConversations } = await supabase
+      // Get total conversations for selected reporting period
+      let totalConversationsQuery = supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true });
+      if (range.start) totalConversationsQuery = totalConversationsQuery.gte('created_at', range.start);
+      if (range.end) totalConversationsQuery = totalConversationsQuery.lte('created_at', range.end);
+      const { count: totalConversations } = await totalConversationsQuery;
 
       // Get messages in last 24h
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -104,9 +143,12 @@ const ComprehensiveAdminDashboard: React.FC = () => {
         .gte('created_at', yesterday);
 
       // Get total tokens (sum from usage_metrics)
-      const { data: tokenData } = await supabase
+      let tokenQuery = supabase
         .from('usage_metrics')
         .select('token_count');
+      if (range.start) tokenQuery = tokenQuery.gte('created_at', range.start);
+      if (range.end) tokenQuery = tokenQuery.lte('created_at', range.end);
+      const { data: tokenData } = await tokenQuery;
 
       const totalTokens = tokenData?.reduce((sum: any, row: any) => sum + (row.token_count || 0), 0) || 0;
 
@@ -119,9 +161,11 @@ const ComprehensiveAdminDashboard: React.FC = () => {
       const tokensLast24h = tokens24hData?.reduce((sum: any, row: any) => sum + (row.token_count || 0), 0) || 0;
 
       // Get knowledge base tokens
-      const { data: kbTokenData } = await supabase
-        .from('admin_knowledge_documents')
-        .select('token_count');
+      const { data: kbTokenData } = reportingPeriod === 'all-time'
+        ? await supabase
+          .from('admin_knowledge_documents')
+          .select('token_count')
+        : { data: [] };
 
       const knowledgeBaseTokens = kbTokenData?.reduce((sum: any, row: any) => sum + (row.token_count || 0), 0) || 0;
 
@@ -138,11 +182,12 @@ const ComprehensiveAdminDashboard: React.FC = () => {
       console.error('Error fetching platform metrics:', err);
       throw err;
     }
-  }, []);
+  }, [getReportingRange, reportingPeriod]);
 
   // Fetch per-user metrics - Query from actual conversations and messages
   const fetchUserMetrics = useCallback(async () => {
     try {
+      const range = getReportingRange();
       // Get all users with their conversation and message counts
       const { data: userData, error: userError } = await supabase
         .from('user_profiles')
@@ -154,17 +199,24 @@ const ComprehensiveAdminDashboard: React.FC = () => {
 
       // For each user, count their conversations and messages
       const userMetricsPromises = (userData || []).map(async (user: any) => {
-        const [conversationsResult, messagesResult] = await Promise.all([
-          supabase
+        let userConversationsQuery = supabase
             .from('conversations')
             .select('id', { count: 'exact', head: true })
-            .eq('user_id', user.id),
+            .eq('user_id', user.id);
+        if (range.start) userConversationsQuery = userConversationsQuery.gte('created_at', range.start);
+        if (range.end) userConversationsQuery = userConversationsQuery.lte('created_at', range.end);
+
+        let conversationIdsQuery = supabase.from('conversations').select('id').eq('user_id', user.id);
+        if (range.start) conversationIdsQuery = conversationIdsQuery.gte('created_at', range.start);
+        if (range.end) conversationIdsQuery = conversationIdsQuery.lte('created_at', range.end);
+        const conversationIds = (await conversationIdsQuery).data?.map((c: any) => c.id) || [];
+
+        const [conversationsResult, messagesResult] = await Promise.all([
+          userConversationsQuery,
           supabase
             .from('messages')
             .select('id', { count: 'exact', head: true })
-            .in('conversation_id',
-              (await supabase.from('conversations').select('id').eq('user_id', user.id)).data?.map((c: any) => c.id) || []
-            )
+            .in('conversation_id', conversationIds)
         ]);
 
         return {
@@ -189,17 +241,20 @@ const ComprehensiveAdminDashboard: React.FC = () => {
       console.error('Error fetching user metrics:', err);
       throw err;
     }
-  }, []);
+  }, [getReportingRange]);
 
   // Fetch conversation topics - Query from actual conversations and messages
   const fetchConversationTopics = useCallback(async () => {
     try {
+      const range = getReportingRange();
       // Get recent conversations with their users
-      const { data: conversations, error: convError } = await supabase
+      let conversationsQuery = supabase
         .from('conversations')
         .select('id, user_id, title, created_at, updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(20);
+        .order('updated_at', { ascending: false });
+      if (range.start) conversationsQuery = conversationsQuery.gte('created_at', range.start);
+      if (range.end) conversationsQuery = conversationsQuery.lte('created_at', range.end);
+      const { data: conversations, error: convError } = await conversationsQuery.limit(20);
 
       if (convError) throw convError;
 
@@ -261,7 +316,7 @@ const ComprehensiveAdminDashboard: React.FC = () => {
       console.error('Error fetching conversation topics:', err);
       throw err;
     }
-  }, []);
+  }, [getReportingRange]);
 
   // Main data fetch function
   const fetchAllData = useCallback(async () => {
@@ -376,17 +431,38 @@ const ComprehensiveAdminDashboard: React.FC = () => {
             </div>
 
             <select
-              value={refreshInterval}
-              onChange={(e) => setRefreshInterval(Number(e.target.value))}
-              disabled={!autoRefresh}
-              className="px-3 py-1.5 rounded-lg border text-xs font-medium disabled:opacity-50"
+              value={reportingPeriod}
+              onChange={(e) => setReportingPeriod(e.target.value as ReportingPeriod)}
+              className="px-3 py-1.5 rounded-lg border text-xs font-medium"
               style={{ borderColor: Brand.line, color: Brand.navy, background: 'white' }}
+              title="Reporting period"
             >
-              <option value={5}>5s</option>
-              <option value={10}>10s</option>
-              <option value={30}>30s</option>
-              <option value={60}>60s</option>
+              <option value="month">Month</option>
+              <option value="quarter">Quarter</option>
+              <option value="all-time">All time</option>
+              <option value="custom">Custom</option>
             </select>
+
+            {reportingPeriod === 'custom' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="px-2 py-1.5 rounded-lg border text-xs"
+                  style={{ borderColor: Brand.line, color: Brand.navy, background: 'white' }}
+                  aria-label="Custom start date"
+                />
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="px-2 py-1.5 rounded-lg border text-xs"
+                  style={{ borderColor: Brand.line, color: Brand.navy, background: 'white' }}
+                  aria-label="Custom end date"
+                />
+              </div>
+            )}
 
             <button
               onClick={fetchAllData}

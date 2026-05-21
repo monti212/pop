@@ -416,6 +416,58 @@ function getTextContentFromMessage(content) {
   return "";
 }
 
+function estimateTokensFromText(text) {
+  if (!text || typeof text !== "string") return 0;
+  return Math.max(1, Math.ceil(text.length / 4));
+}
+
+function estimateInputTokens(input, instructions) {
+  return estimateTokensFromText(`${instructions || ""}\n${JSON.stringify(input || [])}`);
+}
+
+function getUsageTotalTokens(payload, fallbackInputTokens, outputText) {
+  const usage = payload?.response?.usage ?? payload?.usage;
+  const total = usage?.total_tokens ?? usage?.total_tokens_used;
+  if (typeof total === "number" && Number.isFinite(total) && total > 0) {
+    return Math.ceil(total);
+  }
+
+  const inputTokens = usage?.input_tokens ?? usage?.prompt_tokens ?? fallbackInputTokens;
+  const outputTokens = usage?.output_tokens ?? usage?.completion_tokens ?? estimateTokensFromText(outputText);
+  return Math.max(1, Math.ceil((inputTokens || 0) + (outputTokens || 0)));
+}
+
+async function getAuthenticatedUser(supabaseClient, req) {
+  const authHeader = req.headers.get("Authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length).trim() : "";
+  if (!token) return null;
+
+  const { data, error } = await supabaseClient.auth.getUser(token);
+  if (error || !data?.user) {
+    console.warn("⚠️ Could not resolve authenticated user for token tracking:", error?.message);
+    return null;
+  }
+  return data.user;
+}
+
+async function recordTokenUsage(supabaseClient, details) {
+  if (!details?.userId || !details?.tokensUsed || details.tokensUsed <= 0) return;
+
+  const { error } = await supabaseClient.rpc("record_uhuru_token_usage", {
+    p_user_id: details.userId,
+    p_tokens_used: details.tokensUsed,
+    p_organization_name: details.organizationName || "Pencils of Promise",
+    p_model_used: details.modelUsed || "uhuru-2.0",
+    p_request_type: details.requestType || "chat",
+    p_conversation_id: details.conversationId || null,
+    p_image_quality: details.imageQuality || null
+  });
+
+  if (error) {
+    console.warn("⚠️ Failed to record token usage:", error);
+  }
+}
+
 function splitSystemAndBuildInput(messages = [], systemText) {
   let instructions = systemText || "";
   const input = [];
@@ -475,7 +527,7 @@ function normalizeUpstreamError(status, origin = null) {
   return j({ error: msg }, status, origin);
 }
 
-function normalizeStream(upstream) {
+function normalizeStream(upstream, onComplete = null, fallbackInputTokens = 0) {
   const enc = new TextEncoder();
   let closed = false;
   return new ReadableStream({
@@ -506,8 +558,21 @@ function normalizeStream(upstream) {
       };
       let accumulatedText = '';
       let completedEmitted = false;
+      let usageRecorded = false;
       const seen = new Set();
       let dedupeCounter = 0;
+      const completeOnce = (payload) => {
+        if (usageRecorded) return;
+        usageRecorded = true;
+        try {
+          onComplete?.({
+            text: accumulatedText || payload?.text || payload?.response?.output_text || '',
+            tokensUsed: getUsageTotalTokens(payload, fallbackInputTokens, accumulatedText)
+          });
+        } catch (trackingError) {
+          console.warn('⚠️ Token completion callback failed:', trackingError);
+        }
+      };
       const reader = upstream.pipeThrough(new TextDecoderStream())
         .pipeThrough(new TransformStream({
           start() {},
@@ -566,11 +631,13 @@ function normalizeStream(upstream) {
                     if (!accumulatedText && json?.response?.output_text) {
                       const fallbackText = json.response.output_text;
                       send('message.completed', { text: fallbackText });
+                      accumulatedText = fallbackText;
                       completedEmitted = true;
                     } else if (accumulatedText && !completedEmitted) {
                       send('message.completed', { text: accumulatedText });
                       completedEmitted = true;
                     }
+                    completeOnce(json);
                     await reader.cancel().catch(() => {});
                     break;
                   }
@@ -579,6 +646,7 @@ function normalizeStream(upstream) {
                       send('message.completed', { text: accumulatedText || '' });
                       completedEmitted = true;
                     }
+                    completeOnce(json);
                     await reader.cancel().catch(() => {});
                     break;
                   } else if (curEvent.includes('response.incomplete')) {
@@ -614,6 +682,7 @@ function normalizeStream(upstream) {
           if (!completedEmitted) {
             send('message.completed', { text: accumulatedText || '' });
           }
+          completeOnce({ text: accumulatedText });
           safeClose();
         } catch {
           if (!completedEmitted) {
@@ -675,6 +744,11 @@ Deno.serve(async (req) => {
   if (!API_URL || !API_KEY) {
     return j({ error: "Gateway not configured" }, 500, origin);
   }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const requestUser = await getAuthenticatedUser(supabase, req);
 
   // --- Image Generation Path ---
   if (body?.mode === 'image.generate') {
@@ -894,6 +968,22 @@ Respond with ONLY valid JSON, no markdown, no explanation:
 
       console.log('✅ [IMAGE] Successfully generated images:', { count: images.length });
 
+      if (requestUser?.id) {
+        const imageQuality = body?.quality === 'high'
+          ? 'high'
+          : body?.quality === 'medium' || body?.quality === 'med'
+            ? 'med'
+            : 'low';
+        const imageTokenCosts = { low: 50, med: 125, high: 500 };
+        await recordTokenUsage(supabase, {
+          userId: requestUser.id,
+          tokensUsed: imageTokenCosts[imageQuality] * images.length,
+          modelUsed: imageModelVersion === '2.1' ? 'craft-2' : 'craft-1',
+          requestType: 'image',
+          imageQuality
+        });
+      }
+
       // Step 3: Return images + structured label data from the planning step
       return j({ images, diagramData, educationalData }, 200, origin);
     } catch (error: any) {
@@ -987,10 +1077,6 @@ Respond with ONLY valid JSON, no markdown, no explanation:
     return j({ error: "Messages array required" }, 400, origin);
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
   // Extract user's latest query for relevance matching
   const userMessages = messages.filter(m => m.role === 'user');
   const latestUserQuery = userMessages.length > 0
@@ -1047,6 +1133,7 @@ Respond with ONLY valid JSON, no markdown, no explanation:
     instructions,
     stream: true
   };
+  const fallbackInputTokens = estimateInputTokens(input, instructions);
 
   console.log('🚀 [EDGE] Sending to Uhuru:', {
     url: API_URL,
@@ -1085,7 +1172,19 @@ Respond with ONLY valid JSON, no markdown, no explanation:
 
     console.log('✅ [EDGE] Upstream API response OK, streaming started');
 
-    return new Response(normalizeStream(up.body), {
+    return new Response(normalizeStream(
+      up.body,
+      (usage) => {
+        if (!requestUser?.id) return;
+        recordTokenUsage(supabase, {
+          userId: requestUser.id,
+          tokensUsed: usage.tokensUsed,
+          modelUsed: model,
+          requestType: 'chat'
+        });
+      },
+      fallbackInputTokens
+    ), {
       headers: {
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-transform',

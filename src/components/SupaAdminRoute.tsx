@@ -3,18 +3,18 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const SupaAdminRoute: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!isLoading) {
-      if (user && (user.email === 'monti@orionx.xyz' || user.email === 'gaone@orionx.xyz')) {
+      if (user && profile?.team_role === 'supa_admin') {
         setHasAccess(true);
       } else {
         setHasAccess(false);
       }
     }
-  }, [user, isLoading]);
+  }, [user, profile, isLoading]);
 
   if (isLoading || hasAccess === null) {
     return (
