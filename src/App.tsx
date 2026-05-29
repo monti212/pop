@@ -39,6 +39,7 @@ const LiveSystemMonitor = lazy(() => import('./pages/admin/LiveSystemMonitor'));
 const PerformanceMetrics = lazy(() => import('./pages/admin/PerformanceMetrics'));
 const TokenCostBreakdown = lazy(() => import('./pages/admin/TokenCostBreakdown'));
 const ErrorLogsDashboard = lazy(() => import('./pages/admin/ErrorLogsDashboard'));
+const SupaAdminDailyLogger = lazy(() => import('./pages/admin/SupaAdminDailyLogger'));
 
 function App() {
   return (
@@ -302,6 +303,7 @@ const AppContentInner: React.FC = () => {
           <Route path="/supa-admin/monitor" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><LiveSystemMonitor /></Suspense>} />
           <Route path="/supa-admin/performance" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><PerformanceMetrics /></Suspense>} />
           <Route path="/supa-admin/token-usage" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TokenUsage /></Suspense>} />
+          <Route path="/supa-admin/daily-log" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><SupaAdminDailyLogger /></Suspense>} />
           <Route path="/supa-admin/token-cost" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TokenCostBreakdown /></Suspense>} />
           <Route path="/supa-admin/error-logs" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><ErrorLogsDashboard /></Suspense>} />
         </Route>

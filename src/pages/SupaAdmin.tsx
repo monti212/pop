@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Activity, TrendingUp, DollarSign, Zap, Coins } from 'lucide-react';
+import { Activity, TrendingUp, DollarSign, Zap, Coins, ClipboardList } from 'lucide-react';
 
 export default function SupaAdmin() {
   return (
@@ -54,6 +54,15 @@ export default function SupaAdmin() {
             <Zap className="w-12 h-12 text-white mb-4" />
             <h2 className="text-2xl font-bold text-white mb-2">Live Command Center</h2>
             <p className="text-blue-100">Advanced live metrics and system controls</p>
+          </Link>
+
+          <Link
+            to="/supa-admin/daily-log"
+            className="group bg-gradient-to-br from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-2xl p-8 transition-all shadow-2xl hover:shadow-indigo-500/20 hover:scale-105 transform duration-300"
+          >
+            <ClipboardList className="w-12 h-12 text-white mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">Daily Work Logger</h2>
+            <p className="text-indigo-100">Private supaadmin daily work notes</p>
           </Link>
         </div>
 
