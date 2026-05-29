@@ -447,7 +447,30 @@ async function getAuthenticatedUser(supabaseClient, req) {
     console.warn("⚠️ Could not resolve authenticated user for token tracking:", error?.message);
     return null;
   }
-  return data.user;
+
+  let organizationName: string | null = null;
+  try {
+    const { data: usage, error: usageError } = await supabaseClient
+      .from('user_token_usage')
+      .select('organization_name')
+      .eq('user_id', data.user.id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (usageError) {
+      console.warn("⚠️ Could not resolve user organization for token tracking:", usageError.message);
+    } else {
+      organizationName = usage?.organization_name ?? null;
+    }
+  } catch (profileLookupError) {
+    console.warn("⚠️ Unexpected error looking up user organization:", profileLookupError);
+  }
+
+  return {
+    id: data.user.id,
+    organizationName
+  };
 }
 
 async function recordTokenUsage(supabaseClient, details) {
@@ -978,6 +1001,7 @@ Respond with ONLY valid JSON, no markdown, no explanation:
         await recordTokenUsage(supabase, {
           userId: requestUser.id,
           tokensUsed: imageTokenCosts[imageQuality] * images.length,
+          organizationName: requestUser.organizationName || 'Pencils of Promise',
           modelUsed: imageModelVersion === '2.1' ? 'craft-2' : 'craft-1',
           requestType: 'image',
           imageQuality
@@ -1179,6 +1203,7 @@ Respond with ONLY valid JSON, no markdown, no explanation:
         recordTokenUsage(supabase, {
           userId: requestUser.id,
           tokensUsed: usage.tokensUsed,
+          organizationName: requestUser.organizationName || 'Pencils of Promise',
           modelUsed: model,
           requestType: 'chat'
         });

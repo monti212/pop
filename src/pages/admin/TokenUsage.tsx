@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, RefreshCw, Zap, Users, AlertTriangle,
   Clock, Activity, Package,
-  Image as ImageIcon, Plus, Settings
+  Image as ImageIcon, Plus
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/authService';
 import AdminSidebar from '../../components/AdminSidebar';
@@ -64,26 +64,54 @@ interface TokenRefill {
   added_by_email: string;
 }
 
+interface TokenPurchaseHistory {
+  id: string;
+  organization_name: string;
+  purchase_date: string;
+  tokens_purchased: number;
+  amount_paid: number;
+  currency: string;
+  notes: string | null;
+  created_at: string;
+}
+
 const TokenUsage: React.FC = () => {
+  const location = useLocation();
   const { profile } = useAuth();
+  const organizationName = profile?.organization_name || 'Pencils of Promise';
+  const isSupaAdminView = location.pathname.startsWith('/supa-admin');
+  const canEdit = isSupaAdminView && profile?.team_role === 'supa_admin';
   const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview');
   const [metrics, setMetrics] = useState<TokenMetrics | null>(null);
   const [userUsage, setUserUsage] = useState<UserTokenUsage[]>([]);
   const [refills, setRefills] = useState<TokenRefill[]>([]);
+  const [purchaseHistory, setPurchaseHistory] = useState<TokenPurchaseHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [, setShowAddRefillModal] = useState(false);
-  const [, setShowAdjustCapModal] = useState(false);
-
-  const isSuperAdmin = profile?.team_role === 'supa_admin';
+  const [showAddRefillModal, setShowAddRefillModal] = useState(false);
+  const [showAddPurchaseModal, setShowAddPurchaseModal] = useState(false);
+  const [isSubmittingRefill, setIsSubmittingRefill] = useState(false);
+  const [isSubmittingPurchase, setIsSubmittingPurchase] = useState(false);
+  const [refillForm, setRefillForm] = useState({
+    amount: '',
+    expiresAt: '',
+    notes: ''
+  });
+  const [purchaseForm, setPurchaseForm] = useState({
+    purchaseDate: '',
+    tokensPurchased: '',
+    amountPaid: '',
+    currency: 'USD',
+    notes: ''
+  });
 
   const fetchTokenMetrics = useCallback(async () => {
     try {
       const { data, error } = await supabase.rpc('get_token_metrics', {
-        p_organization_name: 'Pencils of Promise'
+        p_organization_name: organizationName
       });
 
       if (error) throw error;
@@ -94,12 +122,12 @@ const TokenUsage: React.FC = () => {
       console.error('Error fetching token metrics:', err);
       throw err;
     }
-  }, []);
+  }, [organizationName]);
 
   const fetchUserUsage = useCallback(async () => {
     try {
       const { data, error } = await supabase.rpc('get_user_token_usage_details', {
-        p_organization_name: 'Pencils of Promise',
+        p_organization_name: organizationName,
         p_limit: 100
       });
 
@@ -109,7 +137,7 @@ const TokenUsage: React.FC = () => {
       console.error('Error fetching user usage:', err);
       throw err;
     }
-  }, []);
+  }, [organizationName]);
 
   const fetchRefills = useCallback(async () => {
     try {
@@ -124,7 +152,7 @@ const TokenUsage: React.FC = () => {
           notes,
           added_by_user_id
         `)
-        .eq('organization_name', 'Pencils of Promise')
+        .eq('organization_name', organizationName)
         .order('expires_at', { ascending: true });
 
       if (error) throw error;
@@ -145,7 +173,24 @@ const TokenUsage: React.FC = () => {
       console.error('Error fetching refills:', err);
       throw err;
     }
-  }, []);
+  }, [organizationName]);
+
+  const fetchPurchaseHistory = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('token_purchase_history')
+        .select('*')
+        .eq('organization_name', organizationName)
+        .order('purchase_date', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPurchaseHistory(data || []);
+    } catch (err: any) {
+      console.error('Error fetching purchase history:', err);
+      throw err;
+    }
+  }, [organizationName]);
 
   const fetchAllData = useCallback(async () => {
     setIsRefreshing(true);
@@ -155,7 +200,8 @@ const TokenUsage: React.FC = () => {
       await Promise.all([
         fetchTokenMetrics(),
         fetchUserUsage(),
-        fetchRefills()
+        fetchRefills(),
+        fetchPurchaseHistory()
       ]);
     } catch (err: any) {
       setError(err.message || 'Failed to load token usage data');
@@ -163,7 +209,97 @@ const TokenUsage: React.FC = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [fetchTokenMetrics, fetchUserUsage, fetchRefills]);
+  }, [fetchTokenMetrics, fetchUserUsage, fetchRefills, fetchPurchaseHistory]);
+
+  const handleAddTokens = useCallback(async () => {
+    if (!canEdit || isSubmittingRefill) return;
+
+    const amount = Number(refillForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('Please enter a valid token amount to add.');
+      return;
+    }
+
+    if (!refillForm.expiresAt) {
+      setError('Please select an expiry date.');
+      return;
+    }
+
+    setIsSubmittingRefill(true);
+    setError(null);
+    try {
+      const expiresAt = new Date(`${refillForm.expiresAt}T23:59:59Z`).toISOString();
+      const { error } = await supabase.rpc('add_token_refill', {
+        p_organization_name: organizationName,
+        p_amount: amount,
+        p_expires_at: expiresAt,
+        p_notes: refillForm.notes || null
+      });
+
+      if (error) throw error;
+
+      setShowAddRefillModal(false);
+      setRefillForm({ amount: '', expiresAt: '', notes: '' });
+      await fetchAllData();
+    } catch (err: any) {
+      setError(err.message || 'Failed to add tokens');
+    } finally {
+      setIsSubmittingRefill(false);
+    }
+  }, [canEdit, isSubmittingRefill, refillForm, organizationName, fetchAllData]);
+
+  const handleAddPurchaseHistory = useCallback(async () => {
+    if (!canEdit || isSubmittingPurchase) return;
+
+    const tokensPurchased = Number(purchaseForm.tokensPurchased);
+    const amountPaid = Number(purchaseForm.amountPaid);
+
+    if (!purchaseForm.purchaseDate) {
+      setError('Please choose a purchase date.');
+      return;
+    }
+
+    if (!Number.isFinite(tokensPurchased) || tokensPurchased <= 0) {
+      setError('Please enter a valid purchased token amount.');
+      return;
+    }
+
+    if (!Number.isFinite(amountPaid) || amountPaid <= 0) {
+      setError('Please enter a valid paid amount.');
+      return;
+    }
+
+    setIsSubmittingPurchase(true);
+    setError(null);
+    try {
+      const { error } = await supabase
+        .from('token_purchase_history')
+        .insert({
+          organization_name: organizationName,
+          purchase_date: purchaseForm.purchaseDate,
+          tokens_purchased: tokensPurchased,
+          amount_paid: amountPaid,
+          currency: purchaseForm.currency,
+          notes: purchaseForm.notes || null
+        });
+
+      if (error) throw error;
+
+      setShowAddPurchaseModal(false);
+      setPurchaseForm({
+        purchaseDate: '',
+        tokensPurchased: '',
+        amountPaid: '',
+        currency: 'USD',
+        notes: ''
+      });
+      await fetchAllData();
+    } catch (err: any) {
+      setError(err.message || 'Failed to add purchase history record');
+    } finally {
+      setIsSubmittingPurchase(false);
+    }
+  }, [canEdit, isSubmittingPurchase, purchaseForm, organizationName, fetchAllData]);
 
   useEffect(() => {
     fetchAllData();
@@ -244,10 +380,10 @@ const TokenUsage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Link
-                to="/admin"
+                to={isSupaAdminView ? '/supa-admin' : '/admin'}
                 className="p-2 rounded-lg hover:bg-white/80 transition-colors"
                 style={{ color: Brand.navy }}
-                title="Back to Dashboard"
+                title={`Back to ${isSupaAdminView ? 'Supa Admin' : 'Admin'} Dashboard`}
               >
                 <ArrowLeft className="w-5 h-5" />
               </Link>
@@ -255,9 +391,11 @@ const TokenUsage: React.FC = () => {
                 <Zap className="w-4 h-4 text-white" />
               </div>
               <div>
-                <div className="font-semibold" style={{ color: Brand.navy }}>Token Usage</div>
+                <div className="font-semibold" style={{ color: Brand.navy }}>
+                  {isSupaAdminView ? 'Supa Admin Token Usage' : 'Token Usage'}
+                </div>
                 <div className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
-                  {metrics?.organization_name || 'Organization'} - Real-time tracking
+                  {metrics?.organization_name || organizationName || 'Organization'} - Real-time tracking
                 </div>
               </div>
             </div>
@@ -636,15 +774,25 @@ const TokenUsage: React.FC = () => {
                     <h3 className="text-lg font-semibold" style={{ color: Brand.navy }}>
                       Active Refills
                     </h3>
-                    {isSuperAdmin && (
-                      <button
-                        onClick={() => setShowAddRefillModal(true)}
-                        className="px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2"
-                        style={{ background: Brand.teal, color: 'white' }}
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Refill
-                      </button>
+                    {canEdit && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setShowAddRefillModal(true)}
+                          className="px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2"
+                          style={{ background: Brand.teal, color: 'white' }}
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Tokens
+                        </button>
+                        <button
+                          onClick={() => setShowAddPurchaseModal(true)}
+                          className="px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 border"
+                          style={{ borderColor: Brand.line, color: Brand.navy, background: 'white' }}
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Purchase
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -799,24 +947,63 @@ const TokenUsage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Super Admin Controls */}
-                {isSuperAdmin && (
-                  <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
-                    <h3 className="text-lg font-semibold mb-4" style={{ color: Brand.navy }}>
-                      Super Admin Controls
+                {/* Purchase History */}
+                <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold" style={{ color: Brand.navy }}>
+                      Purchase History
                     </h3>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => setShowAdjustCapModal(true)}
-                        className="px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 border"
-                        style={{ borderColor: Brand.line, color: Brand.navy }}
-                      >
-                        <Settings className="w-4 h-4" />
-                        Adjust Token Cap
-                      </button>
-                    </div>
+                    <span className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
+                      {canEdit ? 'Supa Admin can add purchases' : 'Read-only'}
+                    </span>
                   </div>
-                )}
+
+                  {purchaseHistory.length === 0 ? (
+                    <div className="text-center py-8" style={{ color: Brand.navy, opacity: 0.6 }}>
+                      <Package className="w-12 h-12 mx-auto mb-3" style={{ opacity: 0.3 }} />
+                      <p className="text-sm">No purchase history yet</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full">
+                        <thead style={{ background: 'rgba(25,50,74,0.03)' }}>
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium uppercase" style={{ color: Brand.navy }}>
+                              Date
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium uppercase" style={{ color: Brand.navy }}>
+                              Tokens Purchased
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium uppercase" style={{ color: Brand.navy }}>
+                              Amount Paid
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium uppercase" style={{ color: Brand.navy }}>
+                              Notes
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y" style={{ borderColor: Brand.line }}>
+                          {purchaseHistory.map((purchase) => (
+                            <tr key={purchase.id}>
+                              <td className="px-4 py-3 text-sm" style={{ color: Brand.navy }}>
+                                {new Date(purchase.purchase_date).toLocaleDateString()}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-semibold" style={{ color: Brand.teal }}>
+                                {purchase.tokens_purchased.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-semibold" style={{ color: Brand.navy }}>
+                                {purchase.currency} {purchase.amount_paid.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-sm" style={{ color: Brand.navy, opacity: 0.7 }}>
+                                {purchase.notes || '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
 
@@ -908,6 +1095,172 @@ const TokenUsage: React.FC = () => {
                   </div>
                 </div>
               </motion.div>
+            )}
+
+            {canEdit && showAddRefillModal && (
+              <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                <div className="w-full max-w-md bg-white rounded-xl p-6 border shadow-xl" style={{ borderColor: Brand.line }}>
+                  <h3 className="text-lg font-semibold mb-4" style={{ color: Brand.navy }}>
+                    Add Tokens to Available Balance
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm mb-1" style={{ color: Brand.navy, opacity: 0.8 }}>
+                        Token Amount
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={refillForm.amount}
+                        onChange={(e) => setRefillForm((prev) => ({ ...prev, amount: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border"
+                        style={{ borderColor: Brand.line }}
+                        placeholder="e.g. 500000"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1" style={{ color: Brand.navy, opacity: 0.8 }}>
+                        Expiry Date
+                      </label>
+                      <input
+                        type="date"
+                        value={refillForm.expiresAt}
+                        onChange={(e) => setRefillForm((prev) => ({ ...prev, expiresAt: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border"
+                        style={{ borderColor: Brand.line }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1" style={{ color: Brand.navy, opacity: 0.8 }}>
+                        Notes (optional)
+                      </label>
+                      <textarea
+                        value={refillForm.notes}
+                        onChange={(e) => setRefillForm((prev) => ({ ...prev, notes: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border"
+                        style={{ borderColor: Brand.line }}
+                        rows={3}
+                        placeholder="Purchase reference or context"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-6 flex justify-end gap-2">
+                    <button
+                      onClick={() => setShowAddRefillModal(false)}
+                      className="px-4 py-2 rounded-lg border"
+                      style={{ borderColor: Brand.line, color: Brand.navy }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddTokens}
+                      disabled={isSubmittingRefill}
+                      className="px-4 py-2 rounded-lg text-white disabled:opacity-60"
+                      style={{ background: Brand.teal }}
+                    >
+                      {isSubmittingRefill ? 'Adding...' : 'Add Tokens'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {canEdit && showAddPurchaseModal && (
+              <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                <div className="w-full max-w-lg bg-white rounded-xl p-6 border shadow-xl" style={{ borderColor: Brand.line }}>
+                  <h3 className="text-lg font-semibold mb-4" style={{ color: Brand.navy }}>
+                    Add Purchase History
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm mb-1" style={{ color: Brand.navy, opacity: 0.8 }}>
+                        Purchase Date
+                      </label>
+                      <input
+                        type="date"
+                        value={purchaseForm.purchaseDate}
+                        onChange={(e) => setPurchaseForm((prev) => ({ ...prev, purchaseDate: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border"
+                        style={{ borderColor: Brand.line }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1" style={{ color: Brand.navy, opacity: 0.8 }}>
+                        Tokens Purchased
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={purchaseForm.tokensPurchased}
+                        onChange={(e) => setPurchaseForm((prev) => ({ ...prev, tokensPurchased: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border"
+                        style={{ borderColor: Brand.line }}
+                        placeholder="e.g. 1000000"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1" style={{ color: Brand.navy, opacity: 0.8 }}>
+                        Amount Paid
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={purchaseForm.amountPaid}
+                        onChange={(e) => setPurchaseForm((prev) => ({ ...prev, amountPaid: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border"
+                        style={{ borderColor: Brand.line }}
+                        placeholder="e.g. 2500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1" style={{ color: Brand.navy, opacity: 0.8 }}>
+                        Currency
+                      </label>
+                      <select
+                        value={purchaseForm.currency}
+                        onChange={(e) => setPurchaseForm((prev) => ({ ...prev, currency: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border"
+                        style={{ borderColor: Brand.line }}
+                      >
+                        <option value="USD">USD</option>
+                        <option value="BWP">BWP</option>
+                        <option value="ZAR">ZAR</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm mb-1" style={{ color: Brand.navy, opacity: 0.8 }}>
+                        Notes (optional)
+                      </label>
+                      <textarea
+                        value={purchaseForm.notes}
+                        onChange={(e) => setPurchaseForm((prev) => ({ ...prev, notes: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border"
+                        style={{ borderColor: Brand.line }}
+                        rows={3}
+                        placeholder="Invoice number, vendor, etc."
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-6 flex justify-end gap-2">
+                    <button
+                      onClick={() => setShowAddPurchaseModal(false)}
+                      className="px-4 py-2 rounded-lg border"
+                      style={{ borderColor: Brand.line, color: Brand.navy }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddPurchaseHistory}
+                      disabled={isSubmittingPurchase}
+                      className="px-4 py-2 rounded-lg text-white disabled:opacity-60"
+                      style={{ background: Brand.teal }}
+                    >
+                      {isSubmittingPurchase ? 'Saving...' : 'Save Purchase'}
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>

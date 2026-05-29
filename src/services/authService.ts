@@ -195,6 +195,7 @@ export interface UserProfile {
   id: string;
   display_name: string | null;
   team_role?: 'supa_admin' | 'admin' | 'prime' | 'free';
+  organization_name?: string | null;
   daily_message_count?: number;
   daily_image_count?: number;
   created_at: string;
@@ -573,8 +574,7 @@ export const getCurrentUser = async (): Promise<AuthUser> => {
             .upsert({
               id: user.id,
              display_name: user.user_metadata.name || null,
-             subscription_tier: 'free',
-             team_role: determineTeamRole(user.email || '')
+             subscription_tier: 'free'
             }, {
               onConflict: 'id'
             })
@@ -604,8 +604,7 @@ export const getCurrentUser = async (): Promise<AuthUser> => {
           const { data: updatedProfile, error: updateError } = await supabase
             .from('user_profiles')
             .update({ 
-              subscription_tier: 'free',
-              team_role: determineTeamRole(user.email || '')
+              subscription_tier: 'free'
             })
             .eq('id', user.id)
             .select()
@@ -832,9 +831,4 @@ export const signInWithGoogle = async (): Promise<{ success: boolean; error?: st
       error: error.message || 'Google sign-in isn\'t cooperating right now. Want to try again?'
     };
   }
-};
-
-// Helper function to determine team role based on email
-const determineTeamRole = (_email: string): TeamRoleEnum => {
-  return 'free';
 };

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Activity, TrendingUp, DollarSign, Zap } from 'lucide-react';
+import { Activity, TrendingUp, DollarSign, Zap, Coins } from 'lucide-react';
 
 export default function SupaAdmin() {
   return (
@@ -11,6 +11,15 @@ export default function SupaAdmin() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Link
+            to="/supa-admin/token-usage"
+            className="group bg-gradient-to-br from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 rounded-2xl p-8 transition-all shadow-2xl hover:shadow-teal-500/20 hover:scale-105 transform duration-300"
+          >
+            <Coins className="w-12 h-12 text-white mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">Token Usage & Purchases</h2>
+            <p className="text-teal-100">Manage available tokens and purchase history</p>
+          </Link>
+
           <Link
             to="/supa-admin/monitor"
             className="group bg-gradient-to-br from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-2xl p-8 transition-all shadow-2xl hover:shadow-green-500/20 hover:scale-105 transform duration-300"

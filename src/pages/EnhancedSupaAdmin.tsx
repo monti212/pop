@@ -399,7 +399,7 @@ export default function EnhancedSupaAdmin() {
               <div className="lg:col-span-2 bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold" style={{ color: Brand.navy }}>Token Consumption</h3>
-                  <Link to="/admin/token-usage" className="text-sm font-medium hover:underline" style={{ color: Brand.teal }}>
+                  <Link to="/supa-admin/token-usage" className="text-sm font-medium hover:underline" style={{ color: Brand.teal }}>
                     View Details →
                   </Link>
                 </div>
