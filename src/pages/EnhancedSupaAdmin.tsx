@@ -53,6 +53,8 @@ const Brand = {
   line: '#EAE7E3',
 };
 
+const DAILY_LIMIT = 1_000_000;
+
 export default function EnhancedSupaAdmin() {
   const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
   const [previousMetrics, setPreviousMetrics] = useState<LiveMetrics | null>(null);
@@ -105,7 +107,7 @@ export default function EnhancedSupaAdmin() {
         systemUptime: 99.98,
         refillBalance: 0,
         monthlyUsagePercent: tokenBalanceData.data ? (tokenBalanceData.data.used_text_this_month / 833333) * 100 : 0,
-        dailyUsagePercent: tokenBalanceData.data ? (tokenBalanceData.data.used_text_today / 30000) * 100 : 0,
+        dailyUsagePercent: tokenBalanceData.data ? (tokenBalanceData.data.used_text_today / DAILY_LIMIT) * 100 : 0,
       };
 
       if (metrics) {
@@ -409,7 +411,7 @@ export default function EnhancedSupaAdmin() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium" style={{ color: Brand.navy }}>Daily Usage</span>
                       <span className="text-sm font-bold" style={{ color: Brand.navy }}>
-                        {formatNumber(metrics.tokensUsedToday)} / 30K
+                        {formatNumber(metrics.tokensUsedToday)} / {formatNumber(DAILY_LIMIT)}
                       </span>
                     </div>
                     <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -541,7 +543,7 @@ export default function EnhancedSupaAdmin() {
               <TokenMetricCard
                 title="Daily Burn Rate"
                 value={formatNumber(metrics.tokensUsedToday)}
-                max={30000}
+                max={DAILY_LIMIT}
                 percentage={metrics.dailyUsagePercent}
                 color={Brand.teal}
               />

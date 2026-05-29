@@ -19,11 +19,13 @@ interface TokenUsage {
   percentage: number;
 }
 
+const DAILY_LIMIT = 1_000_000;
+
 export default function LiveSystemMonitor() {
   const [concurrentUsers, setConcurrentUsers] = useState<number>(0);
   const [connectionPool, setConnectionPool] = useState({ used: 0, total: 500 });
   const [errorRate, setErrorRate] = useState<number>(0);
-  const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ used_today: 0, daily_limit: 30000, percentage: 0 });
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage>({ used_today: 0, daily_limit: DAILY_LIMIT, percentage: 0 });
   const [recentErrors, setRecentErrors] = useState<RecentError[]>([]);
   const [systemHealth, setSystemHealth] = useState<'healthy' | 'warning' | 'critical'>('healthy');
   const [userTrend, setUserTrend] = useState<number[]>([]);
@@ -103,7 +105,7 @@ export default function LiveSystemMonitor() {
       if (error && error.code !== 'PGRST116') throw error;
 
       const usedToday = data?.tokens_used || 0;
-      const dailyLimit = 30000;
+      const dailyLimit = DAILY_LIMIT;
 
       setTokenUsage({
         used_today: usedToday,
@@ -329,7 +331,7 @@ export default function LiveSystemMonitor() {
             <div>
               <p className="text-sm font-medium text-gray-600">Token Usage Today</p>
               <p className="text-4xl font-bold text-gray-900 mt-2">{(tokenUsage.used_today / 1000).toFixed(1)}K</p>
-              <p className="text-sm text-gray-500 mt-1">of 30K daily limit</p>
+              <p className="text-sm text-gray-500 mt-1">of 1M daily limit</p>
             </div>
             <div className="bg-green-100 p-3 rounded-full">
               <Zap className="w-8 h-8 text-green-600" />

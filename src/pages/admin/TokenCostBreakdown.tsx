@@ -93,7 +93,7 @@ export default function TokenCostBreakdown() {
 
   const CHAT_PRICE_PER_1M = 8;
 
-  const DAILY_HARD_CAP = 30000;
+  const DAILY_HARD_CAP = 1_000_000;
   const MONTHLY_BASE = 833333;
   const PLAN_TOTAL = 10250000;
   const IMAGE_CREDITS = 250000;

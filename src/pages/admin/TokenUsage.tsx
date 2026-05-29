@@ -19,6 +19,9 @@ const Brand = {
   line: '#EAE7E3',
 };
 
+const DAILY_LIMIT = 1_000_000;
+const DAILY_WARNING_THRESHOLD = Math.floor(DAILY_LIMIT * (25_000 / 30_000));
+
 interface TokenMetrics {
   organization_name: string;
   total_token_cap: number;
@@ -669,13 +672,13 @@ const TokenUsage: React.FC = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Daily Limit</span>
                         <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          30,000
+                          {DAILY_LIMIT.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Remaining Today</span>
                         <span className="text-lg font-bold" style={{ color: Brand.teal }}>
-                          {(30000 - metrics.used_text_today).toLocaleString()}
+                          {Math.max(0, DAILY_LIMIT - metrics.used_text_today).toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -903,15 +906,15 @@ const TokenUsage: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium" style={{ color: Brand.navy }}>Daily Limit</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          metrics.used_text_today >= 30000 ? 'bg-red-100 text-red-700' :
-                          metrics.used_text_today >= 25000 ? 'bg-amber-100 text-amber-700' :
+                          metrics.used_text_today >= DAILY_LIMIT ? 'bg-red-100 text-red-700' :
+                          metrics.used_text_today >= DAILY_WARNING_THRESHOLD ? 'bg-amber-100 text-amber-700' :
                           'bg-green-100 text-green-700'
                         }`}>
-                          {metrics.used_text_today >= 30000 ? 'Exceeded' : 'OK'}
+                          {metrics.used_text_today >= DAILY_LIMIT ? 'Exceeded' : 'OK'}
                         </span>
                       </div>
                       <div className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        {metrics.used_text_today.toLocaleString()} / 30,000 tokens
+                        {metrics.used_text_today.toLocaleString()} / {DAILY_LIMIT.toLocaleString()} tokens
                       </div>
                     </div>
 
