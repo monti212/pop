@@ -1,7 +1,7 @@
 # Token Usage Admin/Supaadmin Handoff (May 29, 2026)
 
 ## TL;DR
-Implemented mirrored **Admin** and **Supa Admin** token usage experiences, added **purchase history** with DB migration + RLS, wired Supa Admin write actions (add tokens, add purchase entries), validated real-time token recording, committed/pushed code, and deployed edge function updates.
+Implemented mirrored **Admin** and **Supa Admin** token usage experiences, added **purchase history** with DB migration + RLS, wired Supa Admin write actions (add tokens, add purchase entries), validated real-time token recording, added a **private Supa Admin daily logger**, raised the daily token limit to **1,000,000**, committed/pushed code, and deployed edge function updates.
 
 ---
 
@@ -57,8 +57,31 @@ Implemented mirrored **Admin** and **Supa Admin** token usage experiences, added
 ### 7) Git + build + deploy status
 - Build: success (`npm run build`)
 - Commit pushed to `main`
-- Commit: `4e51f5b`
+- Commits:
+  - `4e51f5b` (token usage + purchase history baseline)
+  - `584a393` (private Supa Admin daily logger + docs)
+  - `e21382a` (daily limit to 1,000,000 across UI + metrics)
 - Edge function deployed and active
+
+### 8) Daily limit raised to 1,000,000
+- Frontend updated to show and calculate against 1,000,000 daily limit.
+- Backend updated (`get_token_metrics`) to calculate `daily_usage_percent` using 1,000,000 denominator.
+- Migration added and applied:
+  - `supabase/migrations/20260530000500_increase_daily_limit_to_one_million.sql`
+
+### 9) Private Supa Admin daily logger added
+- New Supa Admin page:
+  - `/supa-admin/daily-log`
+- New private table + policies:
+  - `public.supa_admin_daily_logs`
+- Migration added and applied:
+  - `supabase/migrations/20260529234500_add_supa_admin_daily_logs.sql`
+- Security behavior:
+  - Only `supa_admin` users can access.
+  - Each supaadmin can only view/manage own entries (`created_by = auth.uid()`).
+- Seeded entries created for today:
+  - `TOKEN_USAGE_ADMIN_SUPAADMIN_HANDOFF_2026-05-29.md`
+  - `TOKEN_USAGE_ADMIN_SUPAADMIN_EXEC_SUMMARY_2026-05-29.md`
 
 ---
 
@@ -84,6 +107,12 @@ Implemented mirrored **Admin** and **Supa Admin** token usage experiences, added
 - `supabase/migrations/20260529223000_add_token_purchase_history.sql`
   - Created purchase history table + indexes + RLS + trigger.
 
+- `supabase/migrations/20260529234500_add_supa_admin_daily_logs.sql`
+  - Created private supaadmin daily logger table + RLS + trigger.
+
+- `supabase/migrations/20260530000500_increase_daily_limit_to_one_million.sql`
+  - Updated backend daily percentage metric to 1,000,000 daily limit.
+
 - `supabase/functions/uhuru-llm-api/index.ts`
   - Token usage tracking alignment and deployment updates.
 
@@ -100,6 +129,15 @@ Applied successfully:
 Validation:
 - `public.token_purchase_history` exists
 - RLS policies present
+
+Applied successfully:
+- `add_supa_admin_daily_logs`
+- `increase_daily_limit_to_one_million`
+
+Validation:
+- `public.supa_admin_daily_logs` exists
+- Private RLS policies present
+- `get_token_metrics` daily percentage aligns with 1,000,000 daily limit
 
 ---
 
@@ -130,6 +168,11 @@ Validation:
    - `uhuru-llm-api` was deployed with `verify_jwt=false` per request.
    - Decide whether to keep disabled for testing only and re-enable for production hardening.
 
+5. **Daily logger validation**
+  - Open `/supa-admin/daily-log` as supaadmin.
+  - Confirm seeded entries are visible.
+  - Confirm non-supaadmin accounts cannot access or view entries.
+
 ---
 
 ## What is left / open items
@@ -149,7 +192,12 @@ Validation:
 - Add confirmation toasts for add-token and add-purchase actions.
 - Add per-row created-by visibility in purchase history UI.
 
+### D) Daily logger polish
+- Add search/filter by date/title.
+- Add edit/delete confirmation dialogs.
+- Add export/markdown download for daily summaries.
+
 ---
 
 ## Quick status statement
-All requested functional work for admin/supaadmin token usage + purchase history is implemented, linked to backend, migrated, built, pushed, and deployed. Remaining items are mainly security hardening and optional UX polish.
+All requested functional work for admin/supaadmin token usage + purchase history, private Supa Admin daily logging, and the 1,000,000 daily limit update is implemented, linked to backend, migrated, built, pushed, and deployed. Remaining items are mainly security hardening and optional UX polish.

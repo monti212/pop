@@ -42,11 +42,28 @@ Standardize token management visibility and controls across Admin and Supa Admin
   - `organization_token_balances`
   - `user_token_usage`
 
+### 5) Daily limit increased to 1,000,000
+- Updated daily limit across frontend dashboards and token usage displays from 30,000 to 1,000,000.
+- Updated backend metric calculation (`get_token_metrics`) so `daily_usage_percent` is now based on 1,000,000.
+
+### 6) Private Supa Admin daily logger added
+- Added private route: `/supa-admin/daily-log`.
+- Added `supa_admin_daily_logs` table with strict RLS:
+  - Only `supa_admin` users.
+  - Only own entries (`created_by = auth.uid()`).
+- Seeded two entries for today for documentation continuity:
+  - `TOKEN_USAGE_ADMIN_SUPAADMIN_HANDOFF_2026-05-29.md`
+  - `TOKEN_USAGE_ADMIN_SUPAADMIN_EXEC_SUMMARY_2026-05-29.md`
+
 ## Deployment / release status
 - Frontend built successfully.
 - Changes committed and pushed to `main`.
 - Edge function deployed and active.
 - Migration applied successfully.
+
+Latest delivery commits:
+- `584a393` — private Supa Admin daily logger + docs
+- `e21382a` — daily token limit increased to 1,000,000
 
 ## Test account update
 - `monti@orionx.kkk` configured as `admin`.
@@ -61,7 +78,7 @@ Standardize token management visibility and controls across Admin and Supa Admin
 ## Remaining recommendations
 1. Re-enable JWT verification for production hardening when testing window closes.
 2. Add export/filter options for purchase history for finance reporting.
-3. Add explicit audit log rows for purchase history CRUD if compliance requires.
+3. Add explicit audit log rows for purchase history and daily logger CRUD if compliance requires.
 
 ---
 **Bottom line:** Requested functionality is implemented end-to-end, live, and ready for morning validation.
