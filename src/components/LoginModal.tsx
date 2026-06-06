@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, Eye, EyeOff, AlertCircle, MessageCircle } from 'lucide-react';
 import { signIn, resetPassword } from '../services/authService';
 import Particles from './Particles';
 import Logo from './Logo';
 import PhoneAuthModal from './PhoneAuthModal';
+import WhatsAppAuthModal from './WhatsAppAuthModal';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -25,6 +26,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
   const [resetSuccess, setResetSuccess] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [showPhoneAuth, setShowPhoneAuth] = useState(false);
+  const [showWhatsAppAuth, setShowWhatsAppAuth] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -321,6 +323,25 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                 ) : "Sign In"}
               </motion.button>
 
+              <div className="relative my-5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-[#0170b9]/10"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">Or</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowWhatsAppAuth(true)}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-[#25D366]/30 bg-white text-[#0e7e3e] hover:bg-[#25D366]/5 hover:border-[#25D366]/60 font-medium text-sm min-h-[44px] transition-all"
+              >
+                <MessageCircle className="w-5 h-5 text-[#25D366]" />
+                Sign in with WhatsApp
+              </button>
+
             </form>
           )}
 
@@ -348,6 +369,18 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
             onSuccess();
           }}
           onSwitchToEmail={() => setShowPhoneAuth(false)}
+        />
+      )}
+
+      {showWhatsAppAuth && (
+        <WhatsAppAuthModal
+          mode="sign-in"
+          onClose={() => setShowWhatsAppAuth(false)}
+          onSuccess={() => {
+            setShowWhatsAppAuth(false);
+            onSuccess();
+          }}
+          onSwitchToEmail={() => setShowWhatsAppAuth(false)}
         />
       )}
     </div>

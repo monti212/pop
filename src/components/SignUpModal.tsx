@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Mail, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
+import { X, Mail, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, MessageCircle } from 'lucide-react';
 import { signUp } from '../services/authService';
 import Particles from './Particles';
 import Logo from './Logo';
 import PhoneAuthModal from './PhoneAuthModal';
+import WhatsAppAuthModal from './WhatsAppAuthModal';
 
 interface SignUpModalProps {
   onClose: () => void;
@@ -34,6 +35,7 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPhoneAuth, setShowPhoneAuth] = useState(false);
+  const [showWhatsAppAuth, setShowWhatsAppAuth] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -339,16 +341,15 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
               </div>
             </div>
 
-            {/* Phone authentication temporarily hidden
-            <div>
-              <SocialAuthButton
-                provider="Phone"
-                icon={Smartphone}
-                onClick={() => setShowPhoneAuth(true)}
-                disabled={isLoading}
-              />
-            </div>
-            */}
+            <button
+              type="button"
+              onClick={() => setShowWhatsAppAuth(true)}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-[#25D366]/30 bg-white text-[#0e7e3e] hover:bg-[#25D366]/5 hover:border-[#25D366]/60 font-medium text-sm min-h-[44px] transition-all"
+            >
+              <MessageCircle className="w-5 h-5 text-[#25D366]" />
+              Sign up with WhatsApp
+            </button>
 
             <div className="pt-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -381,6 +382,18 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
             onSuccess();
           }}
           onSwitchToEmail={() => setShowPhoneAuth(false)}
+        />
+      )}
+
+      {showWhatsAppAuth && (
+        <WhatsAppAuthModal
+          mode="sign-up"
+          onClose={() => setShowWhatsAppAuth(false)}
+          onSuccess={() => {
+            setShowWhatsAppAuth(false);
+            onSuccess();
+          }}
+          onSwitchToEmail={() => setShowWhatsAppAuth(false)}
         />
       )}
     </div>
