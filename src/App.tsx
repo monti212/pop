@@ -22,6 +22,7 @@ import ApiDocumentation from './pages/ApiDocumentation';
 import AdminLogin from './pages/AdminLogin';
 import AdminRoute from './components/AdminRoute';
 import SupaAdminRoute from './components/SupaAdminRoute';
+import TeacherShell from './components/teach/TeacherShell';
 const WhatsAppMessages = lazy(() => import('./pages/admin/WhatsAppMessages'));
 const CostBreakdownMaker = lazy(() => import('./pages/admin/CostBreakdownMaker'));
 const ComprehensiveAdminDashboard = lazy(() => import('./pages/admin/ComprehensiveAdminDashboard'));
@@ -40,6 +41,11 @@ const PerformanceMetrics = lazy(() => import('./pages/admin/PerformanceMetrics')
 const TokenCostBreakdown = lazy(() => import('./pages/admin/TokenCostBreakdown'));
 const ErrorLogsDashboard = lazy(() => import('./pages/admin/ErrorLogsDashboard'));
 const SupaAdminDailyLogger = lazy(() => import('./pages/admin/SupaAdminDailyLogger'));
+const TeacherHomePage = lazy(() => import('./pages/teach/TeacherHomePage'));
+const TeacherClassesPage = lazy(() => import('./pages/teach/TeacherClassesPage'));
+const TeacherLessonsPage = lazy(() => import('./pages/teach/TeacherLessonsPage'));
+const TeacherAskPage = lazy(() => import('./pages/teach/TeacherAskPage'));
+const HealthCompanionPage = lazy(() => import('./pages/HealthCompanionPage'));
 
 function App() {
   return (
@@ -87,6 +93,7 @@ const AppContentInner: React.FC = () => {
   const isAdminLoginPage = location.pathname === '/admin/login';
   const isAdminPage = location.pathname.startsWith('/admin');
   const isSupaAdminPage = location.pathname.startsWith('/supa-admin');
+  const isTeachPage = location.pathname.startsWith('/teach');
   const isChatPage = location.pathname === '/chat';
 
   // GreyEd Pages detection
@@ -115,7 +122,7 @@ const AppContentInner: React.FC = () => {
       // Only navigate to chat if not already on a U page or other special page
       const isOnSpecialPage = isUPage || isTermsPage || isPrivacyPolicyPage ||
                               isResetPasswordPage || isApiDocsPage ||
-                              isAdminLoginPage || isAdminPage || isSupaAdminPage;
+                              isAdminLoginPage || isAdminPage || isSupaAdminPage || isTeachPage;
 
       if (!isOnSpecialPage && location.pathname !== '/chat') {
         // Use navigate to go to chat route instead of modal
@@ -273,6 +280,8 @@ const AppContentInner: React.FC = () => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/api-docs" element={<ApiDocumentation />} />
+        {/* Uhuru Companion — public prototype */}
+        <Route path="/health" element={<Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: '#E8E2D8' }}><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2" style={{ borderColor: '#212754' }}></div></div>}><HealthCompanionPage /></Suspense>} />
         {/* GreyEd Pages Routes */}
         <Route path="/uhuru-office" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><UhuruDocsPage /></Suspense>} />
         <Route path="/uhuru-sheets" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><UhuruSheetsPage /></Suspense>} />
@@ -296,7 +305,7 @@ const AppContentInner: React.FC = () => {
           <Route path="/admin/knowledge-base" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><AIKnowledgeBase /></Suspense>} />
         </Route>
 
-        {/* Protected Supa Admin Route - Only for monti@orionx.xyz */}
+        {/* Protected Supa Admin Route - supa_admin only */}
         <Route element={<SupaAdminRoute />}>
           <Route path="/supa-admin" element={<Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center"><div className="text-white text-xl">Loading...</div></div>}><SupaAdmin /></Suspense>} />
           <Route path="/supa-admin/live" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><EnhancedSupaAdmin /></Suspense>} />
@@ -307,7 +316,15 @@ const AppContentInner: React.FC = () => {
           <Route path="/supa-admin/token-cost" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TokenCostBreakdown /></Suspense>} />
           <Route path="/supa-admin/error-logs" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><ErrorLogsDashboard /></Suspense>} />
         </Route>
-        
+
+        {/* GreyEd Teacher Web App — shell + screens (S0). Auth-gated inside TeacherShell. */}
+        <Route element={<TeacherShell />}>
+          <Route path="/teach" element={<Suspense fallback={<div className="h-full flex items-center justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-greyed-navy"></div></div>}><TeacherHomePage /></Suspense>} />
+          <Route path="/teach/classes" element={<Suspense fallback={<div className="h-full flex items-center justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-greyed-navy"></div></div>}><TeacherClassesPage /></Suspense>} />
+          <Route path="/teach/lessons" element={<Suspense fallback={<div className="h-full flex items-center justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-greyed-navy"></div></div>}><TeacherLessonsPage /></Suspense>} />
+          <Route path="/teach/ask" element={<Suspense fallback={<div className="h-full flex items-center justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-greyed-navy"></div></div>}><TeacherAskPage /></Suspense>} />
+        </Route>
+
         <Route path="/*" element={
           <>
             {isLoading ? (
