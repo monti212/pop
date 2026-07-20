@@ -16,7 +16,7 @@ const ProductTiersSection: React.FC = () => {
 
   const tiers: Tier[] = [
     {
-      version: "Uhuru 2.0",
+      version: "U4.0",
       tagline: "Advanced reasoning unleashed",
       idealFor: "Professionals, analysts, decision-makers",
       keyAbilities: ["Strategic analysis", "Complex problem-solving", "Creative innovation"],
@@ -148,7 +148,7 @@ const ProductTiersSection: React.FC = () => {
                     <thead>
                       <tr className="border-b border-gray-100">
                         <th className="text-left p-4 font-semibold text-deep-navy">Feature</th>
-                        <th className="text-center p-4 font-semibold text-deep-navy">Uhuru 2.0</th>
+                        <th className="text-center p-4 font-semibold text-deep-navy">U4.0</th>
                         <th className="text-center p-4 font-semibold text-deep-navy">Polymath</th>
                       </tr>
                     </thead>

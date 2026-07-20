@@ -56,7 +56,7 @@ const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
     {
       icon: <Bot className="w-4 h-4 text-teal" />,
       title: "Advanced AI Models",
-      description: "Access to Uhuru 2.0 model"
+      description: "Access to U4.0 & U4.3 models"
     },
     {
       icon: <Globe className="w-4 h-4 text-teal" />,

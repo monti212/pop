@@ -88,7 +88,7 @@ const UpgradeTab: React.FC<UpgradeTabProps> = ({
                     Access to all AI models
                   </p>
                   <p className={`text-sm ${darkMode ? 'text-white/70' : 'text-gray-600'}`}>
-                    Uhuru 2.0 model available
+                    U4.0 & U4.3 models available
                   </p>
                 </div>
               </li>
