@@ -49,7 +49,7 @@ const UpgradeTab: React.FC<UpgradeTabProps> = ({
             </div>
             <div>
               <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                OrionX {getTeamRoleDisplayName(teamRole)}
+                GreyEd {getTeamRoleDisplayName(teamRole)}
               </h2>
               <p className={`text-sm ${darkMode ? 'text-white/70' : 'text-gray-600'}`}>
                 You have full team access to all Uhuru capabilities
@@ -102,7 +102,7 @@ const UpgradeTab: React.FC<UpgradeTabProps> = ({
                     Priority support and features
                   </p>
                   <p className={`text-sm ${darkMode ? 'text-white/70' : 'text-gray-600'}`}>
-                    Direct access to the OrionX team
+                    Direct access to the GreyEd team
                   </p>
                 </div>
               </li>
@@ -120,7 +120,7 @@ const UpgradeTab: React.FC<UpgradeTabProps> = ({
                 Team Account Benefits
               </h4>
               <p className={`text-xs ${darkMode ? 'text-white/70' : 'text-blue-700'}`}>
-                Your OrionX team account provides unlimited access to all Uhuru features and models. 
+                Your GreyEd team account provides unlimited access to all Uhuru features and models. 
                 No subscription management is needed for your team account.
               </p>
             </div>

@@ -205,7 +205,7 @@ const CostBreakdownMaker: React.FC = () => {
               </div>
 
               <div className="mt-8 flex justify-between items-center text-sm text-gray-500">
-                <span>Uhuru · OrionX</span>
+                <span>Uhuru · GreyEd</span>
                 <span id="date"></span>
               </div>
             </div>

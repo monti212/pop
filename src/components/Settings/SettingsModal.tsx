@@ -375,7 +375,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     },
     {
       question: translations[interfaceLanguage]?.howCanIDeleteAccount || "How can I delete my account?",
-      answer: translations[interfaceLanguage]?.toDeleteAccount || "To delete your account, please contact our support team at support@orionx.xyz with the subject 'Account Deletion Request'."
+      answer: translations[interfaceLanguage]?.toDeleteAccount || "To delete your account, please contact our support team at support@uhuruai.co with the subject 'Account Deletion Request'."
     },
     {
       question: translations[interfaceLanguage]?.isMyDataPrivate || "Is my data private?",
@@ -731,7 +731,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       {getTranslation('needHelp')}
                     </p>
                     <a
-                      href="mailto:support@orionx.xyz"
+                      href="mailto:support@uhuruai.co"
                       className="inline-block px-3 py-2 rounded-12 text-xs bg-teal text-white hover:bg-teal/90 transition-colors duration-200"
                     >
                       {getTranslation('contactUs')}

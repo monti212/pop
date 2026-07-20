@@ -104,7 +104,7 @@ const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
                   {isTeamMember ? 'TEAM ROLE' : 'MEMBER SINCE'}
                 </p>
                 <h3 className="text-lg font-medium text-gray-900">
-                  {isTeamMember ? `Your OrionX ${getTeamRoleDisplayName(teamRole)} Account` : 'Your Uhuru Account'}
+                  {isTeamMember ? `Your GreyEd ${getTeamRoleDisplayName(teamRole)} Account` : 'Your Uhuru Account'}
                 </h3>
                 <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   {isTeamMember ? 'Full team access with unlimited features' : 'Free access to all Uhuru features and capabilities'}
@@ -181,21 +181,21 @@ const SubscriptionSettings: React.FC<SubscriptionSettingsProps> = ({
           }`} />
           <div>
             <h3 className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-navy'}`}>
-              {isTeamMember ? 'OrionX Team Member' : 'Our Mission'}
+              {isTeamMember ? 'GreyEd Team Member' : 'Our Mission'}
             </h3>
             <p className={`text-xs mt-1 ${darkMode ? 'text-white/70' : 'text-navy/70'}`}>
               {isTeamMember ? (
-                `As an OrionX ${getTeamRoleDisplayName(teamRole)}, you have full access to all Uhuru capabilities and advanced AI models. Your usage helps us refine the platform for all users across Africa.`
+                `As a GreyEd ${getTeamRoleDisplayName(teamRole)}, you have full access to all Uhuru capabilities and advanced AI models. Your usage helps us refine the platform for all users across Africa.`
               ) : (
                 <>
                   Uhuru is committed to democratizing access to advanced AI technology for every African.
                   All features are free because we believe everyone deserves access to intelligent assistance.
                   For support, contact us at{' '}
                   <a
-                    href="mailto:support@orionx.xyz"
+                    href="mailto:support@uhuruai.co"
                     className={`underline ${darkMode ? 'text-teal' : 'text-teal'}`}
                   >
-                    support@orionx.xyz
+                    support@uhuruai.co
                   </a>
                 </>
               )}

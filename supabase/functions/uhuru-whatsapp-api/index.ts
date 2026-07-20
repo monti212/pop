@@ -43,6 +43,18 @@ function sanitizeResponse(text: string): string {
 
   // Block external AI provider/model references (obfuscated patterns)
   const vendorPatterns = [
+    // DEFENSIVE — vendor/model literals are intentional: they exist so these
+    // names never reach a user. Upstreams serving U4.0 / U4.3 were previously
+    // unredacted here. Full provider paths first so they aren't fragmented.
+    [/\baccounts\/[a-z0-9_.-]+\/models\/[a-z0-9._-]+/gi, 'Uhuru'],
+    [/\bfireworks(\s*ai|\.ai)?\b/gi, 'our AI provider'],
+    [/\bmoonshot(\s*ai)?\b/gi, 'our AI provider'],
+    [/\bzhipu(\s*ai)?\b/gi, 'our AI provider'],
+    [/\bchatglm\b/gi, 'Uhuru'],
+    [/\bkimi(-?k?\d[a-z0-9]*)?\b/gi, 'Uhuru'],
+    [/\bglm-?\d[a-z0-9]*\b/gi, 'Uhuru'],
+    [/\b(deepseek|qwen|mixtral|mistral|llama)[a-z0-9._-]*\b/gi, 'AI model'],
+
     [/\b[Oo][pP][eE][nN][Aa][Ii]\b/g, 'our AI provider'],
     [/\b[Aa][nN][tT][hH][rR][oO][pP][iI][cC]\b/g, 'our AI provider'],
     [/\b[Gg][oO][oO][gG][lL][eE]\s+[Aa][Ii]\b/g, 'our AI provider'],
@@ -70,7 +82,7 @@ function sanitizeResponse(text: string): string {
   for (const pattern of systemPromptPatterns) {
     if (pattern.test(sanitized)) {
       console.log('🛡️ Blocked system prompt fragment exposure');
-      return "I'm Uhuru, an AI assistant created by OrionX to help with various tasks. How can I assist you today?";
+      return "I'm Uhuru, an AI teaching assistant by GreyEd, supporting Pencils of Promise teachers. How can I assist you today?";
     }
   }
 

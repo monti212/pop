@@ -401,7 +401,7 @@ const UhuruDocsPage: React.FC = () => {
   </div>
   
   <div class="footer">
-    <p>Created with Uhuru Office by OrionX</p>
+    <p>Created with Uhuru Office by GreyEd</p>
     <p>Document generated at ${new Date().toLocaleTimeString()}</p>
   </div>
 </body>

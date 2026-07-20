@@ -319,7 +319,7 @@ function sanitizeAIResponse(text: string): string {
     /# Identity & Disclosure/i,
     /CRITICAL IDENTITY PROTOCOL/i,
     /NON-NEGOTIABLE/i,
-    /You are Uhuru — an OrionX/i,
+    /You are Uhuru[,—]/i,
     /internal configuration/i,
     /Core Behavior:/i,
     /Response Style:/i

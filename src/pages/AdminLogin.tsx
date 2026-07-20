@@ -169,7 +169,7 @@ const AdminLogin: React.FC = () => {
 
       <footer className="py-4 border-t border-teal/10 text-center text-sm text-navy/60">
         <div className="container mx-auto px-4">
-          <p>© 2025 OrionX. All rights reserved.</p>
+          <p>© 2025 Pencils of Promise. All rights reserved.</p>
         </div>
       </footer>
     </div>

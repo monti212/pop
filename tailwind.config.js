@@ -23,6 +23,17 @@ export default {
           black: '#292828',
           white: '#efeae4',
           beige: '#dedbc2',
+          // semantic additions for the GreyEd teacher web app (design tokens)
+          line: '#e8e4da',          // hairline border on warm surfaces
+          tile: '#eaf2f9',          // soft-blue icon tile / chip background
+          ink: '#7c7773',           // muted label text
+          faint: '#9a8f7f',         // faint eyebrow / metadata text
+          soft: '#5b5750',          // secondary body text
+          success: '#1f7a52',
+          'success-soft': '#e8f4ee',
+          warning: '#b8860b',
+          danger: '#b42318',
+          'danger-soft': '#fdeceb',
         },
         sand: {
           50: '#FEFEFE',
@@ -107,8 +118,13 @@ export default {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'gradient-shift': 'gradient-shift 8s ease infinite',
         'float': 'float 6s ease-in-out infinite',
+        'w-fade': 'wFade 0.3s cubic-bezier(0.25,0.1,0.25,1)',
       },
       keyframes: {
+        wFade: {
+          from: { opacity: '0', transform: 'translateY(6px)' },
+          to: { opacity: '1', transform: 'none' },
+        },
         'gradient-shift': {
           '0%, 100%': { backgroundPosition: '0% 50%' },
           '50%': { backgroundPosition: '100% 50%' },

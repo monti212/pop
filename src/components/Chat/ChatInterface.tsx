@@ -49,7 +49,7 @@ interface ChatInterfaceProps {
   userSubscription: any;
 }
 
-type ModelVer = "2.0";
+type ModelVer = "4.0" | "4.3" | "2.0";
 type Verbosity = "low" | "medium" | "high";
 
 export default function ChatInterface({
@@ -120,11 +120,13 @@ export default function ChatInterface({
   const [modelVersion, setModelVersion] = useState<ModelVer>(() => {
     try {
       const saved = localStorage.getItem("uhuru-last-model");
-      if (saved && saved === "2.0") {
+      // Legacy "2.0" is deliberately NOT restored: that endpoint is retired for
+      // chat, so returning users are migrated forward to U4.0.
+      if (saved === "4.0" || saved === "4.3") {
         return saved as ModelVer;
       }
     } catch {}
-    return "2.0"; // Default to Uhuru 2.0
+    return "4.0"; // Default to Helios U4.0
   });
 
   const [deepThinkMap, setDeepThinkMap] = useState<Record<ModelVer, Verbosity>>(() => {
@@ -1501,7 +1503,13 @@ export default function ChatInterface({
 
                 {/* Image generation loader as assistant message */}
                 {isGeneratingImage && (
-                  <ImageGenerationLoader modelVersion={modelVersion} />
+                  // Image loader takes the IMAGE model version (craft-1 -> 2.0,
+                  // craft-2 -> 2.1), not the chat model. It was previously
+                  // handed the chat model version, which only type-checked
+                  // while chat happened to share the same "2.0" literal.
+                  <ImageGenerationLoader
+                    modelVersion={selectedImageModel === 'craft-2' ? '2.1' : '2.0'}
+                  />
                 )}
 
                 <div ref={messagesEndRef} />

@@ -41,10 +41,11 @@ const PrivacyPolicy: React.FC = () => {
               <div className="prose prose-sm sm:prose lg:prose-lg max-w-none text-navy/80">
                 <h2>Introduction</h2>
                 <h3>1.1 Overview</h3>
-                <p>OrionX ("we", "our", "us") is committed to protecting the privacy, confidentiality, and security of personal information we collect when you use our Services, including Hilous and Pax. This Privacy Policy describes how we collect, use, disclose, and protect personal data. By accessing or using our Services, you agree to the practices described in this Privacy Policy.</p>
+                <p>OrionX ("we", "our", "us") is committed to protecting the privacy, confidentiality, and security of personal information we collect when you use our Services, including Uhuru. This Privacy Policy describes how we collect, use, disclose, and protect personal data. By accessing or using our Services, you agree to the practices described in this Privacy Policy.</p>
+                <p>The GreyEd Teacher AI Platform, including the Uhuru assistant, is owned by Orion X Limited and made available to Pencils of Promise and its teachers under license.</p>
                 
                 <h3>1.2 Scope</h3>
-                <p>This Privacy Policy applies to all personal data collected by OrionX through all channels: our websites (e.g., orionx.xyz), web and mobile applications (Hilous), APIs, integrations, email and support interactions, third-party platforms, and any offline data processing. It governs our handling of information belonging to actual or prospective users, clients, business contacts, job applicants, and website visitors (collectively, "Users").</p>
+                <p>This Privacy Policy applies to all personal data collected by OrionX through all channels: our websites (e.g., uhuruai.co), web and mobile applications (Uhuru), APIs, integrations, email and support interactions, third-party platforms, and any offline data processing. It governs our handling of information belonging to actual or prospective users, clients, business contacts, job applicants, and website visitors (collectively, "Users").</p>
                 
                 <h3>1.3 Governing Principles</h3>
                 <p>We abide by the principles of data minimization, purpose limitation, transparency, data integrity, security, and accountability. We comply with the Botswana Data Protection Act, 2018, relevant African data protection regulations, and globally recognized best practices (e.g., GDPR principles where applicable).</p>
@@ -86,7 +87,7 @@ const PrivacyPolicy: React.FC = () => {
                 
                 <h4>3.1.4 Content and Data Transformations</h4>
                 <ul>
-                  <li>User-provided prompts, uploads (documents, PDFs, images, audio), and selections submitted to Hilous.</li>
+                  <li>User-provided prompts, uploads (documents, PDFs, images, audio), and selections submitted to Uhuru.</li>
                   <li>Model-generated output: generated text, code, summaries, translations, insights.</li>
                   <li>Anonymized embeddings or vectors for research and improvement.</li>
                 </ul>
@@ -108,7 +109,7 @@ const PrivacyPolicy: React.FC = () => {
                 <h4>3.2.1 Direct Collection</h4>
                 <ul>
                   <li>When you register, subscribe, or update your profile data.</li>
-                  <li>When you use Hilous to enter text, upload documents, or request actions.</li>
+                  <li>When you use Uhuru to enter text, upload documents, or request actions.</li>
                   <li>When you contact our support, sales, or marketing teams.</li>
                 </ul>
                 
@@ -133,7 +134,7 @@ const PrivacyPolicy: React.FC = () => {
                 <p>We rely on legitimate interests to: enhance user experience, prevent fraud and abuse, monitor and improve system performance and security, conduct internal research and analytics, and protect OrionX's intellectual property.</p>
                 
                 <h3>4.3 Consent</h3>
-                <p>When required by law or industry standard (e.g., marketing communications, optional analytics tracking, or certain cookies), we obtain your express consent before processing. You can withdraw consent at any time via your account settings or by contacting privacy@orionx.xyz.</p>
+                <p>When required by law or industry standard (e.g., marketing communications, optional analytics tracking, or certain cookies), we obtain your express consent before processing. You can withdraw consent at any time via your account settings or by contacting privacy@uhuruai.co.</p>
                 
                 <h3>4.4 Compliance with Legal Obligations</h3>
                 <p>We may process personal data to comply with applicable laws, regulations, subpoenas, court orders, or governmental requests.</p>
@@ -152,7 +153,7 @@ const PrivacyPolicy: React.FC = () => {
                 
                 <h3>5.2 Product Improvement and Research</h3>
                 <ul>
-                  <li>To train, fine-tune, and enhance Pax's performance (unless you opt out via the privacy dashboard or request).</li>
+                  <li>To train, fine-tune, and enhance the underlying AI model's performance (unless you opt out via the privacy dashboard or request).</li>
                   <li>To refine safety filters, bias mitigation, and fairness algorithms.</li>
                   <li>To evaluate and monitor model outputs, identify hallucinations, and reduce error rates.</li>
                   <li>To conduct A/B tests, usage analytics, and feature experiments.</li>
@@ -280,7 +281,7 @@ const PrivacyPolicy: React.FC = () => {
                 <h3>9.3 Data Deletion Requests (Right to be Forgotten)</h3>
                 <h4>9.3.1 User-Initiated Deletion</h4>
                 <ul>
-                  <li>Users may request deletion of their personal information via their account dashboard or by emailing privacy@orionx.xyz with the subject "Data Deletion Request".</li>
+                  <li>Users may request deletion of their personal information via their account dashboard or by emailing privacy@uhuruai.co with the subject "Data Deletion Request".</li>
                   <li>Upon receiving a verifiable request, we will delete your Personal Data from our primary systems within 30 days, except where retention is required by law, such as tax or regulatory obligations.</li>
                 </ul>
                 
@@ -314,10 +315,10 @@ const PrivacyPolicy: React.FC = () => {
 
                 <h2>Data Subject Rights and Choices (Botswana and Beyond)</h2>
                 <h3>11.1 Right of Access</h3>
-                <p>You may request a copy of Personal Data we hold about you—covering categories, purpose of processing, recipients, retention period, and source—by submitting a "Data Access Request" to privacy@orionx.xyz. We will respond within 30 days, or within the timeframe mandated by applicable law.</p>
+                <p>You may request a copy of Personal Data we hold about you—covering categories, purpose of processing, recipients, retention period, and source—by submitting a "Data Access Request" to privacy@uhuruai.co. We will respond within 30 days, or within the timeframe mandated by applicable law.</p>
                 
                 <h3>11.2 Right to Correction (Rectification)</h3>
-                <p>You may correct incomplete or inaccurate Personal Data by updating your account profile or by contacting privacy@orionx.xyz. We will verify identity before granting access or making changes.</p>
+                <p>You may correct incomplete or inaccurate Personal Data by updating your account profile or by contacting privacy@uhuruai.co. We will verify identity before granting access or making changes.</p>
                 
                 <h3>11.3 Right to Deletion (Erasure)</h3>
                 <p>As described in Section 9.3, you can request deletion of Personal Data. Exceptions apply for data essential to legal compliance, dispute resolution, or legitimate OrionX interests.</p>
@@ -333,7 +334,7 @@ const PrivacyPolicy: React.FC = () => {
                 <p>You may object to or request restriction of processing of your Personal Data for direct-marketing purposes or if you contest accuracy. We will comply unless we demonstrate compelling legitimate grounds for the processing.</p>
                 
                 <h3>11.6 Right to Withdraw Consent</h3>
-                <p>Where processing is based solely on your consent (e.g., marketing emails, optional analytics), you can withdraw consent by updating preferences in your account or emailing privacy@orionx.xyz. Withdrawal does not affect lawfulness of prior processing.</p>
+                <p>Where processing is based solely on your consent (e.g., marketing emails, optional analytics), you can withdraw consent by updating preferences in your account or emailing privacy@uhuruai.co. Withdrawal does not affect lawfulness of prior processing.</p>
                 
                 <h3>11.7 Right to Lodge Complaint</h3>
                 <p>If you believe we have violated your data-protection rights, you may file a complaint with the Botswana Data Protection Office (DPO) or other relevant regulator in your jurisdiction.</p>
@@ -346,14 +347,14 @@ const PrivacyPolicy: React.FC = () => {
                 <p>If you are under 16, you may use our Services only if accompanied by a parent or legal guardian who agrees to this Privacy Policy on your behalf.</p>
                 
                 <h3>12.3 Removal of Children's Data</h3>
-                <p>If we discover that a minor's Personal Data was collected without parental consent, we will promptly delete it. Parents or guardians may request deletion by emailing privacy@orionx.xyz.</p>
+                <p>If we discover that a minor's Personal Data was collected without parental consent, we will promptly delete it. Parents or guardians may request deletion by emailing privacy@uhuruai.co.</p>
 
                 <h2>Vendors, Sub-processors, and Third-Party Services</h2>
                 <h3>13.1 Criteria for Selecting Processors</h3>
                 <p>We only engage sub-processors who agree to contractual obligations consistent with this Privacy Policy, including data security, confidentiality, and breach notification.</p>
                 
                 <h3>13.2 Current Sub-processor List</h3>
-                <p>A complete list of our third-party processors (including AWS, Mailgun, Stripe, etc.) is maintained at https://uhuru.orionx.xyz/subprocessors. We update this list regularly when new sub-processors are engaged.</p>
+                <p>A complete list of our third-party processors (including AWS, Mailgun, Stripe, etc.) is maintained at https://uhuruai.co/subprocessors. We update this list regularly when new sub-processors are engaged.</p>
                 
                 <h3>13.3 Data-Processing Addendum (DPA)</h3>
                 <p>All sub-processors handling Personal Data are bound by a DPA that requires them to:</p>

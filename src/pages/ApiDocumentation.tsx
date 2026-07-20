@@ -275,13 +275,13 @@ const ApiDocumentation: React.FC = () => {
       "id": "uhuru-1",
       "object": "model",
       "created": 1677610602,
-      "owned_by": "orionx"
+      "owned_by": "greyed"
     },
     {
       "id": "uhuru-1-dev",
       "object": "model",
       "created": 1677610602,
-      "owned_by": "orionx"
+      "owned_by": "greyed"
     }
   ]
 }`} 
@@ -992,7 +992,7 @@ export default UhuruChatComponent;`}
               <div className="bg-navy-700 rounded-lg p-4">
                 <h3 className="font-bold mb-2">How do I report issues with the API?</h3>
                 <p className="text-white/80">
-                  For technical issues or questions about the API, please contact our support team at <a href="mailto:support@orionx.xyz" className="text-teal hover:underline">support@orionx.xyz</a>.
+                  For technical issues or questions about the API, please contact our support team at <a href="mailto:support@uhuruai.co" className="text-teal hover:underline">support@uhuruai.co</a>.
                 </p>
               </div>
             </div>

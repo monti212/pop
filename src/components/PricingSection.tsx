@@ -129,7 +129,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSignUp }) => {
                 onClick={() => {
                   if (plan.id === 'pro') setShowProModal(true);
                   else if (plan.id === 'free') onSignUp();
-                  else if (plan.id === 'business') window.open('mailto:sales@orionx.xyz', '_blank');
+                  else if (plan.id === 'business') window.open('mailto:sales@uhuruai.co', '_blank');
                 }}
                 disabled={plan.disabled}
                 className={`w-full py-4 rounded-xl font-semibold transition-all duration-200 hover:scale-[0.97] disabled:hover:scale-100 disabled:cursor-not-allowed ${

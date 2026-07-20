@@ -451,7 +451,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 </motion.button>
               )}
 
-              {/* Supa Admin Button - Only visible to monti@orionx.xyz */}
+              {/* Supa Admin Button - Only visible to supa_admin */}
               {isSupaAdmin && (
                 <motion.button
                   onClick={() => {

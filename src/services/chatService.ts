@@ -528,7 +528,11 @@ export async function streamResponse({
       throw new Error('Configuration error. Please contact support.');
     }
 
-    const endpoint = `${functionsUrl}/uhuru-llm-api`;
+    // Helios U4.0 / U4.3 are served by uhuru-llm-api-v4 (enforcement gate,
+    // pinned PoP + syllabus context, weighted/cache-aware metering).
+    // Legacy 2.0 stays on the original function.
+    const isV4 = String(modelVersion).startsWith('4');
+    const endpoint = `${functionsUrl}/${isV4 ? 'uhuru-llm-api-v4' : 'uhuru-llm-api'}`;
     console.log('🎯 [CHAT] Final endpoint URL:', endpoint);
 
     const requestPayload = {

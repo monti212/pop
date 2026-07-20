@@ -343,6 +343,23 @@ function sanitizeResponse(text) {
   let sanitized = text;
   // Remove references to external AI providers and model identifiers
   const patterns = [
+    // DEFENSIVE — the vendor/model literals below are intentional. They exist so
+    // these names can NEVER reach a user-facing response. Do not "clean them up".
+    //
+    // Upstream serving U4.0 / U4.3. Verified reachable and previously unredacted:
+    // a model self-description would have leaked the provider verbatim.
+    // Full provider model paths first, so the whole path is replaced before the
+    // narrower patterns below can fragment it.
+    [/\baccounts\/[a-z0-9_.-]+\/models\/[a-z0-9._-]+/gi, 'Uhuru'],
+    [/\bfireworks(\s*ai|\.ai)?\b/gi, '[REDACTED]'],
+    [/\bmoonshot(\s*ai)?\b/gi, '[REDACTED]'],
+    [/\bzhipu(\s*ai)?\b/gi, '[REDACTED]'],
+    [/\bchatglm\b/gi, 'Uhuru'],
+    [/\bkimi(-?k?\d[a-z0-9]*)?\b/gi, 'Uhuru'],
+    [/\bglm-?\d[a-z0-9]*\b/gi, 'Uhuru'],
+    // Other common open-weight upstreams, pre-emptively covered.
+    [/\b(deepseek|qwen|mixtral|mistral|llama)[a-z0-9._-]*\b/gi, '[REDACTED]'],
+
     // Provider names (obfuscated patterns)
     [/\b[Oo][pP][eE][nN][Aa][Ii]\b/g, '[REDACTED]'],
     [/\b[Aa][nN][tT][hH][rR][oO][pP][iI][cC]\b/g, '[REDACTED]'],

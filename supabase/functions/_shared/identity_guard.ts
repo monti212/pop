@@ -15,7 +15,7 @@
 
 // Approved identity response
 export const UHURU_IDENTITY =
-  "Uhuru is a proprietary AI developed by OrionX. I don't disclose or discuss underlying providers as I like them too much.";
+  "Uhuru is a proprietary AI teaching assistant built by GreyEd to support Pencils of Promise teachers. I don't disclose or discuss underlying providers.";
 
 // Patterns that indicate attempts to extract vendor/model information
 const VENDOR_PROBE_PATTERNS = [
@@ -56,6 +56,20 @@ const VENDOR_PROBE_PATTERNS = [
 // Vendor names and identifiers to redact from responses
 // Patterns are obfuscated to avoid revealing what we're protecting
 const VENDOR_IDENTIFIERS = [
+  // DEFENSIVE — the vendor/model literals here are intentional. They exist so
+  // these names can never reach a user-facing response. Do not "tidy" them away.
+  //
+  // Upstream actually serving U4.0 / U4.3. Full provider paths first, so the
+  // whole path is replaced before narrower patterns can fragment it.
+  /accounts\/[a-z0-9_.-]+\/models\/[a-z0-9._-]+/gi,
+  /\bfireworks(\s*ai|\.ai)?\b/gi,
+  /\bmoonshot(\s*ai)?\b/gi,
+  /\bzhipu(\s*ai)?\b/gi,
+  /\bchatglm\b/gi,
+  /\bkimi(-?k?\d[a-z0-9]*)?\b/gi,
+  /\bglm-?\d[a-z0-9]*\b/gi,
+  /\b(deepseek|qwen|mixtral|mistral|llama)[a-z0-9._-]*\b/gi,
+
   // Company patterns (encoded)
   /o[pP][eE][nN][aA][iI]/gi,
   /a[nN][tT][hH][rR][oO][pP][iI][cC]/gi,
@@ -64,13 +78,15 @@ const VENDOR_IDENTIFIERS = [
   /m[eE][tT][aA]\s+[aA][iI]/gi,
   /m[iI][cC][rR][oO][sS][oO][fF][tT]/gi,
 
-  // Model patterns (generic)
-  /[a-z]{3,5}-\d+(\.\d+)?(-\w+)?/gi,
-  /[a-z]{5,8}-\d+(\.\ d+)?(-\w+)?/gi,
-  /[a-z]{6}(-\w+)?/gi,
-  /[a-z]{5}-\d+/gi,
-  /[a-z]{7}-\d+/gi,
-  /[a-z]{4}-\d+/gi,
+  // Model patterns — DELIBERATELY NARROW.
+  //
+  // These previously included /[a-z]{6}(-\w+)?/gi, which matches ANY six
+  // lowercase letters. It rewrote ordinary prose into nonsense:
+  //   "Teach learners about fractions" -> "Teach [REDACTED]rs about [REDACTED]ons"
+  // That bug is almost certainly why this module was never imported anywhere.
+  // Model names must be matched by an explicit letters-digits shape, never by
+  // bare letter runs.
+  /\b[a-z]{2,8}-\d+(\.\d+)?(-[a-z0-9]+)?\b/gi,
 
   // Image model patterns (provider-specific)
   /d[aA][lL][lL]-[eE]-\d+/gi,
@@ -275,7 +291,7 @@ export function redactVendorProbes(text: string): {
 export function injectIdentityProtocol(systemPrompt: string): string {
   // MINIMAL identity reinforcement - don't reveal the protection mechanism
   const identityProtocol = `
-IMPORTANT: You are Uhuru, created by OrionX. When asked about technical implementation details, models, or architecture, respond that you're a proprietary AI system.
+IMPORTANT: You are Uhuru, an AI teaching assistant by GreyEd supporting Pencils of Promise teachers. When asked about technical implementation details, models, providers, or architecture, respond that you're a proprietary AI system and do not name any underlying provider.
 
 `;
 
@@ -611,7 +627,7 @@ export function guardResponse(responseText: string): {
   if ((stillHasLeakage || tooShortAfterSanitization) && hasLeakage) {
     // Replace with safe identity response
     return {
-      sanitizedResponse: "Hello! I'm Uhuru, an AI assistant created by OrionX in Botswana. I'm designed to understand African contexts and help with various tasks like writing, analysis, planning, and answering questions. How can I assist you today?",
+      sanitizedResponse: "Hello! I'm Uhuru, an AI teaching assistant by GreyEd, supporting Pencils of Promise teachers across Africa. I can help you plan lessons, adapt teaching methods, and create classroom-ready materials. How can I assist you today?",
       detectedLeakage: true,
       leakTypes: [...leakTypes, 'replaced_with_fallback']
     };

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
-import { Home, Users, BookOpen, MessageCircle, Globe, Plus } from 'lucide-react';
+import { Home, Users, BookOpen, MessageCircle, Globe, Plus, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import popLogo from '../../assets/pencils-of-promise-logo.png';
 
@@ -16,7 +16,7 @@ import popLogo from '../../assets/pencils-of-promise-logo.png';
 interface NavItem {
   key: string;
   label: string;
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  icon: LucideIcon;
   path: string;
 }
 
@@ -78,7 +78,7 @@ const TeacherShell: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden font-sans">
       {/* ── Sidebar ─────────────────────────────────────────────── */}
-      <aside className="w-[240px] flex-none bg-greyed-navy flex flex-col overflow-hidden">
+      <aside className="hidden lg:flex w-[240px] flex-none bg-greyed-navy flex-col overflow-hidden">
         {/* lockup */}
         <div className="px-5 pt-[22px] pb-[14px] border-b border-white/[0.08]">
           <Link to="/teach" className="flex items-center gap-[9px]">
@@ -157,10 +157,24 @@ const TeacherShell: React.FC = () => {
         </div>
 
         {/* content */}
-        <div className="flex-1 overflow-y-auto bg-greyed-white relative">
+        <div className="flex-1 overflow-y-auto bg-greyed-white relative pb-[76px] lg:pb-0">
           <Outlet />
         </div>
       </div>
+
+      {/* mobile bottom tab bar — desktop uses the sidebar */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-greyed-line flex px-1.5 pt-1.5 pb-2.5">
+        {NAV_ITEMS.map((item) => {
+          const active = item.key === activeKey;
+          const Icon = item.icon;
+          return (
+            <Link key={item.key} to={item.path} className="flex-1 flex flex-col items-center py-[7px]">
+              <Icon size={20} className={active ? 'text-greyed-navy' : 'text-greyed-ink'} />
+              <span className={`text-[11px] mt-1 ${active ? 'text-greyed-navy font-semibold' : 'text-greyed-ink'}`}>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 };

@@ -67,7 +67,7 @@ const PaymentMethodSettings: React.FC<PaymentMethodSettingsProps> = ({
             </div>
             <div>
               <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                OrionX Team Account
+                GreyEd Team Account
               </h2>
               <p className={`text-sm ${darkMode ? 'text-white/70' : 'text-gray-600'}`}>
                 {getTeamRoleDisplayName(teamRole)} - No payment management needed
@@ -92,7 +92,7 @@ const PaymentMethodSettings: React.FC<PaymentMethodSettingsProps> = ({
                     Organization-managed account
                   </p>
                   <p className={`text-sm ${darkMode ? 'text-white/70' : 'text-gray-600'}`}>
-                    Your access is provided through OrionX team membership
+                    Your access is provided through GreyEd team membership
                   </p>
                 </div>
               </li>
@@ -140,10 +140,10 @@ const PaymentMethodSettings: React.FC<PaymentMethodSettingsProps> = ({
               <p className={`text-xs ${darkMode ? 'text-white/70' : 'text-gray-600'}`}>
                 For account questions or team management, contact{' '}
                 <a 
-                  href="mailto:admin@orionx.xyz" 
+                  href="mailto:admin@uhuruai.co" 
                   className={`underline ${darkMode ? 'text-teal' : 'text-teal'}`}
                 >
-                  admin@orionx.xyz
+                  admin@uhuruai.co
                 </a>
               </p>
             </div>

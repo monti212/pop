@@ -1,9 +1,9 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { Brain, Check } from "lucide-react";
+import { Brain, Check, Zap } from "lucide-react";
 
-type ModelVer = "2.0";
+type ModelVer = "4.0" | "4.3" | "2.0";
 type Verbosity = "low" | "medium"; // low=Default, medium=Extra Long
 
 interface Props {
@@ -21,8 +21,23 @@ interface Props {
 
 // MobileProps - kept for future use
 
+// Helios family. U4.0 is the default for most users; U4.3 trades speed for
+// depth. They are different tools, not better/worse — label them that way.
 const MODELS = [
-  { id: "2.0", name: "Uhuru 2.0", tagline: "Advanced Reasoning", icon: <Brain className="w-4 h-4" />, accent: "indigo" },
+  {
+    id: "4.0",
+    name: "U4.0",
+    tagline: "Fast, knowledgeable intelligence for everyday work, writing, planning and problem-solving.",
+    icon: <Zap className="w-4 h-4" />,
+    accent: "indigo",
+  },
+  {
+    id: "4.3",
+    name: "U4.3",
+    tagline: "Advanced intelligence for complex analysis, deep reasoning and difficult multi-step problems.",
+    icon: <Brain className="w-4 h-4" />,
+    accent: "violet",
+  },
 ] as const;
 
 const accents = {

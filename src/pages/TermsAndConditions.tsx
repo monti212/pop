@@ -40,12 +40,13 @@ const TermsAndConditions: React.FC = () => {
               
               <div className="prose prose-sm sm:prose lg:prose-lg max-w-none text-navy/80">
                 <h2>1. Introduction</h2>
-                <p>These Terms and Conditions govern your use of OrionX, including Hilous AI assistant, websites, and other services (collectively, the "Services"). By accessing or using our Services, you agree to be bound by these Terms and Conditions.</p>
+                <p>These Terms and Conditions govern your use of OrionX, including Uhuru AI assistant, websites, and other services (collectively, the "Services"). By accessing or using our Services, you agree to be bound by these Terms and Conditions.</p>
+                <p>The GreyEd Teacher AI Platform, including the Uhuru AI assistant, is owned by Orion X Limited ("OrionX") and made available to Pencils of Promise and its teachers under license.</p>
 
                 <h2>2. Definitions</h2>
                 <p>"OrionX" refers to Orion X Limited, a company registered in Botswana.</p>
-                <p>"Hilous" refers to the AI assistant developed by OrionX.</p>
-                <p>"Pax" refers to the large language model powering Hilous.</p>
+                <p>"Uhuru" refers to the AI assistant developed by OrionX.</p>
+                <p>Uhuru is powered by a proprietary large language model.</p>
                 <p>"User", "you", or "your" refers to the individual or entity accessing or using the Services.</p>
                 <p>"Content" refers to any information, data, text, software, images, audio, video, or other materials that may be viewed or accessed through the Services.</p>
 
@@ -94,7 +95,7 @@ const TermsAndConditions: React.FC = () => {
                 <p>7.3 You understand that by using the Services, you may be exposed to User Content that might be offensive, harmful, inaccurate, or otherwise inappropriate. OrionX does not endorse, support, represent, or guarantee the completeness, truthfulness, accuracy, or reliability of any User Content.</p>
 
                 <h2>8. AI Training and Improvement</h2>
-                <p>8.1 By default, your prompts and files stay private and are never used to retrain Pax unless you explicitly opt in.</p>
+                <p>8.1 By default, your prompts and files stay private and are never used to retrain the underlying AI model unless you explicitly opt in.</p>
                 <p>8.2 If you opt in, your interactions with our AI systems may be used to improve our AI models and services. This could include using your prompts, conversations, and feedback for training purposes.</p>
                 <p>8.3 We will always respect your privacy choices and provide clear options for opting in or out of AI training programs.</p>
 
@@ -111,7 +112,7 @@ const TermsAndConditions: React.FC = () => {
                 <h2>10. Disclaimer of Warranties</h2>
                 <p>10.1 Your use of the Services is at your sole risk. The Services are provided on an "AS IS" and "AS AVAILABLE" basis. OrionX expressly disclaims all warranties of any kind, whether express or implied, including but not limited to the implied warranties of merchantability, fitness for a particular purpose, and non-infringement.</p>
                 <p>10.2 OrionX makes no warranty that the Services will meet your requirements, be available on an uninterrupted, secure, or error-free basis, or that the Services will be accurate, reliable, complete, legal, or safe.</p>
-                <p>10.3 You acknowledge that Hilous may produce inaccurate information. You should verify important information before making decisions based on outputs from our AI systems.</p>
+                <p>10.3 You acknowledge that Uhuru may produce inaccurate information. You should verify important information before making decisions based on outputs from our AI systems.</p>
 
                 <h2>11. Governing Law</h2>
                 <p>These Terms and Conditions and any dispute or claim arising out of, or related to, them, their subject matter, or their formation shall be governed by and construed in accordance with the laws of Botswana, without giving effect to any choice or conflict of law provision or rule.</p>
