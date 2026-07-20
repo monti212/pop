@@ -26,9 +26,10 @@ interface LiveMetrics {
   totalFilesProcessed: number;
   imagesGeneratedToday: number;
   totalImagesGenerated: number;
-  avgResponseTime: number;
-  errorRate: number;
-  systemUptime: number;
+  totalTokenCap: number;
+  monthlyTokenCap: number;
+  dailyTokenCap: number;
+  enforcementEnabled: boolean;
   refillBalance: number;
   monthlyUsagePercent: number;
   dailyUsagePercent: number;
@@ -102,12 +103,13 @@ export default function EnhancedSupaAdmin() {
         totalFilesProcessed: orgData.data?.total_files_processed || 0,
         imagesGeneratedToday: tokenBalanceData.data?.image_low_used || 0,
         totalImagesGenerated: (tokenBalanceData.data?.image_low_used || 0) + (tokenBalanceData.data?.image_med_used || 0) + (tokenBalanceData.data?.image_high_used || 0),
-        avgResponseTime: 245,
-        errorRate: 0.02,
-        systemUptime: 99.98,
+        totalTokenCap: tokenBalanceData.data?.total_token_cap || 10_250_000,
+        monthlyTokenCap: tokenBalanceData.data?.monthly_token_cap || 833_333,
+        dailyTokenCap: tokenBalanceData.data?.daily_token_cap || DAILY_LIMIT,
+        enforcementEnabled: tokenBalanceData.data?.enforcement_enabled ?? false,
         refillBalance: 0,
-        monthlyUsagePercent: tokenBalanceData.data ? (tokenBalanceData.data.used_text_this_month / 833333) * 100 : 0,
-        dailyUsagePercent: tokenBalanceData.data ? (tokenBalanceData.data.used_text_today / DAILY_LIMIT) * 100 : 0,
+        monthlyUsagePercent: tokenBalanceData.data ? (tokenBalanceData.data.used_text_this_month / (tokenBalanceData.data.monthly_token_cap || 833_333)) * 100 : 0,
+        dailyUsagePercent: tokenBalanceData.data ? (tokenBalanceData.data.used_text_today / (tokenBalanceData.data.daily_token_cap || DAILY_LIMIT)) * 100 : 0,
       };
 
       if (metrics) {
@@ -153,28 +155,6 @@ export default function EnhancedSupaAdmin() {
         type: 'warning',
         title: 'Daily Token Limit Warning',
         message: `${metrics.dailyUsagePercent.toFixed(1)}% of daily token limit used.`,
-        timestamp: new Date().toISOString(),
-        acknowledged: false,
-      });
-    }
-
-    if (metrics.errorRate > 5) {
-      newAlerts.push({
-        id: 'error-rate',
-        type: 'critical',
-        title: 'High Error Rate Detected',
-        message: `System error rate at ${metrics.errorRate.toFixed(2)}%. Investigating required.`,
-        timestamp: new Date().toISOString(),
-        acknowledged: false,
-      });
-    }
-
-    if (metrics.systemUptime < 99.5) {
-      newAlerts.push({
-        id: 'uptime-warning',
-        type: 'warning',
-        title: 'System Uptime Below Target',
-        message: `Current uptime: ${metrics.systemUptime.toFixed(2)}%`,
         timestamp: new Date().toISOString(),
         acknowledged: false,
       });
@@ -327,7 +307,7 @@ export default function EnhancedSupaAdmin() {
           <div className="flex gap-2 mt-4">
             {[
               { key: 'overview', label: 'Overview', icon: BarChart3 },
-              { key: 'tokens', label: 'Token Analytics', icon: Zap },
+              { key: 'tokens', label: 'Credit Analytics', icon: Zap },
               { key: 'users', label: 'User Insights', icon: Users },
               { key: 'system', label: 'System Health', icon: Server },
             ].map(({ key, label, icon: Icon }) => (
@@ -376,7 +356,7 @@ export default function EnhancedSupaAdmin() {
               />
 
               <MetricCard
-                title="Tokens Used Today"
+                title="Credits Used Today"
                 value={formatNumber(metrics.tokensUsedToday)}
                 icon={Zap}
                 color={Brand.orange}
@@ -387,20 +367,18 @@ export default function EnhancedSupaAdmin() {
               />
 
               <MetricCard
-                title="System Uptime"
-                value={`${metrics.systemUptime.toFixed(2)}%`}
-                icon={CheckCircle}
-                color="#10B981"
-                trend={<CheckCircle className="w-3 h-3 text-green-500" />}
-                trendText="Healthy"
-                subtitle={`${metrics.avgResponseTime}ms avg response`}
+                title="Enforcement"
+                value={metrics.enforcementEnabled ? 'ON' : 'OFF'}
+                icon={metrics.enforcementEnabled ? CheckCircle : AlertTriangle}
+                color={metrics.enforcementEnabled ? '#10B981' : Brand.orange}
+                subtitle={metrics.enforcementEnabled ? 'Caps enforced' : 'Observe only — not enforced'}
               />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold" style={{ color: Brand.navy }}>Token Consumption</h3>
+                  <h3 className="text-lg font-bold" style={{ color: Brand.navy }}>Credit Consumption</h3>
                   <Link to="/supa-admin/token-usage" className="text-sm font-medium hover:underline" style={{ color: Brand.teal }}>
                     View Details →
                   </Link>
@@ -411,7 +389,7 @@ export default function EnhancedSupaAdmin() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium" style={{ color: Brand.navy }}>Daily Usage</span>
                       <span className="text-sm font-bold" style={{ color: Brand.navy }}>
-                        {formatNumber(metrics.tokensUsedToday)} / {formatNumber(DAILY_LIMIT)}
+                        {formatNumber(metrics.tokensUsedToday)} / {formatNumber(metrics.dailyTokenCap)}
                       </span>
                     </div>
                     <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -434,7 +412,7 @@ export default function EnhancedSupaAdmin() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium" style={{ color: Brand.navy }}>Monthly Usage</span>
                       <span className="text-sm font-bold" style={{ color: Brand.navy }}>
-                        {formatNumber(metrics.tokensUsedThisMonth)} / 833K
+                        {formatNumber(metrics.tokensUsedThisMonth)} / {formatNumber(metrics.monthlyTokenCap)}
                       </span>
                     </div>
                     <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -464,13 +442,13 @@ export default function EnhancedSupaAdmin() {
                       <div
                         className="h-full rounded-full"
                         style={{
-                          width: `${((10250000 - metrics.tokenCapRemaining) / 10250000) * 100}%`,
+                          width: `${((metrics.totalTokenCap - metrics.tokenCapRemaining) / metrics.totalTokenCap) * 100}%`,
                           background: Brand.teal
                         }}
                       />
                     </div>
                     <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.6 }}>
-                      Total cap: 10.25M tokens
+                      Total cap: {formatNumber(metrics.totalTokenCap)} credits
                     </p>
                   </div>
                 </div>
@@ -484,7 +462,7 @@ export default function EnhancedSupaAdmin() {
                   <StatRow icon={ImageIcon} label="Images Generated" value={formatNumber(metrics.totalImagesGenerated)} color={Brand.orange} />
                   <StatRow icon={Globe} label="Active This Week" value={formatNumber(metrics.activeUsersWeek)} color="#10B981" />
                   <StatRow icon={Calendar} label="Active This Month" value={formatNumber(metrics.activeUsersMonth)} color="#8B5CF6" />
-                  <StatRow icon={Clock} label="Avg Response Time" value={`${metrics.avgResponseTime}ms`} color="#6366F1" />
+                  <StatRow icon={Clock} label="Enforcement" value={metrics.enforcementEnabled ? 'On' : 'Observe only'} color={metrics.enforcementEnabled ? '#10B981' : Brand.orange} />
                 </div>
 
                 <Link
@@ -516,7 +494,7 @@ export default function EnhancedSupaAdmin() {
                   <TrendingUp className="w-5 h-5" />
                 </div>
                 <div className="text-3xl font-bold mb-1">{formatNumber(metrics.totalTokensUsed)}</div>
-                <div className="text-sm opacity-90">Total Tokens Used</div>
+                <div className="text-sm opacity-90">Total Credits Used</div>
                 <div className="mt-3 pt-3 border-t border-white/20 text-xs opacity-75">
                   {formatNumber(metrics.tokensUsedToday)} used today
                 </div>
@@ -543,35 +521,35 @@ export default function EnhancedSupaAdmin() {
               <TokenMetricCard
                 title="Daily Burn Rate"
                 value={formatNumber(metrics.tokensUsedToday)}
-                max={DAILY_LIMIT}
+                max={metrics.dailyTokenCap}
                 percentage={metrics.dailyUsagePercent}
                 color={Brand.teal}
               />
               <TokenMetricCard
                 title="Monthly Consumption"
                 value={formatNumber(metrics.tokensUsedThisMonth)}
-                max={833333}
+                max={metrics.monthlyTokenCap}
                 percentage={metrics.monthlyUsagePercent}
                 color={Brand.orange}
               />
               <TokenMetricCard
                 title="YTD Usage"
-                value={formatNumber(10250000 - metrics.tokenCapRemaining)}
-                max={10250000}
-                percentage={((10250000 - metrics.tokenCapRemaining) / 10250000) * 100}
+                value={formatNumber(metrics.totalTokenCap - metrics.tokenCapRemaining)}
+                max={metrics.totalTokenCap}
+                percentage={((metrics.totalTokenCap - metrics.tokenCapRemaining) / metrics.totalTokenCap) * 100}
                 color="#3B82F6"
               />
               <TokenMetricCard
                 title="Remaining Balance"
                 value={formatNumber(metrics.tokenCapRemaining)}
-                max={10250000}
-                percentage={100 - ((10250000 - metrics.tokenCapRemaining) / 10250000) * 100}
+                max={metrics.totalTokenCap}
+                percentage={100 - ((metrics.totalTokenCap - metrics.tokenCapRemaining) / metrics.totalTokenCap) * 100}
                 color="#10B981"
               />
             </div>
 
             <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
-              <h3 className="text-lg font-bold mb-6" style={{ color: Brand.navy }}>Token Velocity & Projections</h3>
+              <h3 className="text-lg font-bold mb-6" style={{ color: Brand.navy }}>Credit Velocity & Projections</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
                   <Gauge className="w-8 h-8 mx-auto mb-3" style={{ color: Brand.teal }} />
@@ -584,7 +562,7 @@ export default function EnhancedSupaAdmin() {
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
                   <Target className="w-8 h-8 mx-auto mb-3" style={{ color: Brand.orange }} />
                   <div className="text-2xl font-bold mb-1" style={{ color: Brand.navy }}>
-                    {Math.ceil((833333 - metrics.tokensUsedThisMonth) / (metrics.tokensUsedToday || 1))}
+                    {Math.ceil((metrics.monthlyTokenCap - metrics.tokensUsedThisMonth) / (metrics.tokensUsedToday || 1))}
                   </div>
                   <div className="text-sm" style={{ color: Brand.navy, opacity: 0.7 }}>Days Until Monthly Cap</div>
                 </div>
@@ -704,25 +682,25 @@ export default function EnhancedSupaAdmin() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <SystemHealthCard
-                title="Uptime"
-                value={`${metrics.systemUptime}%`}
+                title="Enforcement"
+                value={metrics.enforcementEnabled ? 'On' : 'Observe'}
+                icon={Gauge}
+                status={metrics.enforcementEnabled ? 'healthy' : 'warning'}
+                color={metrics.enforcementEnabled ? '#10B981' : Brand.orange}
+              />
+              <SystemHealthCard
+                title="Credits Remaining"
+                value={formatNumber(metrics.tokenCapRemaining)}
                 icon={Server}
-                status="healthy"
-                color="#10B981"
+                status={metrics.tokenCapRemaining > 0 ? 'healthy' : 'warning'}
+                color={metrics.tokenCapRemaining > 0 ? '#10B981' : Brand.orange}
               />
               <SystemHealthCard
-                title="Response Time"
-                value={`${metrics.avgResponseTime}ms`}
+                title="Monthly Cap Used"
+                value={`${metrics.monthlyUsagePercent.toFixed(1)}%`}
                 icon={Cpu}
-                status="healthy"
-                color={Brand.teal}
-              />
-              <SystemHealthCard
-                title="Error Rate"
-                value={`${metrics.errorRate}%`}
-                icon={AlertTriangle}
-                status={metrics.errorRate > 2 ? 'warning' : 'healthy'}
-                color={metrics.errorRate > 2 ? Brand.orange : '#10B981'}
+                status={metrics.monthlyUsagePercent < 80 ? 'healthy' : 'warning'}
+                color={metrics.monthlyUsagePercent < 80 ? '#10B981' : Brand.orange}
               />
               <SystemHealthCard
                 title="Active Sessions"
@@ -734,14 +712,12 @@ export default function EnhancedSupaAdmin() {
             </div>
 
             <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
-              <h3 className="text-lg font-bold mb-6" style={{ color: Brand.navy }}>Infrastructure Status</h3>
-              <div className="space-y-4">
-                <InfrastructureRow label="Database" status="Operational" latency="15ms" color="#10B981" />
-                <InfrastructureRow label="Edge Functions" status="Operational" latency="42ms" color="#10B981" />
-                <InfrastructureRow label="Storage" status="Operational" latency="28ms" color="#10B981" />
-                <InfrastructureRow label="Authentication" status="Operational" latency="12ms" color="#10B981" />
-                <InfrastructureRow label="Real-time" status="Operational" latency="8ms" color="#10B981" />
-              </div>
+              <h3 className="text-lg font-bold mb-2" style={{ color: Brand.navy }}>Infrastructure Status</h3>
+              <p className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>
+                Live latency and uptime monitoring is not yet wired to a real source, so this panel
+                intentionally shows no numbers rather than placeholder values. Enforcement and credit
+                figures above are live from organization_token_balances.
+              </p>
             </div>
           </div>
         )}
@@ -934,21 +910,6 @@ function SystemHealthCard({ title, value, icon: Icon, status, color }: { title: 
       </div>
       <div className="text-2xl font-bold mb-1" style={{ color: Brand.navy }}>{value}</div>
       <div className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>{title}</div>
-    </div>
-  );
-}
-
-function InfrastructureRow({ label, status, latency, color }: { label: string; status: string; latency: string; color: string }) {
-  return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-      <div className="flex items-center gap-3">
-        <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-        <span className="font-medium" style={{ color: Brand.navy }}>{label}</span>
-      </div>
-      <div className="flex items-center gap-4">
-        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>{latency}</span>
-        <span className="text-sm font-medium" style={{ color }}>{status}</span>
-      </div>
     </div>
   );
 }

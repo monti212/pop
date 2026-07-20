@@ -20,7 +20,10 @@ const Brand = {
 };
 
 const DAILY_LIMIT = 1_000_000;
-const DAILY_WARNING_THRESHOLD = Math.floor(DAILY_LIMIT * (25_000 / 30_000));
+
+// Quota/usage counters are denominated in CREDITS (raw_tokens x model.credit_weight).
+// U4.0 = 1.0, U4.3 = 2.5. Legacy pre-metering rows have weight 1.0, so historical
+// numbers are unchanged 1:1. Cost figures below use RAW tokens; quota uses CREDITS.
 
 interface TokenMetrics {
   organization_name: string;
@@ -78,6 +81,29 @@ interface TokenPurchaseHistory {
   created_at: string;
 }
 
+// Per-model breakdown (get_model_usage_breakdown) + cache effectiveness (get_cache_effectiveness).
+// Postgres numeric/bigint can arrive as strings via PostgREST, so coerce with Number() at render.
+interface ModelUsageRow {
+  model_key: string;
+  display_name: string;
+  category: string;
+  credit_weight: number | string;
+  request_count: number | string;
+  raw_tokens: number | string;
+  credits_charged: number | string;
+  unique_users: number | string;
+}
+
+interface CacheStatRow {
+  model_key: string;
+  request_count: number | string;
+  raw_tokens: number | string;
+  cached_tokens: number | string;
+  cache_hit_rate: number | string;
+  credits_charged: number | string;
+  credits_saved: number | string;
+}
+
 const TokenUsage: React.FC = () => {
   const location = useLocation();
   const { profile } = useAuth();
@@ -89,6 +115,9 @@ const TokenUsage: React.FC = () => {
   const [userUsage, setUserUsage] = useState<UserTokenUsage[]>([]);
   const [refills, setRefills] = useState<TokenRefill[]>([]);
   const [purchaseHistory, setPurchaseHistory] = useState<TokenPurchaseHistory[]>([]);
+  const [modelBreakdown, setModelBreakdown] = useState<ModelUsageRow[]>([]);
+  const [cacheStats, setCacheStats] = useState<CacheStatRow[]>([]);
+  const [defaultModelName, setDefaultModelName] = useState<string>('U4.0');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -195,6 +224,24 @@ const TokenUsage: React.FC = () => {
     }
   }, [organizationName]);
 
+  const fetchModelBreakdown = useCallback(async () => {
+    // Non-critical: never let this reject fetchAllData — swallow errors and keep empty state.
+    try {
+      const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const [breakdownRes, cacheRes, registryRes] = await Promise.all([
+        supabase.rpc('get_model_usage_breakdown', { p_organization_name: organizationName, p_since: since30d }),
+        supabase.rpc('get_cache_effectiveness', { p_organization_name: organizationName, p_since: since7d }),
+        supabase.from('uhuru_model_registry').select('display_name').eq('is_default', true).maybeSingle(),
+      ]);
+      setModelBreakdown((breakdownRes.data as ModelUsageRow[]) || []);
+      setCacheStats((cacheRes.data as CacheStatRow[]) || []);
+      if (registryRes.data?.display_name) setDefaultModelName(registryRes.data.display_name);
+    } catch (err) {
+      console.error('Error fetching model breakdown / cache stats:', err);
+    }
+  }, [organizationName]);
+
   const fetchAllData = useCallback(async () => {
     setIsRefreshing(true);
     setError(null);
@@ -204,7 +251,8 @@ const TokenUsage: React.FC = () => {
         fetchTokenMetrics(),
         fetchUserUsage(),
         fetchRefills(),
-        fetchPurchaseHistory()
+        fetchPurchaseHistory(),
+        fetchModelBreakdown()
       ]);
     } catch (err: any) {
       setError(err.message || 'Failed to load token usage data');
@@ -212,7 +260,7 @@ const TokenUsage: React.FC = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [fetchTokenMetrics, fetchUserUsage, fetchRefills, fetchPurchaseHistory]);
+  }, [fetchTokenMetrics, fetchUserUsage, fetchRefills, fetchPurchaseHistory, fetchModelBreakdown]);
 
   const handleAddTokens = useCallback(async () => {
     if (!canEdit || isSubmittingRefill) return;
@@ -546,17 +594,17 @@ const TokenUsage: React.FC = () => {
                 <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold" style={{ color: Brand.navy }}>
-                      Token Balance Summary
+                      Credit Balance Summary
                     </h3>
                     <div className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: Brand.teal, color: 'white' }}>
-                      Uhuru 2.0 Default
+                      {defaultModelName} Default
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        Total Token Cap
+                        Total Credit Cap
                       </div>
                       <div className="text-3xl font-bold" style={{ color: Brand.navy }}>
                         {metrics.total_token_cap.toLocaleString()}
@@ -564,7 +612,7 @@ const TokenUsage: React.FC = () => {
                     </div>
                     <div>
                       <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        Tokens Used YTD
+                        Credits Used YTD
                       </div>
                       <div className="text-3xl font-bold" style={{ color: Brand.orange }}>
                         {metrics.used_text_total_ytd.toLocaleString()}
@@ -572,7 +620,7 @@ const TokenUsage: React.FC = () => {
                     </div>
                     <div>
                       <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        Tokens Remaining
+                        Credits Remaining
                       </div>
                       <div className="text-3xl font-bold" style={{ color: Brand.teal }}>
                         {metrics.tokens_remaining.toLocaleString()}
@@ -607,11 +655,92 @@ const TokenUsage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Per-model usage (last 30 days). Only U4 rows carry model_key; older rows bucket as legacy. */}
+                <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold" style={{ color: Brand.navy }}>
+                      Per-Model Usage <span className="text-sm font-normal" style={{ opacity: 0.6 }}>(last 30 days)</span>
+                    </h3>
+                    <span className="text-xs" style={{ color: Brand.navy, opacity: 0.5 }}>credits = raw × weight</span>
+                  </div>
+                  {modelBreakdown.length === 0 ? (
+                    <p className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>No usage recorded in this window.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left" style={{ color: Brand.navy, opacity: 0.6 }}>
+                            <th className="py-2 pr-4 font-medium">Model</th>
+                            <th className="py-2 pr-4 font-medium text-right">Requests</th>
+                            <th className="py-2 pr-4 font-medium text-right">Raw tokens</th>
+                            <th className="py-2 pr-4 font-medium text-right">Credits</th>
+                            <th className="py-2 pr-4 font-medium text-right">Weight</th>
+                            <th className="py-2 font-medium text-right">Users</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {modelBreakdown.map((m) => (
+                            <tr key={m.model_key} className="border-t" style={{ borderColor: Brand.line }}>
+                              <td className="py-2 pr-4 font-semibold" style={{ color: Brand.navy }}>
+                                {m.display_name}
+                                {m.category === 'legacy' && (
+                                  <span className="ml-2 text-xs font-normal" style={{ color: Brand.orange }}>pre-metering</span>
+                                )}
+                              </td>
+                              <td className="py-2 pr-4 text-right" style={{ color: Brand.navy }}>{Number(m.request_count).toLocaleString()}</td>
+                              <td className="py-2 pr-4 text-right" style={{ color: Brand.navy }}>{Number(m.raw_tokens).toLocaleString()}</td>
+                              <td className="py-2 pr-4 text-right font-semibold" style={{ color: Brand.navy }}>{Number(m.credits_charged).toLocaleString()}</td>
+                              <td className="py-2 pr-4 text-right" style={{ color: Brand.navy, opacity: 0.7 }}>{Number(m.credit_weight).toFixed(2)}×</td>
+                              <td className="py-2 text-right" style={{ color: Brand.navy }}>{Number(m.unique_users).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <p className="text-xs mt-3" style={{ color: Brand.navy, opacity: 0.5 }}>
+                        Only U4 requests carry a model tag; earlier rows are grouped as "Legacy (pre-metering)".
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Cache effectiveness (last 7 days) */}
+                <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
+                  <h3 className="text-lg font-semibold mb-4" style={{ color: Brand.navy }}>
+                    Cache Effectiveness <span className="text-sm font-normal" style={{ opacity: 0.6 }}>(last 7 days)</span>
+                  </h3>
+                  {(() => {
+                    const totReq = cacheStats.reduce((s, c) => s + Number(c.request_count), 0);
+                    const totCached = cacheStats.reduce((s, c) => s + Number(c.cached_tokens), 0);
+                    const totRaw = cacheStats.reduce((s, c) => s + Number(c.raw_tokens), 0);
+                    const totSaved = cacheStats.reduce((s, c) => s + Number(c.credits_saved), 0);
+                    const hitRate = totRaw > 0 ? (totCached / totRaw) * 100 : 0;
+                    if (totReq === 0) {
+                      return <p className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>No cache data yet — this populates as U4 traffic grows.</p>;
+                    }
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>Cache hit rate</div>
+                          <div className="text-3xl font-bold" style={{ color: Brand.teal }}>{hitRate.toFixed(1)}%</div>
+                        </div>
+                        <div>
+                          <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>Cached tokens</div>
+                          <div className="text-3xl font-bold" style={{ color: Brand.navy }}>{totCached.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>Credits saved</div>
+                          <div className="text-3xl font-bold" style={{ color: Brand.navy }}>{totSaved.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 {/* Monthly Token Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
                     <h3 className="text-lg font-semibold mb-4" style={{ color: Brand.navy }}>
-                      Monthly Token Metrics
+                      Monthly Credit Metrics
                     </h3>
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">

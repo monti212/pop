@@ -88,15 +88,11 @@ export default function TokenCostBreakdown() {
   const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  // PoP Constants
-  const COGS_PER_1M = 0.295;
-
-  const CHAT_PRICE_PER_1M = 8;
-
-  const DAILY_HARD_CAP = 1_000_000;
-  const MONTHLY_BASE = 833333;
-  const PLAN_TOTAL = 10250000;
-  const IMAGE_CREDITS = 250000;
+  // Pricing (finance-owned) comes from pricing_config; caps come from organization_token_balances.
+  // These defaults are only first-paint fallbacks until fetchUsageData resolves.
+  const [pricing, setPricing] = useState({ cogsPerM: 0.295, pricePerM: 8 });
+  const [caps, setCaps] = useState({ dailyCap: 1_000_000, monthlyBase: 833_333, planTotal: 10_250_000, imageCredits: 250_000 });
+  const [defaultModelName, setDefaultModelName] = useState('Helios U4');
 
   const IMAGE_TOKEN_COSTS = {
     low: 50,
@@ -110,20 +106,20 @@ export default function TokenCostBreakdown() {
     high: 0.85
   };
 
-  const calculateCosts = (data: UsageData): CostBreakdown => {
-    const cost_usd_today = (data.tokens_used_today / 1000000) * COGS_PER_1M;
-    const cost_usd_month = (data.tokens_used_month / 1000000) * COGS_PER_1M;
-    const cost_usd_ytd = (data.tokens_used_ytd / 1000000) * COGS_PER_1M;
+  const calculateCosts = (data: UsageData, cogsPerM: number, pricePerM: number): CostBreakdown => {
+    const cost_usd_today = (data.tokens_used_today / 1000000) * cogsPerM;
+    const cost_usd_month = (data.tokens_used_month / 1000000) * cogsPerM;
+    const cost_usd_ytd = (data.tokens_used_ytd / 1000000) * cogsPerM;
 
     const tokens_from_plan = Math.min(data.tokens_used_month - data.rollover_in, data.monthly_base);
     const tokens_from_rollover = Math.min(data.rollover_in, data.tokens_used_month);
 
-    const price_usd_from_plan = (Math.max(0, tokens_from_plan) / 1000000) * CHAT_PRICE_PER_1M;
-    const price_usd_from_rollover = (Math.max(0, tokens_from_rollover) / 1000000) * CHAT_PRICE_PER_1M;
+    const price_usd_from_plan = (Math.max(0, tokens_from_plan) / 1000000) * pricePerM;
+    const price_usd_from_rollover = (Math.max(0, tokens_from_rollover) / 1000000) * pricePerM;
 
     let price_usd_from_refills = 0;
     data.refills.forEach(refill => {
-      price_usd_from_refills += (refill.consumed / 1000000) * CHAT_PRICE_PER_1M;
+      price_usd_from_refills += (refill.consumed / 1000000) * pricePerM;
     });
 
     const price_usd_total = price_usd_from_plan + price_usd_from_rollover + price_usd_from_refills;
@@ -153,6 +149,26 @@ export default function TokenCostBreakdown() {
 
       if (balanceData) {
         const now = new Date();
+
+        // Finance-owned pricing + real caps from the DB (no bundle literals).
+        const { data: pricingRows } = await supabase
+          .from('pricing_config')
+          .select('cogs_per_1m_raw, price_per_1m_credit, model_key')
+          .order('model_key', { ascending: true });
+        const { data: defaultModel } = await supabase
+          .from('uhuru_model_registry')
+          .select('display_name')
+          .eq('is_default', true)
+          .maybeSingle();
+        const cogsPerM = Number(pricingRows?.[0]?.cogs_per_1m_raw ?? 0.295);
+        const pricePerM = Number(pricingRows?.[0]?.price_per_1m_credit ?? 8);
+        const monthlyBase = balanceData.monthly_token_cap || 833_333;
+        const planTotal = balanceData.total_token_cap || 10_250_000;
+        const imageCredits = balanceData.image_token_cap || 250_000;
+        const dailyCap = balanceData.daily_token_cap || 1_000_000;
+        setPricing({ cogsPerM, pricePerM });
+        setCaps({ dailyCap, monthlyBase, planTotal, imageCredits });
+        if (defaultModel?.display_name) setDefaultModelName(`Helios ${defaultModel.display_name}`);
 
         const { data: todayLogs } = await supabase
           .from('user_token_usage')
@@ -187,23 +203,23 @@ export default function TokenCostBreakdown() {
         const refill_balance = refills.reduce((sum: any, r: any) => sum + (r.amount - r.consumed), 0);
 
         const prev_month_unused = balanceData.prev_month_unused || 0;
-        const rollover_in = Math.min(prev_month_unused, MONTHLY_BASE);
-        const monthly_cap = MONTHLY_BASE + rollover_in;
+        const rollover_in = Math.min(prev_month_unused, monthlyBase);
+        const monthly_cap = monthlyBase + rollover_in;
         const monthly_balance = Math.max(0, monthly_cap - tokens_used_month);
-        const plan_balance_total = Math.max(0, PLAN_TOTAL - (balanceData.used_text_total_ytd || 0)) + refill_balance;
+        const plan_balance_total = Math.max(0, planTotal - (balanceData.used_text_total_ytd || 0)) + refill_balance;
 
         const usage: UsageData = {
           tokens_used_today,
           tokens_used_month,
           tokens_used_ytd: balanceData.used_text_total_ytd || 0,
-          monthly_base: MONTHLY_BASE,
+          monthly_base: monthlyBase,
           monthly_cap,
           monthly_balance,
           rollover_in,
           refill_balance,
           plan_balance_total,
           image_tokens_used: 0,
-          image_tokens_remaining: IMAGE_CREDITS,
+          image_tokens_remaining: imageCredits,
           low_count: 0,
           med_count: 0,
           high_count: 0,
@@ -212,7 +228,7 @@ export default function TokenCostBreakdown() {
         };
 
         setUsageData(usage);
-        setCostBreakdown(calculateCosts(usage));
+        setCostBreakdown(calculateCosts(usage, cogsPerM, pricePerM));
 
         const chartNow = new Date();
         const quarterStartMonth = Math.floor(chartNow.getMonth() / 3) * 3;
@@ -239,8 +255,8 @@ export default function TokenCostBreakdown() {
         const formattedDaily: DailyUsage[] = (dailyData || []).map((day: any) => ({
           date: day.usage_date,
           tokens_used: day.tokens_used,
-          cost_usd: (day.tokens_used / 1000000) * COGS_PER_1M,
-          price_usd: (day.tokens_used / 1000000) * CHAT_PRICE_PER_1M
+          cost_usd: (day.tokens_used / 1000000) * cogsPerM,
+          price_usd: (day.tokens_used / 1000000) * pricePerM
         }));
 
         setDailyUsage(formattedDaily);
@@ -290,9 +306,9 @@ export default function TokenCostBreakdown() {
     a.click();
   };
 
-  const dailyUsagePercentage = (usageData.tokens_used_today / DAILY_HARD_CAP) * 100;
+  const dailyUsagePercentage = (usageData.tokens_used_today / caps.dailyCap) * 100;
   const monthlyUsagePercentage = (usageData.tokens_used_month / usageData.monthly_cap) * 100;
-  const imageUsagePercentage = (usageData.image_tokens_used / IMAGE_CREDITS) * 100;
+  const imageUsagePercentage = (usageData.image_tokens_used / caps.imageCredits) * 100;
 
   const showMonthlyWarning80 = monthlyUsagePercentage >= 80;
   const showMonthlyWarning95 = monthlyUsagePercentage >= 95;
@@ -316,7 +332,7 @@ export default function TokenCostBreakdown() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">PoP Token Usage & Cost Tracking</h1>
-            <p className="text-gray-600 mt-1">Uhuru LLM U1.5 - Pencils of Promise Dashboard</p>
+            <p className="text-gray-600 mt-1">{defaultModelName} - Pencils of Promise Dashboard</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -350,7 +366,7 @@ export default function TokenCostBreakdown() {
                 <div>
                   <h3 className="font-bold text-red-900">Daily Cap Reached</h3>
                   <p className="text-sm text-red-700">
-                    Daily token limit of {DAILY_HARD_CAP.toLocaleString()} tokens has been reached.
+                    Daily limit of {caps.dailyCap.toLocaleString()} credits has been reached.
                   </p>
                 </div>
               </div>
@@ -420,7 +436,7 @@ export default function TokenCostBreakdown() {
           <div className="space-y-2">
             <div className="flex justify-between text-xs text-gray-600">
               <span>{dailyUsagePercentage.toFixed(1)}% of daily cap</span>
-              <span>{DAILY_HARD_CAP.toLocaleString()}</span>
+              <span>{caps.dailyCap.toLocaleString()}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
@@ -482,7 +498,7 @@ export default function TokenCostBreakdown() {
             </div>
           </div>
           <div className="text-xs text-gray-600 space-y-1">
-            <div>YTD Used: {(usageData.tokens_used_ytd / 1000000).toFixed(2)}M / 10.25M</div>
+            <div>YTD Used: {(usageData.tokens_used_ytd / 1000000).toFixed(2)}M / {(caps.planTotal / 1000000).toFixed(2)}M</div>
             <div>Refill Balance: {(usageData.refill_balance / 1000).toFixed(0)}K tokens</div>
           </div>
         </div>
@@ -513,7 +529,7 @@ export default function TokenCostBreakdown() {
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
             <DollarSign className="w-5 h-5 mr-2 text-red-600" />
-            Internal Cost (Uhuru LLM U1.5 COGS)
+            Internal Cost ({defaultModelName} COGS)
           </h2>
           <div className="space-y-4">
             <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
@@ -545,7 +561,7 @@ export default function TokenCostBreakdown() {
             </div>
           </div>
           <div className="mt-4 p-3 bg-gray-50 rounded text-xs text-gray-600">
-            COGS: $0.000295 per 1K tokens ($0.295 per 1M)
+            COGS: ${pricing.cogsPerM.toFixed(3)} per 1M raw tokens (from pricing_config)
           </div>
         </div>
 
@@ -582,7 +598,7 @@ export default function TokenCostBreakdown() {
             </div>
           </div>
           <div className="mt-4 p-3 bg-gray-50 rounded text-xs text-gray-600">
-            Chat response pricing: flat $8 per 1M tokens
+            Chat response pricing: ${pricing.pricePerM} per 1M credits (from pricing_config)
           </div>
         </div>
       </div>
@@ -644,7 +660,7 @@ export default function TokenCostBreakdown() {
                   <div>{new Date(day.date).toLocaleDateString()}</div>
                   <div>{(day.tokens_used / 1000).toFixed(1)}K tokens</div>
                   <div>COGS: ${day.cost_usd.toFixed(4)}</div>
-                  <div>Value: ${day.price_usd.toFixed(2)} at $8/M</div>
+                  <div>Value: ${day.price_usd.toFixed(2)} at ${pricing.pricePerM}/M</div>
                 </div>
               </div>
             );
@@ -667,7 +683,7 @@ export default function TokenCostBreakdown() {
             <div className="mb-4">
               <div className="flex justify-between text-sm text-gray-600 mb-2">
                 <span>Credits Used</span>
-                <span>{usageData.image_tokens_used.toLocaleString()} / {IMAGE_CREDITS.toLocaleString()}</span>
+                <span>{usageData.image_tokens_used.toLocaleString()} / {caps.imageCredits.toLocaleString()}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
@@ -754,7 +770,7 @@ export default function TokenCostBreakdown() {
                     />
                   </div>
                   <div className="mt-2 text-xs text-gray-600">
-                    Priced at flat $8 per 1M tokens
+                    Priced at ${pricing.pricePerM} per 1M credits
                   </div>
                 </div>
               );
