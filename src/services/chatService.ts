@@ -468,6 +468,8 @@ export async function streamResponse({
   modelVersion = '2.0',
   verbosity = 'low',
   displayName,
+  gradeLevel = null,
+  subject = null,
   signal,
   onEvent, // (type, payload) => void
 }: {
@@ -477,6 +479,10 @@ export async function streamResponse({
   modelVersion?: string;
   verbosity?: 'low' | 'medium' | 'high';
   displayName?: string;
+  // Curriculum scope for the v4 pinned-context path (get_pinned_context).
+  // Null = no scoping (pinned PoP docs + budget-limited syllabus). Ignored by legacy 2.0.
+  gradeLevel?: string | null;
+  subject?: string | null;
   signal?: AbortSignal;
   onEvent: (type: string, payload: any) => void;
 }) {
@@ -541,7 +547,9 @@ export async function streamResponse({
       region,
       modelVersion,
       verbosity,
-      displayName
+      displayName,
+      gradeLevel,
+      subject
     };
 
     console.log('📦 [CHAT] Request payload summary:', {
@@ -770,6 +778,8 @@ export const generateResponse = async ({
   region = 'global',
   modelVersion = '2.0',
   displayName,
+  gradeLevel = null,
+  subject = null,
   abortSignal,
   onStatusUpdate,
 }: {
@@ -778,6 +788,8 @@ export const generateResponse = async ({
   region?: string;
   modelVersion?: string;
   displayName?: string;
+  gradeLevel?: string | null;
+  subject?: string | null;
   abortSignal?: AbortSignal;
   onStatusUpdate?: (s: string) => void;
 }): Promise<string> => {
@@ -791,6 +803,8 @@ export const generateResponse = async ({
       region,
       modelVersion,
       displayName,
+      gradeLevel,
+      subject,
       signal: abortSignal,
       onEvent: (type, payload) => {
         if (type === 'message.delta') {

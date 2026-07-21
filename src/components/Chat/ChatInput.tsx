@@ -26,7 +26,34 @@ interface ChatInputProps {
   imageModelLabel?: string;
   onOpenImageModelSelector?: (anchorEl: HTMLElement) => void;
   isImageMode?: boolean;
+  // Curriculum scope: grounds answers in a grade band + subject's syllabus. '' = unscoped.
+  gradeLevel?: string;
+  subject?: string;
+  onGradeChange?: (v: string) => void;
+  onSubjectChange?: (v: string) => void;
 }
+
+// Ghana basic-school bands + NaCCA subjects present in the knowledge base.
+// Values are sent to get_pinned_context, which matches them tolerantly.
+const GRADE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '', label: 'Any grade' },
+  { value: 'KG', label: 'KG' },
+  { value: 'B1-B3', label: 'Basic 1–3' },
+  { value: 'B4-B6', label: 'Basic 4–6' },
+];
+const SUBJECT_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '', label: 'Any subject' },
+  { value: 'English', label: 'English' },
+  { value: 'Mathematics', label: 'Mathematics' },
+  { value: 'Science', label: 'Science' },
+  { value: 'Creative Arts', label: 'Creative Arts' },
+  { value: 'Computing', label: 'Computing' },
+  { value: 'Ghanaian Language', label: 'Ghanaian Language' },
+  { value: 'Our World and Our People', label: 'Our World & Our People' },
+  { value: 'History', label: 'History' },
+  { value: 'Religious and Moral Education', label: 'Religious & Moral Ed.' },
+  { value: 'Physical Education', label: 'Physical Education' },
+];
 
 const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
@@ -48,6 +75,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
   imageModelLabel,
   onOpenImageModelSelector,
   isImageMode = false,
+  gradeLevel = '',
+  subject = '',
+  onGradeChange,
+  onSubjectChange,
 }) => {
   const { t } = useLanguage();
   const [message, setMessage] = useState('');
@@ -817,6 +848,32 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   >
                     <span className="font-medium">{modelLabel}</span>
                   </button>
+                )}
+
+                {/* Curriculum scope: grade band + subject → get_pinned_context */}
+                {!isImageMode && onGradeChange && (
+                  <div className="flex items-center gap-1">
+                    <select
+                      value={gradeLevel}
+                      onChange={(e) => onGradeChange(e.target.value)}
+                      title="Grade band — grounds answers in this level's curriculum"
+                      className="px-2 py-1.5 rounded-lg text-sm bg-transparent text-gray-600 hover:bg-white hover:shadow-sm transition-colors duration-200 focus:outline-none cursor-pointer border-0"
+                    >
+                      {GRADE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={subject}
+                      onChange={(e) => onSubjectChange?.(e.target.value)}
+                      title="Subject — grounds answers in this subject's curriculum"
+                      className="px-2 py-1.5 rounded-lg text-sm bg-transparent text-gray-600 hover:bg-white hover:shadow-sm transition-colors duration-200 focus:outline-none cursor-pointer border-0 max-w-[9rem]"
+                    >
+                      {SUBJECT_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 )}
               </div>
 

@@ -657,6 +657,8 @@ const ClassroomHomePage: React.FC = () => {
           classId={classId!}
           className={classData.class_name}
           students={students}
+          classGrade={classData.grade_level}
+          classSubject={classData.subject}
         />
       )}
 

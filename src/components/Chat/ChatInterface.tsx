@@ -141,7 +141,18 @@ export default function ChatInterface({
   const { interfaceLanguage, responseLanguage, setInterfaceLanguage, setResponseLanguage } = useLanguage();
   const selectedLanguage = responseLanguage;
   const [selectedRegion, setSelectedRegion] = useState('global');
-  
+
+  // Curriculum scope: grade band + subject that ground answers in the syllabus
+  // (sent to v4 -> get_pinned_context). '' = unscoped. Persisted across sessions.
+  const [selectedGrade, setSelectedGrade] = useState<string>(() => {
+    try { return localStorage.getItem('uhuru-grade-scope') || ''; } catch { return ''; }
+  });
+  const [selectedSubject, setSelectedSubject] = useState<string>(() => {
+    try { return localStorage.getItem('uhuru-subject-scope') || ''; } catch { return ''; }
+  });
+  useEffect(() => { try { localStorage.setItem('uhuru-grade-scope', selectedGrade); } catch {} }, [selectedGrade]);
+  useEffect(() => { try { localStorage.setItem('uhuru-subject-scope', selectedSubject); } catch {} }, [selectedSubject]);
+
   // State to track processed message IDs to prevent duplicates
   const processedMessageIds = useRef<Set<string>>(new Set());
   
@@ -836,6 +847,8 @@ export default function ChatInterface({
         modelVersion,
         verbosity,
         displayName: user?.user_metadata?.name || (profile as any)?.full_name || undefined,
+        gradeLevel: selectedGrade || null,
+        subject: selectedSubject || null,
         signal: ac.signal,
         onEvent: (type, payload) => processStreamEvent(
           type,
@@ -858,7 +871,7 @@ export default function ChatInterface({
       setTypingState({ isTyping: false, message: '' });
       setWebFetchingState({ isFetching: false, status: '' });
     }
-  }, [selectedLanguage, selectedRegion, modelVersion, verbosity, selectedAgent, processStreamEvent]);
+  }, [selectedLanguage, selectedRegion, modelVersion, verbosity, selectedGrade, selectedSubject, selectedAgent, processStreamEvent]);
 
   const handleSendMessage = useCallback(async (data: { text: string; files: File[]; isWebSearchActive: boolean }) => {
     if (!currentConversation || !user) return;
@@ -1413,6 +1426,10 @@ export default function ChatInterface({
                     imageModelLabel={getImageModelLabel()}
                     onOpenImageModelSelector={handleOpenImageModelSelector}
                     isImageMode={showImageInput}
+                    gradeLevel={selectedGrade}
+                    subject={selectedSubject}
+                    onGradeChange={setSelectedGrade}
+                    onSubjectChange={setSelectedSubject}
                   />
                 </motion.div>
               </div>
@@ -1608,6 +1625,10 @@ export default function ChatInterface({
                   imageModelLabel={getImageModelLabel()}
                   onOpenImageModelSelector={handleOpenImageModelSelector}
                   isImageMode={showImageInput}
+                  gradeLevel={selectedGrade}
+                  subject={selectedSubject}
+                  onGradeChange={setSelectedGrade}
+                  onSubjectChange={setSelectedSubject}
                 />
               </div>
             </motion.div>

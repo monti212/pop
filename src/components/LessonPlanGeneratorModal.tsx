@@ -17,6 +17,9 @@ interface LessonPlanGeneratorModalProps {
   classId: string;
   className: string;
   students: Student[];
+  // Class grade/subject → scope the generated plan to the matching curriculum.
+  classGrade?: string | null;
+  classSubject?: string | null;
 }
 
 const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
@@ -25,7 +28,9 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
   onSuccess,
   classId,
   className,
-  students
+  students,
+  classGrade,
+  classSubject
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -147,7 +152,10 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
         ],
         language: 'english',
         region: 'global',
-        modelVersion: '2.0',
+        // U4 so the plan is grounded in the pinned PoP docs + matching curriculum.
+        modelVersion: '4.0',
+        gradeLevel: classGrade || null,
+        subject: formData.subject || classSubject || null,
         onStatusUpdate: (status) => {
           setGenerationStatus(status);
         }
