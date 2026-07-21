@@ -48,6 +48,18 @@ const compact = (x: number | string | null | undefined) => {
   if (Math.abs(v) >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
   return v.toLocaleString();
 };
+// Date-only strings ('YYYY-MM-DD') parse as UTC midnight and shift a day in behind-UTC zones;
+// anchor to local noon so the displayed date matches the stored date.
+const fmtDate = (s: string) => {
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T12:00:00`) : new Date(s);
+  return d.toLocaleDateString();
+};
+// Quote CSV cells so commas/quotes/newlines don't shift columns; guard against formula injection.
+const csvCell = (v: string | number) => {
+  let s = String(v);
+  if (/^[=+\-@]/.test(s)) s = `'${s}`;
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
 
 const PERIODS = [
   { key: 'all', label: 'All time', days: 3650 },
@@ -125,7 +137,7 @@ export default function FinancialCommandCenter() {
       ['Cash collected', cashCollected.toFixed(2)],
       ['Value given away', valueGivenAway.toFixed(2)],
     ];
-    const csv = rows.map(r => r.join(',')).join('\n');
+    const csv = rows.map(r => r.map(csvCell).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     const a = document.createElement('a');
     a.href = url; a.download = `pop-financials-${new Date().toISOString()}.csv`; a.click();
@@ -286,7 +298,7 @@ export default function FinancialCommandCenter() {
                       {c.is_complimentary ? 'Complimentary' : 'Paid'}
                     </span>
                     <div>
-                      <div className="text-sm font-medium">{new Date(c.purchase_date).toLocaleDateString()}</div>
+                      <div className="text-sm font-medium">{fmtDate(c.purchase_date)}</div>
                       <div className="text-[11px]" style={{ color: B.inkSoft }}>{compact(c.tokens_purchased)} credits{c.notes ? ` · ${c.notes}` : ''}</div>
                     </div>
                   </div>
@@ -341,7 +353,7 @@ export default function FinancialCommandCenter() {
                       <div className="rounded-t" style={{ width: '46%', height: `${(num(t.cogs_usd) / trendMax) * 100}%`, minHeight: 2, background: B.orange }} />
                     </div>
                     <div className="absolute bottom-full mb-2 hidden group-hover:block text-white text-[11px] rounded px-2 py-1 whitespace-nowrap z-10" style={{ background: B.ink }}>
-                      <div>{new Date(t.period).toLocaleDateString()}</div>
+                      <div>{fmtDate(t.period)}</div>
                       <div>Value {usd(t.value_usd)}</div>
                       <div>COGS {usd(t.cogs_usd)}</div>
                       <div>Margin {usd(t.margin_usd)}</div>
