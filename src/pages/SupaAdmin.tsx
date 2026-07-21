@@ -39,6 +39,15 @@ export default function SupaAdmin() {
           </Link>
 
           <Link
+            to="/supa-admin/finance"
+            className="group bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 rounded-2xl p-8 transition-all shadow-2xl hover:shadow-emerald-500/20 hover:scale-105 transform duration-300"
+          >
+            <TrendingUp className="w-12 h-12 text-white mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">Financial Command Center</h2>
+            <p className="text-emerald-100">Revenue, real COGS, margin, runway & projections</p>
+          </Link>
+
+          <Link
             to="/supa-admin/token-cost"
             className="group bg-gradient-to-br from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-2xl p-8 transition-all shadow-2xl hover:shadow-yellow-500/20 hover:scale-105 transform duration-300"
           >
