@@ -20,6 +20,7 @@ const Brand = {
 };
 
 const DAILY_LIMIT = 1_000_000;
+const DAILY_WARNING_THRESHOLD = Math.floor(DAILY_LIMIT * 0.8); // amber badge at 80% of daily cap
 
 // Quota/usage counters are denominated in CREDITS (raw_tokens x model.credit_weight).
 // U4.0 = 1.0, U4.3 = 2.5. Legacy pre-metering rows have weight 1.0, so historical
@@ -110,6 +111,12 @@ const TokenUsage: React.FC = () => {
   const organizationName = profile?.organization_name || 'Pencils of Promise';
   const isSupaAdminView = location.pathname.startsWith('/supa-admin');
   const canEdit = isSupaAdminView && profile?.team_role === 'supa_admin';
+  // The org-admin view (/admin) shows usage as "Ed Tokens" (1 credit = 100 Ed Tokens); the internal
+  // supa-admin view keeps raw "credits". Percentages are ratios, so they're unchanged by the x100.
+  const isEd = !isSupaAdminView;
+  const unit = isEd ? 'Ed Tokens' : 'Credits';
+  const unitS = isEd ? 'Ed Token' : 'Credit';
+  const fmtU = (creditVal: number) => (creditVal * (isEd ? 100 : 1)).toLocaleString();
   const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview');
   const [metrics, setMetrics] = useState<TokenMetrics | null>(null);
   const [userUsage, setUserUsage] = useState<UserTokenUsage[]>([]);
@@ -594,7 +601,7 @@ const TokenUsage: React.FC = () => {
                 <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold" style={{ color: Brand.navy }}>
-                      Credit Balance Summary
+                      {unitS} Balance Summary
                     </h3>
                     <div className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: Brand.teal, color: 'white' }}>
                       {defaultModelName} Default
@@ -604,26 +611,26 @@ const TokenUsage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        Total Credit Cap
+                        Total {unitS} Cap
                       </div>
                       <div className="text-3xl font-bold" style={{ color: Brand.navy }}>
-                        {metrics.total_token_cap.toLocaleString()}
+                        {fmtU(metrics.total_token_cap)}
                       </div>
                     </div>
                     <div>
                       <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        Credits Used YTD
+                        {unit} Used YTD
                       </div>
                       <div className="text-3xl font-bold" style={{ color: Brand.orange }}>
-                        {metrics.used_text_total_ytd.toLocaleString()}
+                        {fmtU(metrics.used_text_total_ytd)}
                       </div>
                     </div>
                     <div>
                       <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        Credits Remaining
+                        {unit} Remaining
                       </div>
                       <div className="text-3xl font-bold" style={{ color: Brand.teal }}>
-                        {metrics.tokens_remaining.toLocaleString()}
+                        {fmtU(metrics.tokens_remaining)}
                       </div>
                     </div>
                   </div>
@@ -650,12 +657,13 @@ const TokenUsage: React.FC = () => {
 
                   <div className="mt-4 pt-4 border-t" style={{ borderColor: Brand.line }}>
                     <p className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
-                      Need more tokens? <span className="font-semibold">Contact sales for refill options</span>
+                      Need more {unit}? <span className="font-semibold">Contact sales for refill options</span>
                     </p>
                   </div>
                 </div>
 
-                {/* Per-model usage (last 30 days). Only U4 rows carry model_key; older rows bucket as legacy. */}
+                {/* Per-model + cache analytics: internal supa-admin view only (org/Ed-Token view keeps a clean meter). */}
+                {isSupaAdminView && (<>
                 <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold" style={{ color: Brand.navy }}>
@@ -735,36 +743,37 @@ const TokenUsage: React.FC = () => {
                     );
                   })()}
                 </div>
+                </>)}
 
                 {/* Monthly Token Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
                     <h3 className="text-lg font-semibold mb-4" style={{ color: Brand.navy }}>
-                      Monthly Credit Metrics
+                      Monthly {unitS} Metrics
                     </h3>
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Used This Month</span>
                         <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          {metrics.used_text_this_month.toLocaleString()}
+                          {fmtU(metrics.used_text_this_month)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Monthly Cap</span>
                         <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          {metrics.monthly_cap.toLocaleString()}
+                          {fmtU(metrics.monthly_cap)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Monthly Balance</span>
                         <span className="text-lg font-bold" style={{ color: Brand.teal }}>
-                          {metrics.monthly_balance.toLocaleString()}
+                          {fmtU(metrics.monthly_balance)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Rollover from Prev Month</span>
                         <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          {metrics.rollover_tokens.toLocaleString()}
+                          {fmtU(metrics.rollover_tokens)}
                         </span>
                       </div>
                     </div>
@@ -793,21 +802,21 @@ const TokenUsage: React.FC = () => {
                     </h3>
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Tokens Used Today</span>
+                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>{unit} Used Today</span>
                         <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          {metrics.used_text_today.toLocaleString()}
+                          {fmtU(metrics.used_text_today)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Daily Limit</span>
                         <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          {DAILY_LIMIT.toLocaleString()}
+                          {fmtU(DAILY_LIMIT)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Remaining Today</span>
                         <span className="text-lg font-bold" style={{ color: Brand.teal }}>
-                          {Math.max(0, DAILY_LIMIT - metrics.used_text_today).toLocaleString()}
+                          {fmtU(Math.max(0, DAILY_LIMIT - metrics.used_text_today))}
                         </span>
                       </div>
                     </div>

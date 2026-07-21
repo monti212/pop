@@ -73,6 +73,7 @@ export default function FinancialCommandCenter() {
   const [cash, setCash] = useState<CashRow[]>([]);
   const [trend, setTrend] = useState<TrendRow[]>([]);
   const [inputShare, setInputShare] = useState(0.30);
+  const [pricePerM, setPricePerM] = useState(100);
   const [periodDays, setPeriodDays] = useState(3650);
   const [windowDays, setWindowDays] = useState(30);
   const [loading, setLoading] = useState(true);
@@ -83,12 +84,13 @@ export default function FinancialCommandCenter() {
     setError(null);
     try {
       const since = new Date(Date.now() - periodDays * 86400000).toISOString();
-      const [ov, pr, ca, tr, cfg] = await Promise.all([
+      const [ov, pr, ca, tr, cfg, pcp] = await Promise.all([
         supabase.rpc('get_financial_overview', { p_organization_name: ORG, p_since: since }),
         supabase.rpc('get_financial_projection', { p_organization_name: ORG, p_window_days: windowDays }),
         supabase.rpc('get_cash_summary', { p_organization_name: ORG }),
         supabase.rpc('get_financial_trend', { p_organization_name: ORG, p_days: Math.min(periodDays, 365), p_bucket: 'week' }),
         supabase.from('financial_config').select('input_token_share').maybeSingle(),
+        supabase.from('pricing_config').select('price_per_1m_credit').eq('model_key', 'u4.0').maybeSingle(),
       ]);
       if (ov.error) throw ov.error;
       setOverview((ov.data as OverviewRow[]) || []);
@@ -96,6 +98,7 @@ export default function FinancialCommandCenter() {
       setCash((ca.data as CashRow[]) || []);
       setTrend((tr.data as TrendRow[]) || []);
       if (cfg.data?.input_token_share != null) setInputShare(Number(cfg.data.input_token_share));
+      if (pcp.data?.price_per_1m_credit != null) setPricePerM(Number(pcp.data.price_per_1m_credit));
       setLastUpdate(new Date());
     } catch (e: any) {
       setError(e?.message === 'not authorized' ? 'This dashboard is restricted to super-admin accounts.' : (e?.message || 'Failed to load financials'));
@@ -196,7 +199,7 @@ export default function FinancialCommandCenter() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight" style={{ color: B.ink }}>Financial Command Center</h1>
               <p className="text-xs" style={{ color: B.inkSoft }}>
-                {ORG} · revenue $100 / 1M credits · COGS blended {Math.round(inputShare * 100)}/{Math.round((1 - inputShare) * 100)}
+                {ORG} · revenue ${pricePerM} / 1M credits · COGS blended {Math.round(inputShare * 100)}/{Math.round((1 - inputShare) * 100)}
                 {lastUpdate && <> · updated {lastUpdate.toLocaleTimeString()}</>}
               </p>
             </div>
@@ -225,7 +228,7 @@ export default function FinancialCommandCenter() {
           <HeroNote rotate={-1.5} accent={B.green} icon={Percent} label="Gross margin"
             value={`${marginPct.toFixed(1)}%`} sub="value − COGS" big />
           <HeroNote rotate={1} accent={B.teal} icon={TrendingUp} label="Consumption value"
-            value={usd(totalValue)} sub="usage × $100/1M (imputed)" />
+            value={usd(totalValue)} sub={`usage × $${pricePerM}/1M (imputed)`} />
           <HeroNote rotate={-0.5} accent={B.gold} icon={Wallet} label="Cash collected"
             value={usd(cashCollected)} sub="actual purchases" />
           <HeroNote rotate={1.5} accent={B.orange} icon={DollarSign} label="Real COGS"

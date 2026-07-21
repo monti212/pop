@@ -90,7 +90,7 @@ export default function TokenCostBreakdown() {
 
   // Pricing (finance-owned) comes from pricing_config; caps come from organization_token_balances.
   // These defaults are only first-paint fallbacks until fetchUsageData resolves.
-  const [pricing, setPricing] = useState({ cogsPerM: 0.295, pricePerM: 8 });
+  const [pricing, setPricing] = useState({ cogsPerM: 0.295, pricePerM: 100 });
   const [caps, setCaps] = useState({ dailyCap: 1_000_000, monthlyBase: 833_333, planTotal: 10_250_000, imageCredits: 250_000 });
   const [defaultModelName, setDefaultModelName] = useState('Helios U4');
 
@@ -161,7 +161,7 @@ export default function TokenCostBreakdown() {
           .eq('is_default', true)
           .maybeSingle();
         const cogsPerM = Number(pricingRows?.[0]?.cogs_per_1m_raw ?? 0.295);
-        const pricePerM = Number(pricingRows?.[0]?.price_per_1m_credit ?? 8);
+        const pricePerM = Number(pricingRows?.[0]?.price_per_1m_credit ?? 100);
         const monthlyBase = balanceData.monthly_token_cap || 833_333;
         const planTotal = balanceData.total_token_cap || 10_250_000;
         const imageCredits = balanceData.image_token_cap || 250_000;
