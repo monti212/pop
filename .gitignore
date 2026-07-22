@@ -24,6 +24,7 @@ dist-ssr
 *.sw?
 .env
 .gstack/
+.worktrees/
 supabase/.temp/
 
 # TypeScript incremental build info (from tsc -b)
