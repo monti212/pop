@@ -77,7 +77,7 @@ describe('phone auth start', () => {
       options: {
         channel: 'sms',
         shouldCreateUser: true,
-        data: { display_name: 'Ada Lovelace' },
+        data: { name: 'Ada Lovelace' },
         captchaToken: undefined,
       },
     });

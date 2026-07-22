@@ -49,7 +49,7 @@ export interface PhoneAuthClient {
       options: {
         channel: PhoneAuthChannel;
         shouldCreateUser: boolean;
-        data: { display_name: string } | undefined;
+        data: { name: string } | undefined;
         captchaToken: string | undefined;
       };
     }): Promise<AuthResult<unknown>>;
@@ -171,7 +171,7 @@ export function createPhoneAuthService(
             channel: input.channel,
             shouldCreateUser: input.intent === 'sign_up',
             data: input.intent === 'sign_up' && displayName
-              ? { display_name: displayName }
+              ? { name: displayName }
               : undefined,
             captchaToken: input.captchaToken,
           },
