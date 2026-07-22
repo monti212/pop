@@ -7,7 +7,7 @@
     "dev": "npx vite",
     "build": "tsc -b && vite build",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
-    "lint:auth": "eslint src/services/phoneAuthService.ts src/services/phoneAuthService.test.ts src/hooks/usePhoneAuthFlow.ts src/hooks/usePhoneAuthFlow.test.ts src/components/PhoneAuthModal.tsx src/components/WhatsAppAuthModal.tsx src/components/Settings/PhoneLinkingSettings.tsx src/components/LoginModal.tsx src/components/SignUpModal.tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:auth": "eslint src/services/phoneAuthService.ts src/services/phoneAuthService.test.ts src/hooks/usePhoneAuthFlow.ts src/hooks/usePhoneAuthFlow.test.ts src/components/PhoneOtpAuthModal.tsx src/components/PhoneAuthModal.tsx src/components/WhatsAppAuthModal.tsx src/components/Settings/PhoneLinkingSettings.tsx src/components/LoginModal.tsx src/components/SignUpModal.tsx --report-unused-disable-directives --max-warnings 0",
     "test:unit": "vitest run",
     "preview": "vite preview"
   },

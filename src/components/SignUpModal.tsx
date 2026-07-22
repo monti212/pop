@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Mail, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, MessageCircle } from 'lucide-react';
+import { X, Mail, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, MessageCircle, Smartphone } from 'lucide-react';
 import { signUp } from '../services/authService';
 import Particles from './Particles';
 import Logo from './Logo';
@@ -22,6 +22,7 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
   isHeroInputSignup = false,
   initialQuestion = null
 }) => {
+  const nativePhoneAuthEnabled = import.meta.env.VITE_NATIVE_PHONE_AUTH_ENABLED === 'true';
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -104,12 +105,9 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
         throw new Error(error || 'I couldn\'t set up your account. Want to try again?');
       }
       
-      // Normal signup flow
-      console.log('Signup successful, proceeding to checkout');
       onSuccess();
-    } catch (err: any) {
-      console.error('Error signing up:', err);
-      setError(err.message || 'Account creation isn\'t working right now. Try again?');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Account creation isn\'t working right now. Try again?');
     } finally {
       setIsLoading(false);
     }
@@ -332,24 +330,39 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
               )}
             </motion.button>
 
-            <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#0170b9]/10"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">Or sign up with</span>
-              </div>
-            </div>
+            {nativePhoneAuthEnabled && (
+              <>
+                <div className="relative my-5">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#0170b9]/10"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-gray-500">Or sign up with</span>
+                  </div>
+                </div>
 
-            <button
-              type="button"
-              onClick={() => setShowWhatsAppAuth(true)}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-[#25D366]/30 bg-white text-[#0e7e3e] hover:bg-[#25D366]/5 hover:border-[#25D366]/60 font-medium text-sm min-h-[44px] transition-all"
-            >
-              <MessageCircle className="w-5 h-5 text-[#25D366]" />
-              Sign up with WhatsApp
-            </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowPhoneAuth(true)}
+                    disabled={isLoading}
+                    className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[#0170b9]/30 bg-white py-3 text-sm font-medium text-[#0170b9] transition-all hover:border-[#0170b9]/60 hover:bg-[#0170b9]/5"
+                  >
+                    <Smartphone className="h-5 w-5" />
+                    SMS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowWhatsAppAuth(true)}
+                    disabled={isLoading}
+                    className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[#25D366]/30 bg-white py-3 text-sm font-medium text-[#0e7e3e] transition-all hover:border-[#25D366]/60 hover:bg-[#25D366]/5"
+                  >
+                    <MessageCircle className="h-5 w-5 text-[#25D366]" />
+                    WhatsApp
+                  </button>
+                </div>
+              </>
+            )}
 
             <div className="pt-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -374,8 +387,9 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
         </div>
       </motion.div>
 
-      {showPhoneAuth && (
+      {nativePhoneAuthEnabled && showPhoneAuth && (
         <PhoneAuthModal
+          mode="sign-up"
           onClose={() => setShowPhoneAuth(false)}
           onSuccess={() => {
             setShowPhoneAuth(false);
@@ -385,7 +399,7 @@ const SignUpModal: React.FC<SignUpModalProps> = ({
         />
       )}
 
-      {showWhatsAppAuth && (
+      {nativePhoneAuthEnabled && showWhatsAppAuth && (
         <WhatsAppAuthModal
           mode="sign-up"
           onClose={() => setShowWhatsAppAuth(false)}

@@ -1,356 +1,216 @@
-import React, { useState, useEffect } from 'react';
-import { Phone, Check, X, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, Loader2, Phone, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/authService';
+import { usePhoneAuthFlow } from '../../hooks/usePhoneAuthFlow';
+import { normalizePhone, PhoneAuthError, type PhoneAuthClient } from '../../services/phoneAuthService';
 import CountryCodeSelector from '../CountryCodeSelector';
-import { countries, Country } from '../../utils/countryCodes';
+import { countries, type Country } from '../../utils/countryCodes';
 
 interface PhoneLinkingSettingsProps {
   darkMode?: boolean;
   interfaceLanguage?: string;
 }
 
-const PhoneLinkingSettings: React.FC<PhoneLinkingSettingsProps> = ({
+const defaultCountry = countries.find((country) => country.code === 'BW') ?? countries[0];
+
+export default function PhoneLinkingSettings({
   darkMode: _darkMode = false,
-  interfaceLanguage: _interfaceLanguage = 'english'
-}) => {
+  interfaceLanguage: _interfaceLanguage = 'english',
+}: PhoneLinkingSettingsProps) {
+  void _darkMode;
+  void _interfaceLanguage;
   const { user } = useAuth();
+  const nativePhoneAuthEnabled = import.meta.env.VITE_NATIVE_PHONE_AUTH_ENABLED === 'true';
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]);
+  const [selectedCountry, setSelectedCountry] = useState<Country>(defaultCountry);
   const [verificationCode, setVerificationCode] = useState('');
-  const [isLinking, setIsLinking] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [showVerification, setShowVerification] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [linkedPhone, setLinkedPhone] = useState<string | null>(null);
-  const [isUnlinking, setIsUnlinking] = useState(false);
+  const flow = usePhoneAuthFlow({
+    client: supabase as PhoneAuthClient,
+    intent: 'link',
+    channel: 'sms',
+  });
 
   useEffect(() => {
-    checkLinkedPhone();
+    setLinkedPhone(user?.phone ?? user?.user_metadata?.phone_number ?? null);
   }, [user]);
 
-  const checkLinkedPhone = async () => {
-    if (!user) return;
-
-    try {
-      // Check if user already has a phone number linked
-      const userPhone = user.phone || user.user_metadata?.phone_number;
-      if (userPhone) {
-        setLinkedPhone(userPhone);
-      }
-    } catch (error: any) {
-      console.error('Error checking linked phone:', error);
-    }
-  };
-
   const handleSendVerification = async () => {
-    setError(null);
+    setValidationError(null);
     setSuccess(null);
 
-    if (!phoneNumber.trim()) {
-      setError('Please enter a valid phone number');
-      return;
-    }
-
-    const fullPhoneNumber = `${selectedCountry.dialCode}${phoneNumber.replace(/^0+/, '')}`;
-
-    // Validate phone number format
-    const phoneRegex = /^\+\d{7,15}$/;
-    if (!phoneRegex.test(fullPhoneNumber)) {
-      setError('Please enter a valid phone number with country code');
-      return;
-    }
-
-    setIsLinking(true);
-
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/start-phone-verification`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({ phone_number: fullPhoneNumber })
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send verification code');
-      }
-
-      setShowVerification(true);
-      setSuccess('Verification code sent! Check your phone.');
-    } catch (error: any) {
-      console.error('Error sending verification:', error);
-      setError(error.message || 'Failed to send verification code. Please try again.');
-    } finally {
-      setIsLinking(false);
+      const phone = normalizePhone(selectedCountry.dialCode, phoneNumber);
+      await flow.start({ phone });
+    } catch (error) {
+      setValidationError(error instanceof PhoneAuthError ? error.message : 'Enter a valid phone number.');
     }
   };
 
   const handleVerifyAndLink = async () => {
-    setError(null);
+    setValidationError(null);
     setSuccess(null);
 
-    if (!verificationCode.trim()) {
-      setError('Please enter the verification code');
+    if (!/^\d{4,8}$/.test(verificationCode)) {
+      setValidationError('Enter the verification code you received.');
       return;
     }
 
-    const fullPhoneNumber = `${selectedCountry.dialCode}${phoneNumber.replace(/^0+/, '')}`;
+    const session = await flow.verify(verificationCode);
+    if (!session || !flow.phone) return;
 
-    setIsVerifying(true);
-
-    try {
-      // Verify the code
-      const verifyResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/check-phone-verification`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({
-            phone_number: fullPhoneNumber,
-            code: verificationCode
-          })
-        }
-      );
-
-      const verifyData = await verifyResponse.json();
-
-      if (!verifyResponse.ok) {
-        throw new Error(verifyData.error || 'Invalid verification code');
-      }
-
-      // Update user's phone number
-      const { error: updateError } = await supabase.auth.updateUser({
-        phone: fullPhoneNumber
-      });
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      setLinkedPhone(fullPhoneNumber);
-      setSuccess('Phone number successfully linked! You can now sign in with either email or phone.');
-      setShowVerification(false);
-      setPhoneNumber('');
-      setVerificationCode('');
-    } catch (error: any) {
-      console.error('Error verifying code:', error);
-      setError(error.message || 'Failed to verify code. Please try again.');
-    } finally {
-      setIsVerifying(false);
-    }
+    setLinkedPhone(flow.phone);
+    setVerificationCode('');
+    setSuccess('Phone number linked. You can now use it to sign in.');
   };
 
-  const handleUnlinkPhone = async () => {
-    if (!confirm('Are you sure you want to unlink your phone number? You will only be able to sign in with email.')) {
-      return;
-    }
-
-    setIsUnlinking(true);
-    setError(null);
-
-    try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        phone: undefined
-      });
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      setLinkedPhone(null);
-      setSuccess('Phone number unlinked successfully');
-    } catch (error: any) {
-      console.error('Error unlinking phone:', error);
-      setError(error.message || 'Failed to unlink phone number');
-    } finally {
-      setIsUnlinking(false);
-    }
+  const handleChangePhone = () => {
+    flow.changePhone();
+    setVerificationCode('');
+    setValidationError(null);
+    setSuccess(null);
   };
+
+  if (!nativePhoneAuthEnabled) {
+    return (
+      <section className="space-y-3" aria-labelledby="phone-linking-title">
+        <h3 id="phone-linking-title" className="font-headline text-lg font-semibold text-navy">Phone sign-in</h3>
+        <div className="rounded-12 border border-borders bg-sand-200/50 p-4">
+          <p className="text-sm text-navy">Phone sign-in is not available yet. Your email sign-in remains unchanged.</p>
+        </div>
+      </section>
+    );
+  }
+
+  const visibleError = validationError ?? flow.error;
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-6" aria-labelledby="phone-linking-title">
       <div>
-        <h3 className="text-lg font-semibold text-navy font-headline mb-2">
-          Link Phone Number
-        </h3>
-        <p className="text-sm text-navy">
-          Link your phone number to sign in with either email or phone number
-        </p>
+        <h3 id="phone-linking-title" className="mb-2 font-headline text-lg font-semibold text-navy">Phone sign-in</h3>
+        <p className="text-sm text-navy">Verify a phone number to add password-free sign-in to this account.</p>
       </div>
 
       {linkedPhone ? (
-        <div className="p-4 rounded-12 border border-borders bg-sand-200/50 space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-green-100">
-                <Phone className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-navy">Linked Phone Number</h4>
-                <p className="text-sm text-navy mt-1">{linkedPhone}</p>
-                <p className="text-xs text-navy mt-2">
-                  You can sign in using either your email or this phone number
-                </p>
-              </div>
+        <div className="rounded-12 border border-borders bg-sand-200/50 p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-green-100 p-2">
+              <Phone className="h-5 w-5 text-green-600" />
             </div>
-            <button
-              onClick={handleUnlinkPhone}
-              disabled={isUnlinking}
-              className="px-3 py-1.5 rounded-12 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 transition-colors duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isUnlinking ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                'Unlink'
-              )}
-            </button>
+            <div>
+              <h4 className="text-sm font-medium text-navy">Verified phone number</h4>
+              <p className="mt-1 text-sm text-navy">{linkedPhone}</p>
+              <p className="mt-2 text-xs text-navy">You can sign in with this number or continue using email.</p>
+            </div>
           </div>
+        </div>
+      ) : flow.step === 'phone' ? (
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="link-phone" className="mb-2 block text-sm font-medium text-navy">Phone number</label>
+            <div className="flex gap-2">
+              <CountryCodeSelector selectedCountry={selectedCountry} onSelectCountry={setSelectedCountry} />
+              <input
+                id="link-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel-national"
+                value={phoneNumber}
+                onChange={(event) => setPhoneNumber(event.target.value)}
+                placeholder="72 123 456"
+                className="flex-1 rounded-lg border border-borders bg-white px-4 py-3 text-sm text-navy focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal"
+                style={{ fontSize: '16px' }}
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void handleSendVerification()}
+            disabled={flow.isBusy || !phoneNumber.trim()}
+            className="flex w-full items-center justify-center gap-2 rounded-12 bg-teal px-4 py-2 text-white transition-colors hover:bg-teal/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {flow.isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
+            {flow.isBusy ? 'Sending code…' : 'Send verification code'}
+          </button>
         </div>
       ) : (
         <div className="space-y-4">
-          {!showVerification ? (
-            <>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-navy">
-                  Phone Number
-                </label>
-                <div className="flex gap-2">
-                  <CountryCodeSelector
-                    selectedCountry={selectedCountry}
-                    onSelectCountry={setSelectedCountry}
-                  />
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value.replace(/[^\d]/g, ''))}
-                    placeholder="71234567"
-                    className="flex-1 px-4 py-3 text-navy border border-borders rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent text-sm"
-                    style={{ fontSize: '16px' }}
-                  />
-                </div>
-                <p className="text-xs text-navy mt-1">
-                  Enter your phone number without the leading zero
-                </p>
-              </div>
+          <div className="rounded-12 border border-teal/20 bg-teal/10 p-4">
+            <p className="text-sm text-navy">Enter the code sent to {flow.phone}.</p>
+          </div>
 
-              <button
-                onClick={handleSendVerification}
-                disabled={isLinking || !phoneNumber.trim()}
-                className="w-full px-4 py-2 rounded-12 bg-teal text-white hover:bg-teal/90 transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLinking ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Sending Code...</span>
-                  </>
-                ) : (
-                  <>
-                    <Phone className="w-4 h-4" />
-                    <span>Send Verification Code</span>
-                  </>
-                )}
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="p-4 rounded-12 bg-teal/10 border border-teal/20">
-                <p className="text-sm text-navy">
-                  Verification code sent to {selectedCountry.dialCode}{phoneNumber}
-                </p>
-              </div>
+          <div>
+            <label htmlFor="link-phone-code" className="mb-2 block text-sm font-medium text-navy">Verification code</label>
+            <input
+              id="link-phone-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={verificationCode}
+              onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 8))}
+              className="w-full rounded-12 border border-borders px-3 py-2 text-center tracking-[0.35em] text-navy focus:border-teal focus:ring-1 focus:ring-teal"
+              autoFocus
+            />
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2 text-navy">
-                  Verification Code
-                </label>
-                <input
-                  type="text"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value.replace(/[^\d]/g, ''))}
-                  placeholder="Enter 6-digit code"
-                  maxLength={6}
-                  className="w-full px-3 py-2 rounded-12 border border-borders text-navy focus:border-teal focus:ring-1 focus:ring-teal"
-                />
-              </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleChangePhone}
+              disabled={flow.isBusy}
+              className="flex-1 rounded-12 border border-borders bg-white px-4 py-2 text-navy transition-colors hover:bg-sand-200 disabled:opacity-50"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleVerifyAndLink()}
+              disabled={flow.isBusy}
+              className="flex flex-1 items-center justify-center gap-2 rounded-12 bg-teal px-4 py-2 text-white transition-colors hover:bg-teal/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {flow.isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              {flow.status === 'verifying_code' ? 'Verifying…' : 'Verify and link'}
+            </button>
+          </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setShowVerification(false);
-                    setVerificationCode('');
-                    setError(null);
-                  }}
-                  className="flex-1 px-4 py-2 rounded-12 bg-white hover:bg-sand-200 text-navy border border-borders transition-colors duration-200"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleVerifyAndLink}
-                  disabled={isVerifying || verificationCode.length !== 6}
-                  className="flex-1 px-4 py-2 rounded-12 bg-teal text-white hover:bg-teal/90 transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isVerifying ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Verifying...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Verify & Link</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <button
-                onClick={handleSendVerification}
-                disabled={isLinking}
-                className="w-full text-sm text-teal hover:text-teal/80 transition-colors duration-200"
-              >
-                Resend code
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            onClick={() => void flow.resend()}
+            disabled={flow.isBusy}
+            className="w-full text-sm text-teal transition-colors hover:text-teal/80 disabled:opacity-50"
+          >
+            Resend code
+          </button>
         </div>
       )}
 
-      {error && (
-        <div className="p-3 rounded-12 bg-red-50 border border-red-200 flex items-start gap-2">
-          <X className="w-4 h-4 text-red-600 mt-0.5" />
-          <p className="text-sm text-red-600">{error}</p>
+      {visibleError && (
+        <div className="flex items-start gap-2 rounded-12 border border-red-200 bg-red-50 p-3" role="alert">
+          <X className="mt-0.5 h-4 w-4 text-red-600" />
+          <p className="text-sm text-red-600">{visibleError}</p>
         </div>
       )}
 
       {success && (
-        <div className="p-3 rounded-12 bg-green-50 border border-green-200 flex items-start gap-2">
-          <Check className="w-4 h-4 text-green-600 mt-0.5" />
+        <div className="flex items-start gap-2 rounded-12 border border-green-200 bg-green-50 p-3" role="status">
+          <Check className="mt-0.5 h-4 w-4 text-green-600" />
           <p className="text-sm text-green-600">{success}</p>
         </div>
       )}
 
-      <div className="p-4 rounded-12 bg-sand-200/50 border border-borders">
-        <h4 className="text-sm font-medium text-navy mb-2">About Phone Linking</h4>
-        <ul className="text-xs text-navy space-y-1">
-          <li>• Link your phone to use either email or phone for sign in</li>
-          <li>• Your phone will be verified via SMS</li>
-          <li>• You can unlink your phone number at any time</li>
-          <li>• Standard SMS rates may apply</li>
+      <div className="rounded-12 border border-borders bg-sand-200/50 p-4">
+        <h4 className="mb-2 text-sm font-medium text-navy">How phone sign-in works</h4>
+        <ul className="space-y-1 text-xs text-navy">
+          <li>• A one-time code verifies that the number belongs to you.</li>
+          <li>• The number is attached only to your current account.</li>
+          <li>• Your existing email sign-in and account history stay unchanged.</li>
+          <li>• Standard messaging rates may apply.</li>
         </ul>
       </div>
-    </div>
+    </section>
   );
-};
-
-export default PhoneLinkingSettings;
+}
