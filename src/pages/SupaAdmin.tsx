@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Activity, TrendingUp, DollarSign, Zap, Coins, ClipboardList, AlertTriangle } from 'lucide-react';
+import { Activity, TrendingUp, DollarSign, Zap, Coins, ClipboardList, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 export default function SupaAdmin() {
   return (
@@ -81,6 +81,15 @@ export default function SupaAdmin() {
             <AlertTriangle className="w-12 h-12 text-white mb-4" />
             <h2 className="text-2xl font-bold text-white mb-2">Error Logs</h2>
             <p className="text-red-100">Monitor and resolve application errors</p>
+          </Link>
+
+          <Link
+            to="/supa-admin/usage-intelligence"
+            className="group bg-gradient-to-br from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 rounded-2xl p-8 transition-all shadow-2xl hover:shadow-amber-500/20 hover:scale-105 transform duration-300"
+          >
+            <ShieldAlert className="w-12 h-12 text-white mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">Usage Intelligence</h2>
+            <p className="text-amber-100">Abuse radar & consistency-weighted teacher leaderboard</p>
           </Link>
         </div>
 

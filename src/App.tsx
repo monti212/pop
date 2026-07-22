@@ -40,6 +40,7 @@ const LiveSystemMonitor = lazy(() => import('./pages/admin/LiveSystemMonitor'));
 const PerformanceMetrics = lazy(() => import('./pages/admin/PerformanceMetrics'));
 const TokenCostBreakdown = lazy(() => import('./pages/admin/TokenCostBreakdown'));
 const FinancialCommandCenter = lazy(() => import('./pages/FinancialCommandCenter'));
+const UsageIntelligence = lazy(() => import('./pages/UsageIntelligence'));
 const ErrorLogsDashboard = lazy(() => import('./pages/admin/ErrorLogsDashboard'));
 const SupaAdminDailyLogger = lazy(() => import('./pages/admin/SupaAdminDailyLogger'));
 const TeacherHomePage = lazy(() => import('./pages/teach/TeacherHomePage'));
@@ -317,6 +318,7 @@ const AppContentInner: React.FC = () => {
           <Route path="/supa-admin/token-cost" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TokenCostBreakdown /></Suspense>} />
           <Route path="/supa-admin/error-logs" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><ErrorLogsDashboard /></Suspense>} />
           <Route path="/supa-admin/finance" element={<Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: '#F1ECE2' }}><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><FinancialCommandCenter /></Suspense>} />
+          <Route path="/supa-admin/usage-intelligence" element={<Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: '#F1ECE2' }}><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><UsageIntelligence /></Suspense>} />
         </Route>
 
         {/* GreyEd Teacher Web App — shell + screens (S0). Auth-gated inside TeacherShell. */}
