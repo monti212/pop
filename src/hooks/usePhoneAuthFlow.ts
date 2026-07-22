@@ -26,6 +26,7 @@ export interface PhoneAuthFlowState {
 
 export type PhoneAuthFlowEvent =
   | { type: 'SEND'; phone: string }
+  | { type: 'RESEND' }
   | { type: 'SENT' }
   | { type: 'VERIFY' }
   | { type: 'VERIFIED'; intent: PhoneAuthIntent }
@@ -50,6 +51,11 @@ export function phoneAuthReducer(
     case 'SENT':
       if (state.status !== 'sending_code') return state;
       return { ...state, status: 'awaiting_code', step: 'code', error: null };
+    case 'RESEND':
+      if (state.status !== 'awaiting_code' && !(state.status === 'failed' && state.step === 'code')) {
+        return state;
+      }
+      return { ...state, status: 'sending_code', step: 'code', error: null };
     case 'VERIFY':
       if (state.status !== 'awaiting_code' && !(state.status === 'failed' && state.step === 'code')) {
         return state;
@@ -93,11 +99,13 @@ function publicErrorMessage(error: unknown): string {
 export function usePhoneAuthFlow({ client, intent, channel }: UsePhoneAuthFlowOptions) {
   const [state, dispatch] = useReducer(phoneAuthReducer, initialPhoneAuthState);
   const busyRef = useRef(false);
+  const lastStartRef = useRef<StartFlowInput | null>(null);
   const service = useMemo(() => createPhoneAuthService(client), [client]);
 
   const start = useCallback(async ({ phone, displayName, captchaToken }: StartFlowInput) => {
     if (busyRef.current) return false;
     busyRef.current = true;
+    lastStartRef.current = { phone, displayName, captchaToken };
     dispatch({ type: 'SEND', phone });
 
     try {
@@ -118,6 +126,30 @@ export function usePhoneAuthFlow({ client, intent, channel }: UsePhoneAuthFlowOp
     }
   }, [channel, intent, service]);
 
+  const resend = useCallback(async () => {
+    const previous = lastStartRef.current;
+    if (busyRef.current || !state.phone || !previous) return false;
+    busyRef.current = true;
+    dispatch({ type: 'RESEND' });
+
+    try {
+      await service.start({
+        phone: state.phone,
+        intent,
+        channel,
+        profile: previous.displayName ? { displayName: previous.displayName } : undefined,
+        captchaToken: previous.captchaToken,
+      });
+      dispatch({ type: 'SENT' });
+      return true;
+    } catch (error) {
+      dispatch({ type: 'FAILED', message: publicErrorMessage(error) });
+      return false;
+    } finally {
+      busyRef.current = false;
+    }
+  }, [channel, intent, service, state.phone]);
+
   const verify = useCallback(async (code: string): Promise<PhoneAuthSession | null> => {
     if (busyRef.current || !state.phone) return null;
     busyRef.current = true;
@@ -137,6 +169,7 @@ export function usePhoneAuthFlow({ client, intent, channel }: UsePhoneAuthFlowOp
 
   const changePhone = useCallback(() => {
     if (busyRef.current) return;
+    lastStartRef.current = null;
     dispatch({ type: 'CHANGE_PHONE' });
   }, []);
 
@@ -144,6 +177,7 @@ export function usePhoneAuthFlow({ client, intent, channel }: UsePhoneAuthFlowOp
     ...state,
     isBusy: state.status === 'sending_code' || state.status === 'verifying_code',
     start,
+    resend,
     verify,
     changePhone,
   };

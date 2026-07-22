@@ -69,6 +69,24 @@ describe('phoneAuthReducer', () => {
     });
   });
 
+  it('supports resending a code without returning to phone entry', () => {
+    const awaiting: PhoneAuthFlowState = {
+      status: 'awaiting_code',
+      step: 'code',
+      phone: '+26771234567',
+      error: null,
+    };
+
+    const resending = phoneAuthReducer(awaiting, { type: 'RESEND' });
+    expect(resending).toEqual({
+      status: 'sending_code',
+      step: 'code',
+      phone: '+26771234567',
+      error: null,
+    });
+    expect(phoneAuthReducer(resending, { type: 'SENT' }).status).toBe('awaiting_code');
+  });
+
   it('ignores duplicate or invalid transitions', () => {
     const sending: PhoneAuthFlowState = {
       status: 'sending_code',
