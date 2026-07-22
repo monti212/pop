@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Mail, Lock, Eye, EyeOff, AlertCircle, MessageCircle } from 'lucide-react';
+import { X, Mail, Lock, Eye, EyeOff, AlertCircle, MessageCircle, Smartphone } from 'lucide-react';
 import { signIn, resetPassword } from '../services/authService';
 import Particles from './Particles';
 import Logo from './Logo';
@@ -14,6 +14,7 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp }) => {
+  const nativePhoneAuthEnabled = import.meta.env.VITE_NATIVE_PHONE_AUTH_ENABLED === 'true';
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -55,9 +56,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
       }
       
       onSuccess();
-    } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'Those details don\'t look right. Mind double-checking them?');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Those details don\'t look right. Mind double-checking them?');
     } finally {
       setIsLoading(false);
     }
@@ -86,9 +86,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
       
       setResetSuccess(true);
       setError('');
-    } catch (err: any) {
-      console.error('Password reset error:', err);
-      setError(err.message || 'Password reset isn\'t working right now. Try again?');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Password reset isn\'t working right now. Try again?');
     } finally {
       setIsResetting(false);
     }
@@ -323,24 +322,39 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
                 ) : "Sign In"}
               </motion.button>
 
-              <div className="relative my-5">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#0170b9]/10"></div>
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-gray-500">Or</span>
-                </div>
-              </div>
+              {nativePhoneAuthEnabled && (
+                <>
+                  <div className="relative my-5">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-[#0170b9]/10"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                    </div>
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => setShowWhatsAppAuth(true)}
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-[#25D366]/30 bg-white text-[#0e7e3e] hover:bg-[#25D366]/5 hover:border-[#25D366]/60 font-medium text-sm min-h-[44px] transition-all"
-              >
-                <MessageCircle className="w-5 h-5 text-[#25D366]" />
-                Sign in with WhatsApp
-              </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowPhoneAuth(true)}
+                      disabled={isLoading}
+                      className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[#0170b9]/30 bg-white py-3 text-sm font-medium text-[#0170b9] transition-all hover:border-[#0170b9]/60 hover:bg-[#0170b9]/5"
+                    >
+                      <Smartphone className="h-5 w-5" />
+                      SMS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowWhatsAppAuth(true)}
+                      disabled={isLoading}
+                      className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[#25D366]/30 bg-white py-3 text-sm font-medium text-[#0e7e3e] transition-all hover:border-[#25D366]/60 hover:bg-[#25D366]/5"
+                    >
+                      <MessageCircle className="h-5 w-5 text-[#25D366]" />
+                      WhatsApp
+                    </button>
+                  </div>
+                </>
+              )}
 
             </form>
           )}
@@ -361,8 +375,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
         </div>
       </motion.div>
 
-      {showPhoneAuth && (
+      {nativePhoneAuthEnabled && showPhoneAuth && (
         <PhoneAuthModal
+          mode="sign-in"
           onClose={() => setShowPhoneAuth(false)}
           onSuccess={() => {
             setShowPhoneAuth(false);
@@ -372,7 +387,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSuccess, onSignUp })
         />
       )}
 
-      {showWhatsAppAuth && (
+      {nativePhoneAuthEnabled && showWhatsAppAuth && (
         <WhatsAppAuthModal
           mode="sign-in"
           onClose={() => setShowWhatsAppAuth(false)}
