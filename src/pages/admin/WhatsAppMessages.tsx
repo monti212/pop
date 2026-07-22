@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../services/authService';
-import { MessageCircle, Phone, Image, FileText, Send, RefreshCw, Filter, X } from 'lucide-react';
+import { MessageCircle, Phone, Image, FileText, Send, RefreshCw, Filter, X, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import AdminSidebar from '../../components/AdminSidebar';
 
@@ -150,9 +151,17 @@ const WhatsAppMessages: React.FC = () => {
       <div className="flex-1 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">WhatsApp Messages</h1>
-            <p className="text-gray-600 mt-1">Monitor and manage WhatsApp conversations</p>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/admin"
+              className="p-2 rounded-lg bg-white hover:bg-gray-100 transition-colors shadow-sm border border-gray-200"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">WhatsApp Messages</h1>
+              <p className="text-gray-600 mt-1">Monitor and manage WhatsApp conversations</p>
+            </div>
           </div>
           <div className="flex gap-3">
             <button

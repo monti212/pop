@@ -6,7 +6,7 @@ import {
   FileText, BarChart3, DollarSign, AlertTriangle, CheckCircle, XCircle,
   RefreshCw, Bell, Image as ImageIcon, Target,
   Gauge, Sparkles, ArrowUpRight, ArrowDownRight, Minus, Radio,
-  Server, Cpu, Globe, Calendar
+  Server, Cpu, Globe, Calendar, ArrowLeft
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -227,8 +227,8 @@ export default function EnhancedSupaAdmin() {
         <div className="max-w-[1800px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to="/chat" className="p-2 rounded-lg hover:bg-white/60 transition-colors" style={{ color: Brand.navy }}>
-                <Activity className="w-6 h-6" />
+              <Link to="/supa-admin" className="p-2 rounded-lg hover:bg-white/60 transition-colors" style={{ color: Brand.navy }} title="Back to Supa Admin">
+                <ArrowLeft className="w-6 h-6" />
               </Link>
               <div>
                 <h1 className="text-2xl font-bold" style={{ color: Brand.navy }}>Live Command Center</h1>

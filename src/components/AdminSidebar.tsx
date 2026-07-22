@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Database, Menu, X, Zap } from 'lucide-react';
+import { Activity, Database, Menu, X, Zap, MessageCircle, FileText } from 'lucide-react';
 import { supabase } from '../services/authService';
 
 const Brand = {
@@ -74,6 +74,16 @@ const AdminSidebar: React.FC = () => {
       path: '/admin/token-usage',
       icon: Zap,
       label: 'Token Usage',
+    },
+    {
+      path: '/admin/whatsapp',
+      icon: MessageCircle,
+      label: 'WhatsApp Messages',
+    },
+    {
+      path: '/admin/cost-breakdown',
+      icon: FileText,
+      label: 'Cost Breakdown',
     },
     {
       path: '/admin/knowledge-base',

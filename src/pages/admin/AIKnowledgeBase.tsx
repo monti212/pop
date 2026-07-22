@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, Loader, Eye, Trash2, RefreshCw, AlertCircle, X as XIcon, Search, TrendingUp, Database, Clock, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Upload, FileText, CheckCircle, XCircle, Loader, Eye, Trash2, RefreshCw, AlertCircle, X as XIcon, Search, TrendingUp, Database, Clock, Zap, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../services/authService';
 import AdminSidebar from '../../components/AdminSidebar';
 import { processAndChunkDocument } from '../../services/knowledgeBaseChunkingService';
@@ -528,13 +529,23 @@ const AIKnowledgeBase: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold" style={{ color: Brand.navy }}>
-                AI Knowledge Base
-              </h1>
-              <p className="text-sm mt-2" style={{ color: Brand.navy, opacity: 0.7 }}>
-                Manage educational documents that power Uhuru AI's teaching capabilities
-              </p>
+            <div className="flex items-start gap-3">
+              <Link
+                to="/admin"
+                className="p-2 rounded-lg border hover:bg-white/80 transition-colors"
+                style={{ borderColor: Brand.line, color: Brand.navy }}
+                title="Back to Admin Dashboard"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold" style={{ color: Brand.navy }}>
+                  AI Knowledge Base
+                </h1>
+                <p className="text-sm mt-2" style={{ color: Brand.navy, opacity: 0.7 }}>
+                  Manage educational documents that power Uhuru AI's teaching capabilities
+                </p>
+              </div>
             </div>
             <div className="flex gap-3">
               <button
