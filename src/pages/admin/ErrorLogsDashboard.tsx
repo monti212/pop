@@ -1,571 +1,620 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { errorLogService, ErrorLog, ErrorLogFilters } from '../../services/errorLogService';
 import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { Link } from 'react-router-dom';
+import {
+  Activity,
+  AlertCircle,
   AlertTriangle,
   ArrowLeft,
-  CheckCircle,
-  XCircle,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  CircleDot,
+  Clock3,
   Filter,
+  Inbox,
+  LockKeyhole,
   RefreshCw,
-  Info,
-  AlertCircle,
-  XOctagon
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  UserCheck,
+  UserMinus,
+  X,
+  Zap,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
+import { useAuth } from '../../context/AuthContext';
+import {
+  errorLogService,
+  type IssueFilters,
+  type IssueStatus,
+  type ObservabilityIssue,
+} from '../../services/errorLogService';
+
+const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+const statusOrder: Record<IssueStatus, number> = {
+  regressed: 5,
+  open: 4,
+  investigating: 3,
+  resolved: 2,
+  observed: 1,
+  ignored: 1,
+};
+
+const severityStyles = {
+  critical: 'border-rose-200 bg-rose-50 text-rose-700',
+  high: 'border-orange-200 bg-orange-50 text-orange-700',
+  medium: 'border-amber-200 bg-amber-50 text-amber-700',
+  low: 'border-sky-200 bg-sky-50 text-sky-700',
+};
+
+const statusStyles: Record<IssueStatus, string> = {
+  open: 'bg-slate-100 text-slate-700',
+  investigating: 'bg-violet-100 text-violet-700',
+  resolved: 'bg-emerald-100 text-emerald-700',
+  observed: 'bg-sky-100 text-sky-700',
+  ignored: 'bg-slate-100 text-slate-500',
+  regressed: 'bg-rose-100 text-rose-700',
+};
+
+function titleCase(value: string) {
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isActive(status: IssueStatus) {
+  return status === 'open' || status === 'investigating' || status === 'regressed';
+}
+
+function MetricCard({
+  label,
+  value,
+  supporting,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: number;
+  supporting: string;
+  icon: typeof Activity;
+  tone: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
+          <p className="mt-1 text-xs text-slate-500">{supporting}</p>
+        </div>
+        <span className={`rounded-xl p-2.5 ${tone}`}>
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ filtered }: { filtered: boolean }) {
+  return (
+    <div className="flex min-h-80 flex-col items-center justify-center px-6 text-center">
+      <span className="rounded-2xl bg-emerald-50 p-4 text-emerald-600">
+        {filtered ? <Search className="h-7 w-7" /> : <ShieldCheck className="h-7 w-7" />}
+      </span>
+      <h2 className="mt-4 text-lg font-semibold text-slate-900">
+        {filtered ? 'No issues match these filters' : 'Operations are clear'}
+      </h2>
+      <p className="mt-1 max-w-sm text-sm text-slate-500">
+        {filtered
+          ? 'Try widening the status, severity, category, or ownership filters.'
+          : 'New application failures and operational warnings will appear here automatically.'}
+      </p>
+    </div>
+  );
+}
 
 export default function ErrorLogsDashboard() {
-  const [logs, setLogs] = useState<ErrorLog[]>([]);
+  const { user } = useAuth();
+  const [issues, setIssues] = useState<ObservabilityIssue[]>([]);
+  const [selected, setSelected] = useState<ObservabilityIssue | null>(null);
+  const [filters, setFilters] = useState<IssueFilters>({ status: 'active', owner: 'all' });
+  const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
   const [loading, setLoading] = useState(true);
-  const [totalCount, setTotalCount] = useState(0);
-  const [stats, setStats] = useState({
-    total: 0,
-    unresolved: 0,
-    byType: {} as Record<string, number>,
-    bySeverity: {} as Record<string, number>,
-    byEnvironment: {} as Record<string, number>,
-  });
-  const [selectedLog, setSelectedLog] = useState<ErrorLog | null>(null);
-  const [resolutionNotes, setResolutionNotes] = useState('');
-  const [filters, setFilters] = useState<ErrorLogFilters>({});
-  const [showFilters, setShowFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const pageSize = 50;
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const loadIssues = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    else setRefreshing(true);
+    const result = await errorLogService.getIssues();
+    setIssues(result.issues);
+    setLoadError(result.error || '');
+    setLoading(false);
+    setRefreshing(false);
+  }, []);
 
   useEffect(() => {
-    fetchErrorLogs();
-    fetchErrorStats();
-    const interval = setInterval(() => {
-      fetchErrorLogs();
-      fetchErrorStats();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [filters, currentPage]);
+    void loadIssues();
+    const interval = window.setInterval(() => void loadIssues(true), 30_000);
+    return () => window.clearInterval(interval);
+  }, [loadIssues]);
 
-  const fetchErrorLogs = async () => {
-    setLoading(true);
-    const { logs: fetchedLogs, count } = await errorLogService.getErrorLogs(
-      filters,
-      pageSize,
-      currentPage * pageSize
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(''), 3500);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
+
+  const stats = useMemo(() => {
+    const active = issues.filter((issue) => isActive(issue.status));
+    return {
+      active: active.length,
+      critical: active.filter((issue) => issue.severity === 'critical').length,
+      regressed: active.filter((issue) => issue.status === 'regressed').length,
+      unassigned: active.filter((issue) => !issue.assigned_to).length,
+    };
+  }, [issues]);
+
+  const filteredIssues = useMemo(() => {
+    const needle = deferredSearch.trim().toLowerCase();
+    return issues
+      .filter((issue) => {
+        if (filters.status === 'active' && !isActive(issue.status)) return false;
+        if (filters.status && filters.status !== 'active' && issue.status !== filters.status) return false;
+        if (filters.severity && issue.severity !== filters.severity) return false;
+        if (filters.category && issue.category !== filters.category) return false;
+        if (filters.owner === 'mine' && issue.assigned_to !== user?.id) return false;
+        if (filters.owner === 'unassigned' && issue.assigned_to) return false;
+        if (!needle) return true;
+        return [
+          issue.title,
+          issue.summary,
+          issue.category,
+          issue.source,
+          issue.latest_route,
+          issue.fingerprint,
+        ].some((value) => value?.toLowerCase().includes(needle));
+      })
+      .sort((a, b) => {
+        const priority =
+          statusOrder[b.status] - statusOrder[a.status]
+          || severityOrder[b.severity] - severityOrder[a.severity]
+          || b.occurrence_count - a.occurrence_count;
+        return priority || Date.parse(b.last_seen_at) - Date.parse(a.last_seen_at);
+      });
+  }, [deferredSearch, filters, issues, user?.id]);
+
+  const updateIssue = async (
+    status: IssueStatus,
+    assignment: 'keep' | 'claim' | 'unassign' = 'keep',
+  ) => {
+    if (!selected) return;
+    if (status === 'resolved' && notes.trim().length < 3) {
+      setNotice('Add a short resolution note before resolving this issue.');
+      return;
+    }
+    setSaving(true);
+    const result = await errorLogService.manageIssue(
+      selected.id,
+      status,
+      notes.trim() || selected.resolution_notes,
+      assignment,
     );
-    setLogs(fetchedLogs);
-    setTotalCount(count);
-    setLoading(false);
-  };
-
-  const fetchErrorStats = async () => {
-    const fetchedStats = await errorLogService.getErrorStats();
-    setStats(fetchedStats);
-  };
-
-  const handleResolve = async (log: ErrorLog) => {
-    if (!resolutionNotes.trim()) {
-      alert('Please provide resolution notes');
+    if (!result.success) {
+      setNotice(result.error || 'The issue could not be updated.');
+      setSaving(false);
       return;
     }
-
-    const result = await errorLogService.resolveError({
-      id: log.id,
-      resolution_notes: resolutionNotes,
-    });
-
-    if (result.success) {
-      setSelectedLog(null);
-      setResolutionNotes('');
-      fetchErrorLogs();
-      fetchErrorStats();
-    } else {
-      alert(`Failed to resolve error: ${result.error}`);
-    }
+    await loadIssues(true);
+    setSelected((current) => current ? {
+      ...current,
+      status,
+      assigned_to:
+        assignment === 'claim' ? user?.id || current.assigned_to
+          : assignment === 'unassign' ? null
+            : current.assigned_to,
+      resolution_notes: notes.trim() || current.resolution_notes,
+    } : null);
+    setNotice(status === 'resolved' ? 'Issue resolved.' : 'Issue updated.');
+    setSaving(false);
   };
 
-  const handleUnresolve = async (logId: string) => {
-    const result = await errorLogService.unresolveError(logId);
-    if (result.success) {
-      fetchErrorLogs();
-      fetchErrorStats();
-    } else {
-      alert(`Failed to unresolve error: ${result.error}`);
-    }
-  };
-
-  const handleDelete = async (logId: string) => {
-    if (!confirm('Are you sure you want to delete this error log?')) {
-      return;
-    }
-
-    const result = await errorLogService.deleteError(logId);
-    if (result.success) {
-      fetchErrorLogs();
-      fetchErrorStats();
-    } else {
-      alert(`Failed to delete error: ${result.error}`);
-    }
-  };
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'text-red-600 bg-red-50';
-      case 'high': return 'text-orange-600 bg-orange-50';
-      case 'medium': return 'text-yellow-600 bg-yellow-50';
-      case 'low': return 'text-blue-600 bg-blue-50';
-      default: return 'text-gray-600 bg-gray-50';
-    }
-  };
-
-  const getSeverityIcon = (severity: string) => {
-    switch (severity) {
-      case 'critical': return <XOctagon className="w-4 h-4" />;
-      case 'high': return <AlertCircle className="w-4 h-4" />;
-      case 'medium': return <AlertTriangle className="w-4 h-4" />;
-      case 'low': return <Info className="w-4 h-4" />;
-      default: return <AlertTriangle className="w-4 h-4" />;
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'runtime': return 'text-purple-600 bg-purple-50';
-      case 'network': return 'text-blue-600 bg-blue-50';
-      case 'database': return 'text-red-600 bg-red-50';
-      case 'authentication': return 'text-orange-600 bg-orange-50';
-      case 'validation': return 'text-yellow-600 bg-yellow-50';
-      default: return 'text-gray-600 bg-gray-50';
-    }
-  };
-
-  const applyFilters = () => {
-    setCurrentPage(0);
-    fetchErrorLogs();
-  };
-
-  const clearFilters = () => {
-    setFilters({});
-    setCurrentPage(0);
-  };
+  const hasFilters = Boolean(
+    search || filters.severity || filters.category || filters.status !== 'active' || filters.owner !== 'all',
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
+    <div className="min-h-screen bg-[#f5f7fa] text-slate-950">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-[1500px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
           <Link
             to="/supa-admin"
-            className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-4"
+            className="inline-flex w-fit items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-900"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Supa Admin
+            <ArrowLeft className="h-4 w-4" />
+            Super Admin
           </Link>
-
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Error Logs</h1>
-              <p className="text-gray-600 mt-1">Monitor and manage application errors</p>
-            </div>
-            <button
-              onClick={fetchErrorLogs}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Errors</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+              <div className="flex items-center gap-3">
+                <span className="rounded-xl bg-slate-950 p-2.5 text-white">
+                  <Activity className="h-6 w-6" />
+                </span>
+                <div>
+                  <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Operations Inbox</h1>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Prioritized application health, recurrence, ownership, and resolution.
+                  </p>
+                </div>
               </div>
-              <AlertTriangle className="w-8 h-8 text-gray-400" />
             </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Unresolved</p>
-                <p className="text-3xl font-bold text-red-600">{stats.unresolved}</p>
+            <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 sm:flex">
+                <LockKeyhole className="h-4 w-4" />
+                Sensitive values are redacted
               </div>
-              <XCircle className="w-8 h-8 text-red-400" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Resolved</p>
-                <p className="text-3xl font-bold text-green-600">{stats.total - stats.unresolved}</p>
-              </div>
-              <CheckCircle className="w-8 h-8 text-green-400" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Critical</p>
-                <p className="text-3xl font-bold text-red-600">{stats.bySeverity.critical || 0}</p>
-              </div>
-              <XOctagon className="w-8 h-8 text-red-400" />
+              <button
+                type="button"
+                onClick={() => void loadIssues(true)}
+                disabled={refreshing}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
             </div>
           </div>
         </div>
+      </header>
 
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="p-4 border-b border-gray-200">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center text-gray-700 hover:text-gray-900"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              {showFilters ? 'Hide Filters' : 'Show Filters'}
-            </button>
+      <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Issue summary">
+          <MetricCard label="Active issues" value={stats.active} supporting="Needs review or action" icon={Inbox} tone="bg-slate-100 text-slate-700" />
+          <MetricCard label="Critical" value={stats.critical} supporting="Highest operational priority" icon={Zap} tone="bg-rose-100 text-rose-700" />
+          <MetricCard label="Regressions" value={stats.regressed} supporting="Returned after resolution" icon={RotateCcw} tone="bg-violet-100 text-violet-700" />
+          <MetricCard label="Unassigned" value={stats.unassigned} supporting="Waiting for an owner" icon={UserMinus} tone="bg-amber-100 text-amber-700" />
+        </section>
+
+        <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-center">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search issues, routes, fingerprints…"
+                aria-label="Search operational issues"
+                className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <select
+                aria-label="Filter by status"
+                value={filters.status || ''}
+                onChange={(event) => setFilters((current) => ({
+                  ...current,
+                  status: (event.target.value || undefined) as IssueFilters['status'],
+                }))}
+                className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
+              >
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="regressed">Regressed</option>
+                <option value="open">Open</option>
+                <option value="investigating">Investigating</option>
+                <option value="resolved">Resolved</option>
+                <option value="observed">Informational</option>
+                <option value="ignored">Ignored</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((open) => !open)}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-medium transition ${
+                  filtersOpen || filters.severity || filters.category || filters.owner !== 'all'
+                    ? 'border-slate-950 bg-slate-950 text-white'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <Filter className="h-4 w-4" />
+                More filters
+              </button>
+            </div>
           </div>
 
-          {showFilters && (
-            <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Error Type
-                </label>
-                <select
-                  value={filters.error_type || ''}
-                  onChange={(e) => setFilters({ ...filters, error_type: e.target.value || undefined })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All Types</option>
-                  <option value="runtime">Runtime</option>
-                  <option value="network">Network</option>
-                  <option value="database">Database</option>
-                  <option value="authentication">Authentication</option>
-                  <option value="validation">Validation</option>
-                  <option value="unknown">Unknown</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Severity
-                </label>
+          {filtersOpen && (
+            <div className="grid gap-3 border-b border-slate-200 bg-slate-50 p-4 sm:grid-cols-3">
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Severity
                 <select
                   value={filters.severity || ''}
-                  onChange={(e) => setFilters({ ...filters, severity: e.target.value || undefined })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  onChange={(event) => setFilters((current) => ({
+                    ...current,
+                    severity: (event.target.value || undefined) as IssueFilters['severity'],
+                  }))}
+                  className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium normal-case tracking-normal text-slate-700"
                 >
-                  <option value="">All Severities</option>
+                  <option value="">All severities</option>
                   <option value="critical">Critical</option>
                   <option value="high">High</option>
                   <option value="medium">Medium</option>
                   <option value="low">Low</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Environment
-                </label>
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Category
                 <select
-                  value={filters.environment || ''}
-                  onChange={(e) => setFilters({ ...filters, environment: e.target.value || undefined })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={filters.category || ''}
+                  onChange={(event) => setFilters((current) => ({
+                    ...current,
+                    category: (event.target.value || undefined) as IssueFilters['category'],
+                  }))}
+                  className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium normal-case tracking-normal text-slate-700"
                 >
-                  <option value="">All Environments</option>
-                  <option value="development">Development</option>
-                  <option value="production">Production</option>
+                  <option value="">All categories</option>
+                  {['runtime', 'network', 'database', 'authentication', 'validation', 'performance', 'system', 'unknown'].map((category) => (
+                    <option key={category} value={category}>{titleCase(category)}</option>
+                  ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
-                </label>
+              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Ownership
                 <select
-                  value={filters.resolved === undefined ? '' : filters.resolved ? 'true' : 'false'}
-                  onChange={(e) => setFilters({
-                    ...filters,
-                    resolved: e.target.value === '' ? undefined : e.target.value === 'true'
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={filters.owner || 'all'}
+                  onChange={(event) => setFilters((current) => ({
+                    ...current,
+                    owner: event.target.value as IssueFilters['owner'],
+                  }))}
+                  className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium normal-case tracking-normal text-slate-700"
                 >
-                  <option value="">All</option>
-                  <option value="false">Unresolved</option>
-                  <option value="true">Resolved</option>
+                  <option value="all">Everyone</option>
+                  <option value="mine">Assigned to me</option>
+                  <option value="unassigned">Unassigned</option>
                 </select>
-              </div>
+              </label>
+            </div>
+          )}
 
-              <div className="md:col-span-2 flex items-end space-x-2">
-                <button
-                  onClick={applyFilters}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Apply Filters
-                </button>
-                <button
-                  onClick={clearFilters}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                  Clear Filters
-                </button>
+          {loadError && (
+            <div className="m-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <p className="font-semibold">Operations data could not be loaded</p>
+                <p className="mt-0.5 text-rose-600">{loadError}</p>
               </div>
             </div>
           )}
-        </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Severity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Environment
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Message
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                      Loading...
-                    </td>
-                  </tr>
-                ) : logs.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                      No error logs found
-                    </td>
-                  </tr>
-                ) : (
-                  logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {format(new Date(log.created_at), 'MMM d, HH:mm:ss')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(log.error_type)}`}>
-                          {log.error_type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getSeverityColor(log.severity)}`}>
-                          {getSeverityIcon(log.severity)}
-                          <span className="ml-1">{log.severity}</span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          log.environment === 'production' ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50'
-                        }`}>
-                          {log.environment}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 max-w-md truncate">
-                        {log.error_message}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {log.resolved ? (
-                          <span className="flex items-center text-green-600">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Resolved
-                          </span>
-                        ) : (
-                          <span className="flex items-center text-red-600">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Unresolved
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => setSelectedLog(log)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          View
-                        </button>
-                        {!log.resolved ? (
-                          <button
-                            onClick={() => setSelectedLog(log)}
-                            className="text-green-600 hover:text-green-900"
-                          >
-                            Resolve
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleUnresolve(log.id)}
-                            className="text-yellow-600 hover:text-yellow-900"
-                          >
-                            Unresolve
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(log.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {totalCount > pageSize && (
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalCount)} of {totalCount} errors
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                  disabled={currentPage === 0}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                  disabled={(currentPage + 1) * pageSize >= totalCount}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
+          {loading ? (
+            <div className="flex min-h-80 items-center justify-center">
+              <RefreshCw className="h-7 w-7 animate-spin text-slate-400" aria-label="Loading issues" />
             </div>
-          )}
-        </div>
-      </div>
-
-      {selectedLog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Error Details</h2>
+          ) : filteredIssues.length === 0 ? (
+            <EmptyState filtered={hasFilters} />
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {filteredIssues.map((issue) => (
                 <button
+                  key={issue.id}
+                  type="button"
                   onClick={() => {
-                    setSelectedLog(null);
-                    setResolutionNotes('');
+                    setSelected(issue);
+                    setNotes(issue.resolution_notes || '');
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="group grid w-full gap-3 px-4 py-4 text-left transition hover:bg-slate-50 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-5"
                 >
-                  <XCircle className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Type</label>
-                    <span className={`inline-block mt-1 px-3 py-1 text-sm font-semibold rounded-full ${getTypeColor(selectedLog.error_type)}`}>
-                      {selectedLog.error_type}
+                  <div className="flex min-w-0 gap-3">
+                    <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${severityStyles[issue.severity]}`}>
+                      {issue.status === 'regressed'
+                        ? <RotateCcw className="h-4 w-4" />
+                        : issue.severity === 'critical' || issue.severity === 'high'
+                          ? <AlertTriangle className="h-4 w-4" />
+                          : <CircleDot className="h-4 w-4" />}
                     </span>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Severity</label>
-                    <span className={`inline-flex items-center mt-1 px-3 py-1 text-sm font-semibold rounded-full ${getSeverityColor(selectedLog.severity)}`}>
-                      {getSeverityIcon(selectedLog.severity)}
-                      <span className="ml-1">{selectedLog.severity}</span>
-                    </span>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Environment</label>
-                    <span className={`inline-block mt-1 px-3 py-1 text-sm font-semibold rounded-full ${
-                      selectedLog.environment === 'production' ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50'
-                    }`}>
-                      {selectedLog.environment}
-                    </span>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Time</label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {format(new Date(selectedLog.created_at), 'PPpp')}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Message</label>
-                  <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">
-                    {selectedLog.error_message}
-                  </p>
-                </div>
-
-                {selectedLog.error_stack && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Stack Trace</label>
-                    <pre className="mt-1 text-xs text-gray-900 bg-gray-50 p-3 rounded-lg overflow-x-auto">
-                      {selectedLog.error_stack}
-                    </pre>
-                  </div>
-                )}
-
-                {selectedLog.error_context && Object.keys(selectedLog.error_context).length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Context</label>
-                    <pre className="mt-1 text-xs text-gray-900 bg-gray-50 p-3 rounded-lg overflow-x-auto">
-                      {JSON.stringify(selectedLog.error_context, null, 2)}
-                    </pre>
-                  </div>
-                )}
-
-                {selectedLog.resolved && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Resolution</label>
-                    <div className="mt-1 bg-green-50 p-3 rounded-lg">
-                      <p className="text-sm text-green-900 mb-2">
-                        Resolved on {format(new Date(selectedLog.resolved_at!), 'PPpp')}
-                      </p>
-                      <p className="text-sm text-gray-900">{selectedLog.resolution_notes}</p>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-semibold text-slate-900">{issue.title}</p>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${statusStyles[issue.status]}`}>
+                          {issue.status}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                        <span>{titleCase(issue.category)}</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Activity className="h-3.5 w-3.5" />
+                          {issue.occurrence_count.toLocaleString()} {issue.occurrence_count === 1 ? 'occurrence' : 'occurrences'}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock3 className="h-3.5 w-3.5" />
+                          {formatDistanceToNow(new Date(issue.last_seen_at), { addSuffix: true })}
+                        </span>
+                        <span>{issue.assigned_to ? (issue.assigned_to === user?.id ? 'Owned by you' : 'Assigned') : 'Unassigned'}</span>
+                      </div>
                     </div>
                   </div>
-                )}
-
-                {!selectedLog.resolved && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Resolution Notes
-                    </label>
-                    <textarea
-                      value={resolutionNotes}
-                      onChange={(e) => setResolutionNotes(e.target.value)}
-                      placeholder="Describe how this error was resolved..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
-                      rows={4}
-                    />
-                    <button
-                      onClick={() => handleResolve(selectedLog)}
-                      className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Mark as Resolved
-                    </button>
+                  <div className="flex items-center justify-between gap-3 pl-12 sm:justify-end sm:pl-0">
+                    <span className={`rounded-lg border px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${severityStyles[issue.severity]}`}>
+                      {issue.severity}
+                    </span>
+                    <ChevronRight className="h-5 w-5 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500" />
                   </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+
+      {selected && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/30 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="issue-title">
+          <button className="absolute inset-0 cursor-default" onClick={() => setSelected(null)} aria-label="Close issue details" />
+          <aside className="relative flex h-full w-full max-w-2xl flex-col overflow-hidden bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-7">
+              <div className="min-w-0">
+                <div className="flex flex-wrap gap-2">
+                  <span className={`rounded-lg border px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${severityStyles[selected.severity]}`}>
+                    {selected.severity}
+                  </span>
+                  <span className={`rounded-lg px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${statusStyles[selected.status]}`}>
+                    {selected.status}
+                  </span>
+                  <span className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                    {titleCase(selected.category)}
+                  </span>
+                </div>
+                <h2 id="issue-title" className="mt-3 text-xl font-semibold tracking-tight text-slate-950">
+                  {selected.title}
+                </h2>
+                <p className="mt-1 font-mono text-xs text-slate-400">{selected.fingerprint}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close details"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-6 overflow-y-auto px-5 py-6 sm:px-7">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  ['Occurrences', selected.occurrence_count.toLocaleString()],
+                  ['First seen', format(new Date(selected.first_seen_at), 'dd MMM, HH:mm')],
+                  ['Last seen', formatDistanceToNow(new Date(selected.last_seen_at), { addSuffix: true })],
+                  ['Owner', selected.assigned_to === user?.id ? 'You' : selected.assigned_to ? 'Assigned' : 'None'],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {selected.summary && (
+                <section>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Safe summary</h3>
+                  <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                    {selected.summary}
+                  </p>
+                </section>
+              )}
+
+              <section>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Operational context</h3>
+                <dl className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200">
+                  {[
+                    ['Route', selected.latest_route || 'Not available'],
+                    ['Source', titleCase(selected.source)],
+                    ...Object.entries(selected.latest_context || {}).map(([key, value]) => [titleCase(key), String(value)]),
+                  ].map(([label, value]) => (
+                    <div key={label} className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 px-4 py-3 text-sm">
+                      <dt className="font-medium text-slate-500">{label}</dt>
+                      <dd className="break-words font-mono text-xs text-slate-700">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+
+              {selected.sample_stack && (
+                <details className="rounded-xl border border-slate-200">
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-700">
+                    Sanitized technical trace
+                  </summary>
+                  <pre className="max-h-64 overflow-auto border-t border-slate-200 bg-slate-950 p-4 text-xs leading-5 text-slate-300">
+                    {selected.sample_stack}
+                  </pre>
+                </details>
+              )}
+
+              <section>
+                <label htmlFor="resolution-notes" className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Triage and resolution notes
+                </label>
+                <textarea
+                  id="resolution-notes"
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  rows={4}
+                  maxLength={1200}
+                  placeholder="Record the cause, decision, fix, or reason for ignoring…"
+                  className="mt-2 w-full resize-none rounded-xl border border-slate-200 p-3 text-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                />
+                <p className="mt-1 text-right text-xs text-slate-400">{notes.length}/1200</p>
+              </section>
+            </div>
+
+            <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-7">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-2">
+                  {selected.assigned_to === user?.id ? (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => void updateIssue(selected.status, 'unassign')}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      <UserMinus className="h-4 w-4" /> Unassign
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => void updateIssue('investigating', 'claim')}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      <UserCheck className="h-4 w-4" /> Assign to me
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void updateIssue('ignored')}
+                    className="min-h-10 rounded-xl px-3 text-sm font-semibold text-slate-500 hover:bg-slate-200"
+                  >
+                    Ignore
+                  </button>
+                </div>
+                {selected.status === 'resolved' ? (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void updateIssue('open')}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    <RotateCcw className="h-4 w-4" /> Reopen
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void updateIssue('resolved')}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    Mark resolved
+                  </button>
                 )}
               </div>
             </div>
-          </div>
+          </aside>
+        </div>
+      )}
+
+      {notice && (
+        <div className="fixed bottom-5 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-medium text-white shadow-xl" role="status">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+          {notice}
         </div>
       )}
     </div>

@@ -470,7 +470,7 @@ export default function EnhancedSupaAdmin() {
                   className="mt-6 w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
                 >
                   <AlertTriangle className="w-5 h-5 text-red-600" />
-                  <span className="font-medium text-red-700">View Error Logs</span>
+                  <span className="font-medium text-red-700">Open Operations Inbox</span>
                 </Link>
               </div>
             </div>

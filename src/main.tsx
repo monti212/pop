@@ -1,3 +1,4 @@
+import './utils/consoleGuard';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
@@ -5,12 +6,12 @@ import App from './App.tsx';
 import './index.css';
 import { logger } from './utils/logger';
 import { validateEnvironmentVariables, logEnvironmentStatus } from './utils/envValidator';
-import { initializeSentry } from './utils/sentry';
+import { initializeObservability } from './utils/observability';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 const isDevelopment = import.meta.env.DEV;
 
-initializeSentry();
+initializeObservability();
 
 if (isDevelopment) {
   logger.info('🚀 Starting Uhuru Application...');
