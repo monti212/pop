@@ -140,34 +140,23 @@ export default function ModelSelector({
     const vh = window.innerHeight;
 
     // Measure current panel size (fallbacks for first paint)
-    const popRect = pop.getBoundingClientRect();
     const bubbleW = Math.min(280, Math.max(220, vw * 0.28));
-    const bubbleH = popRect.height || 260;
+    // offsetHeight is not affected by the opening scale animation. Measuring
+    // the transformed rectangle made the panel settle closer to the trigger
+    // than intended once the animation reached full size.
+    const bubbleH = pop.offsetHeight || 260;
 
     const btnRect = btn.getBoundingClientRect();
 
     let top: number;
     let left: number;
-    let side: Side;
-    let arrowTop: number | undefined;
+    const side: Side = "bottom";
+    const arrowTop = bubbleH - 2;
     let arrowLeft: number;
 
-    // Check if there's enough space above the button
-    const spaceAbove = btnRect.top;
-    const spaceBelow = vh - btnRect.bottom;
-    const preferAbove = spaceAbove >= bubbleH + GAP || spaceAbove > spaceBelow;
-
-    if (preferAbove) {
-      // Position above the button
-      top = btnRect.top - bubbleH - GAP;
-      side = "bottom"; // Arrow points down to button
-      arrowTop = bubbleH - 2; // Arrow at bottom of selector
-    } else {
-      // Position below the button
-      top = btnRect.bottom + GAP;
-      side = "top"; // Arrow points up to button
-      arrowTop = -5; // Arrow at top of selector
-    }
+    // The selector belongs to the composer, so keep it directly above its
+    // trigger rather than allowing it to drift into the middle of the chat.
+    top = btnRect.top - bubbleH - GAP;
 
     // Align horizontally - try to center on button first, then adjust for viewport
     const btnCenter = btnRect.left + btnRect.width / 2;
@@ -348,7 +337,6 @@ export default function ModelSelector({
                 top: coords.top,
                 left: coords.left,
                 width: 'min(280px, 28vw)',
-                height: 'clamp(200px,62vh,300px)',
                 maxWidth: 'calc(100vw - 24px)',
                 maxHeight: 'calc(100vh - 24px)',
               }),

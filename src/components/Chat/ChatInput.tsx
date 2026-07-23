@@ -21,8 +21,6 @@ interface ChatInputProps {
   onImageGenerate?: () => void;
   modelLabel?: string;
   onOpenModelSelector?: (anchorEl: HTMLElement) => void;
-  regionLabel?: string;
-  onOpenRegionSelector?: (anchorEl: HTMLElement) => void;
   imageModelLabel?: string;
   onOpenImageModelSelector?: (anchorEl: HTMLElement) => void;
   isImageMode?: boolean;
@@ -70,8 +68,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onImageGenerate,
   modelLabel,
   onOpenModelSelector,
-  regionLabel,
-  onOpenRegionSelector,
   imageModelLabel,
   onOpenImageModelSelector,
   isImageMode = false,
@@ -112,7 +108,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   // browseButtonRef removed - unused
   const modelSelectorBtnRef = useRef<HTMLButtonElement>(null);
-  const regionSelectorBtnRef = useRef<HTMLButtonElement>(null);
   const imageModelSelectorBtnRef = useRef<HTMLButtonElement>(null);
   // mediaRecorderRef removed - unused
   const recognitionRef = useRef<any>(null);
@@ -816,23 +811,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 
                 {/* U Files button removed as requested */}
                 
-                {/* Region Selector Trigger */}
-                {regionLabel && onOpenRegionSelector && (
-                  <button
-                    type="button"
-                    ref={regionSelectorBtnRef}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onOpenRegionSelector(regionSelectorBtnRef.current!);
-                    }}
-                    className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors duration-200 hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-800"
-                    title="Select region"
-                  >
-                    <span className="font-medium">{regionLabel}</span>
-                  </button>
-                )}
-
                 {/* Model Selector Trigger */}
                 {modelLabel && onOpenModelSelector && (
                   <button
@@ -843,7 +821,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                       e.stopPropagation();
                       onOpenModelSelector(modelSelectorBtnRef.current!);
                     }}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors duration-200 hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-800"
+                    className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors duration-200 hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-800"
                     title="Select AI model"
                   >
                     <span className="font-medium">{modelLabel}</span>

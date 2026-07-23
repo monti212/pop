@@ -9,7 +9,6 @@ import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
 import ModelSelector from './ModelSelector';
 import ImageModelSelector, { ImageModel } from './ImageModelSelector';
-import RegionSelector from '../RegionSelector';
 import FilesBrowser from './FilesBrowser';
 import SettingsModal from '../Settings/SettingsModal';
 import ImageGenerationLoader from '../ImageGenerationLoader';
@@ -28,7 +27,7 @@ import {
   deleteMessagesAfter,
   generateImage,
 } from '../../services/chatService';
-import { LONG_RESPONSE_THRESHOLD, REGIONS } from '../../utils/constants';
+import { LONG_RESPONSE_THRESHOLD } from '../../utils/constants';
 import { Conversation, DiagramContent } from '../../types/chat';
 import { saveChatStateBackup, clearChatStateBackup } from '../../utils/chatStateRecovery';
 
@@ -36,6 +35,10 @@ interface TypingState {
   isTyping: boolean;
   message: string;
 }
+
+// PoP's deployment is Ghana-specific. Keep location grounding as an invariant
+// rather than exposing a control that can silently move answers out of scope.
+const CHAT_REGION = 'ghana';
 
 interface AgentConfig {
   id: string;
@@ -97,10 +100,6 @@ export default function ChatInterface({
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const [modelSelectorAnchorEl, setModelSelectorAnchorEl] = useState<HTMLElement | null>(null);
 
-  // Region selector state
-  const [regionSelectorOpen, setRegionSelectorOpen] = useState(false);
-  const [regionSelectorAnchorEl, setRegionSelectorAnchorEl] = useState<HTMLElement | null>(null);
-
   // Image model selector state
   const [imageModelSelectorOpen, setImageModelSelectorOpen] = useState(false);
   const [imageModelSelectorAnchorEl, setImageModelSelectorAnchorEl] = useState<HTMLElement | null>(null);
@@ -140,7 +139,7 @@ export default function ChatInterface({
   const verbosity = deepThinkMap[modelVersion] ?? "low";
   const { interfaceLanguage, responseLanguage, setInterfaceLanguage, setResponseLanguage } = useLanguage();
   const selectedLanguage = responseLanguage;
-  const [selectedRegion, setSelectedRegion] = useState('global');
+  const selectedRegion = CHAT_REGION;
 
   // Curriculum scope: grade band + subject that ground answers in the syllabus
   // (sent to v4 -> get_pinned_context). '' = unscoped. Persisted across sessions.
@@ -196,14 +195,6 @@ export default function ChatInterface({
     return verbosityMap[currentVerbosity];
   };
 
-  // Generate region label for the trigger button
-  const getRegionLabel = () => {
-    const selectedRegionObject = REGIONS.find(region => region.code === selectedRegion) || REGIONS[0];
-    return selectedRegionObject.flag
-      ? `${selectedRegionObject.flag} ${selectedRegionObject.name}`
-      : selectedRegionObject.name;
-  };
-
   // Generate image model label for the trigger button
   const getImageModelLabel = () => {
     return selectedImageModel === 'craft-1' ? 'Craft-1' : 'Craft-2';
@@ -226,25 +217,6 @@ export default function ChatInterface({
   const handleCloseModelSelector = useCallback(() => {
     setModelSelectorOpen(false);
     setModelSelectorAnchorEl(null);
-  }, []);
-
-  // Handle toggling region selector (click to open, click again to close)
-  const handleOpenRegionSelector = useCallback((anchorEl: HTMLElement) => {
-    if (regionSelectorOpen) {
-      // If already open, close it
-      setRegionSelectorOpen(false);
-      setRegionSelectorAnchorEl(null);
-    } else {
-      // Otherwise, open it
-      setRegionSelectorAnchorEl(anchorEl);
-      setRegionSelectorOpen(true);
-    }
-  }, [regionSelectorOpen]);
-
-  // Handle closing region selector
-  const handleCloseRegionSelector = useCallback(() => {
-    setRegionSelectorOpen(false);
-    setRegionSelectorAnchorEl(null);
   }, []);
 
   // Handle toggling image model selector
@@ -1420,8 +1392,6 @@ export default function ChatInterface({
                     onImageGenerate={handleImageGenerationRequest}
                     modelLabel={getModelLabel()}
                     onOpenModelSelector={handleOpenModelSelector}
-                    regionLabel={getRegionLabel()}
-                    onOpenRegionSelector={handleOpenRegionSelector}
                     onOpenFilesBrowser={handleOpenFilesBrowser}
                     imageModelLabel={getImageModelLabel()}
                     onOpenImageModelSelector={handleOpenImageModelSelector}
@@ -1619,8 +1589,6 @@ export default function ChatInterface({
                   onImageGenerate={handleImageGenerationRequest}
                   modelLabel={getModelLabel()}
                   onOpenModelSelector={handleOpenModelSelector}
-                  regionLabel={getRegionLabel()}
-                  onOpenRegionSelector={handleOpenRegionSelector}
                   onOpenFilesBrowser={handleOpenFilesBrowser}
                   imageModelLabel={getImageModelLabel()}
                   onOpenImageModelSelector={handleOpenImageModelSelector}
@@ -1648,20 +1616,6 @@ export default function ChatInterface({
           open={modelSelectorOpen}
           onClose={handleCloseModelSelector}
           anchorEl={modelSelectorAnchorEl}
-        />
-      )}
-
-      {/* Region Selector - Rendered as portal when open */}
-      {regionSelectorOpen && regionSelectorAnchorEl && (
-        <RegionSelector
-          selectedRegion={selectedRegion}
-          onChange={(region) => {
-            setSelectedRegion(region);
-            handleCloseRegionSelector();
-          }}
-          open={regionSelectorOpen}
-          onClose={handleCloseRegionSelector}
-          anchorEl={regionSelectorAnchorEl}
         />
       )}
 
