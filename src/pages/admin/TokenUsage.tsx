@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, RefreshCw, Zap, Users, AlertTriangle,
   Clock, Activity, Package,
-  Image as ImageIcon, Plus
+  Image as ImageIcon, Plus, CalendarDays, Layers3, Gauge
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -20,7 +20,6 @@ const Brand = {
 };
 
 const DAILY_LIMIT = 1_000_000;
-const DAILY_WARNING_THRESHOLD = Math.floor(DAILY_LIMIT * 0.8); // amber badge at 80% of daily cap
 
 // Quota/usage counters are denominated in CREDITS (raw_tokens x model.credit_weight).
 // U4.0 = 1.0, U4.3 = 2.5. Legacy pre-metering rows have weight 1.0, so historical
@@ -111,12 +110,11 @@ const TokenUsage: React.FC = () => {
   const organizationName = profile?.organization_name || 'Pencils of Promise';
   const isSupaAdminView = location.pathname.startsWith('/supa-admin');
   const canEdit = isSupaAdminView && profile?.team_role === 'supa_admin';
-  // The org-admin view (/admin) shows usage as "Ed Tokens" (1 credit = 100 Ed Tokens); the internal
-  // supa-admin view keeps raw "credits". Percentages are ratios, so they're unchanged by the x100.
+  // Stored quota counters are already the canonical display scale. The previous admin formatter
+  // multiplied these values by 100, which inflated every Ed Token limit and usage figure.
   const isEd = !isSupaAdminView;
   const unit = isEd ? 'Ed Tokens' : 'Credits';
-  const unitS = isEd ? 'Ed Token' : 'Credit';
-  const fmtU = (creditVal: number) => (creditVal * (isEd ? 100 : 1)).toLocaleString();
+  const fmtU = (value: number) => Number(value || 0).toLocaleString();
   const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview');
   const [metrics, setMetrics] = useState<TokenMetrics | null>(null);
   const [userUsage, setUserUsage] = useState<UserTokenUsage[]>([]);
@@ -395,7 +393,7 @@ const TokenUsage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: Brand.sand }}>
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f7fa]">
         <div className="flex items-center gap-3">
           <RefreshCw className="w-8 h-8 animate-spin" style={{ color: Brand.teal }} />
           <p className="text-lg" style={{ color: Brand.navy }}>Loading token usage data...</p>
@@ -406,7 +404,7 @@ const TokenUsage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: Brand.sand }}>
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f7fa]">
         <div className="max-w-md w-full bg-white rounded-xl p-6 shadow-lg border" style={{ borderColor: Brand.line }}>
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
@@ -427,33 +425,30 @@ const TokenUsage: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: Brand.sand }}>
-      <AdminSidebar />
+    <div className="flex h-screen overflow-hidden bg-[#f5f7fa]">
+      {!isSupaAdminView && <AdminSidebar />}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <header
-          className="sticky top-0 z-40 border-b"
-          style={{ borderColor: Brand.line, background: 'rgba(247,245,242,0.95)', backdropFilter: 'blur(10px)' }}
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-5 py-4 sm:px-8">
             <div className="flex items-center gap-3">
               <Link
                 to={isSupaAdminView ? '/supa-admin' : '/admin'}
-                className="p-2 rounded-lg hover:bg-white/80 transition-colors"
-                style={{ color: Brand.navy }}
-                title={`Back to ${isSupaAdminView ? 'Supa Admin' : 'Admin'} Dashboard`}
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                title={`Back to ${isSupaAdminView ? 'Super Admin' : 'Admin'} Dashboard`}
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Back</span>
               </Link>
-              <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: Brand.orange }}>
-                <Zap className="w-4 h-4 text-white" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white">
+                <Zap className="h-4 w-4" />
               </div>
               <div>
-                <div className="font-semibold" style={{ color: Brand.navy }}>
-                  {isSupaAdminView ? 'Supa Admin Token Usage' : 'Token Usage'}
+                <div className="font-semibold text-slate-950">
+                  Token usage
                 </div>
-                <div className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
-                  {metrics?.organization_name || organizationName || 'Organization'} - Real-time tracking
+                <div className="text-xs text-slate-500">
+                  {metrics?.organization_name || organizationName || 'Organization'} · Allocation control
                 </div>
               </div>
             </div>
@@ -461,20 +456,18 @@ const TokenUsage: React.FC = () => {
               <button
                 onClick={fetchAllData}
                 disabled={isRefreshing}
-                className="p-2 rounded-lg hover:bg-white/80 transition-colors disabled:opacity-50"
-                style={{ color: Brand.navy }}
+                className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
                 title="Refresh data"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
-              <label className="flex items-center gap-2 text-xs" style={{ color: Brand.navy }}>
-                <span>Auto-refresh</span>
+              <label className="hidden items-center gap-2 text-xs text-slate-600 sm:flex">
+                <span>Live refresh</span>
                 <input
                   type="checkbox"
                   checked={autoRefresh}
                   onChange={(e) => setAutoRefresh(e.target.checked)}
-                  className="rounded"
-                  style={{ accentColor: Brand.teal }}
+                  className="rounded accent-cyan-700"
                 />
               </label>
             </div>
@@ -483,7 +476,7 @@ const TokenUsage: React.FC = () => {
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+          <div className="mx-auto max-w-[1500px] px-5 py-8 sm:px-8">
             {/* Alerts */}
             {(monthlyAlertLevel !== 'none' || imageAlertLevel !== 'none' || expiringRefills.length > 0) && (
               <div className="mb-6 space-y-3">
@@ -565,7 +558,7 @@ const TokenUsage: React.FC = () => {
             )}
 
             {/* Tab Navigation */}
-            <div className="flex gap-2 mb-6">
+            <div className="mb-6 inline-flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
               {[
                 { key: 'overview', label: 'Organization Overview', icon: Activity },
                 { key: 'users', label: 'Individual Users', icon: Users },
@@ -573,15 +566,11 @@ const TokenUsage: React.FC = () => {
                 <button
                   key={key}
                   onClick={() => setActiveTab(key as any)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeTab === key ? 'shadow-md' : 'hover:bg-white/50'
+                  className={`flex min-h-10 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                    activeTab === key
+                      ? 'bg-slate-950 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
-                  style={{
-                    background: activeTab === key ? Brand.teal : 'white',
-                    color: activeTab === key ? 'white' : Brand.navy,
-                    borderColor: Brand.line,
-                    border: activeTab === key ? 'none' : `1px solid ${Brand.line}`,
-                  }}
                 >
                   <Icon className="w-4 h-4" />
                   {label}
@@ -597,70 +586,118 @@ const TokenUsage: React.FC = () => {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                {/* Token Balance Summary */}
-                <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold" style={{ color: Brand.navy }}>
-                      {unitS} Balance Summary
-                    </h3>
-                    <div className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: Brand.teal, color: 'white' }}>
-                      {defaultModelName} Default
+                {/* Quota hierarchy: contract, month, and day are intentionally separate scopes. */}
+                <section aria-labelledby="quota-hierarchy-heading">
+                  <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        Allocation control
+                      </p>
+                      <h2 id="quota-hierarchy-heading" className="mt-1 text-xl font-semibold text-slate-950">
+                        Limits by time horizon
+                      </h2>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Each limit is independent. Usage in one period does not redefine another limit.
+                      </p>
                     </div>
+                    <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                      Displayed in {unit}
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        Total {unitS} Cap
-                      </div>
-                      <div className="text-3xl font-bold" style={{ color: Brand.navy }}>
-                        {fmtU(metrics.total_token_cap)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        {unit} Used YTD
-                      </div>
-                      <div className="text-3xl font-bold" style={{ color: Brand.orange }}>
-                        {fmtU(metrics.used_text_total_ytd)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm mb-1" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        {unit} Remaining
-                      </div>
-                      <div className="text-3xl font-bold" style={{ color: Brand.teal }}>
-                        {fmtU(metrics.tokens_remaining)}
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    {[
+                      {
+                        title: 'Total limit',
+                        scope: 'Full contract allocation',
+                        usedLabel: 'Used year to date',
+                        limit: metrics.total_token_cap,
+                        used: metrics.used_text_total_ytd,
+                        icon: Layers3,
+                        tone: 'bg-violet-50 text-violet-700',
+                      },
+                      {
+                        title: 'Monthly limit',
+                        scope: 'Resets each calendar month',
+                        usedLabel: 'Used this month',
+                        limit: metrics.monthly_cap,
+                        used: metrics.used_text_this_month,
+                        icon: CalendarDays,
+                        tone: 'bg-cyan-50 text-cyan-700',
+                      },
+                      {
+                        title: 'Daily limit',
+                        scope: 'Resets every day',
+                        usedLabel: 'Used today',
+                        limit: DAILY_LIMIT,
+                        used: metrics.used_text_today,
+                        icon: Gauge,
+                        tone: 'bg-emerald-50 text-emerald-700',
+                      },
+                    ].map(({ title, scope, usedLabel, limit, used, icon: Icon, tone }) => {
+                      const percent = limit > 0 ? (used / limit) * 100 : 0;
+                      const overage = Math.max(0, used - limit);
+                      const remaining = Math.max(0, limit - used);
+                      const isOver = overage > 0;
+
+                      return (
+                        <article key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+                              <p className="mt-0.5 text-xs text-slate-500">{scope}</p>
+                            </div>
+                            <span className={`rounded-xl p-2.5 ${tone}`}>
+                              <Icon className="h-5 w-5" aria-hidden="true" />
+                            </span>
+                          </div>
+
+                          <div className="mt-6">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Limit</p>
+                            <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
+                              {fmtU(limit)}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">{unit}</p>
+                          </div>
+
+                          <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                isOver ? 'bg-rose-500' : percent >= 80 ? 'bg-amber-500' : 'bg-cyan-600'
+                              }`}
+                              style={{ width: `${Math.min(percent, 100)}%` }}
+                            />
+                          </div>
+
+                          <div className="mt-3 flex items-start justify-between gap-4 text-sm">
+                            <div>
+                              <p className="text-slate-500">{usedLabel}</p>
+                              <p className="mt-0.5 font-semibold text-slate-900">{fmtU(used)}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-slate-500">{isOver ? 'Over limit by' : 'Remaining'}</p>
+                              <p className={`mt-0.5 font-semibold ${isOver ? 'text-rose-700' : 'text-emerald-700'}`}>
+                                {fmtU(isOver ? overage : remaining)}
+                              </p>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
 
-                  <div className="mt-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        Usage Progress
-                      </span>
-                      <span className="text-sm font-semibold" style={{ color: Brand.navy }}>
-                        {metrics.ytd_usage_percent.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${Math.min(metrics.ytd_usage_percent, 100)}%`,
-                          background: metrics.ytd_usage_percent >= 90 ? '#ef4444' : metrics.ytd_usage_percent >= 75 ? Brand.orange : Brand.teal
-                        }}
-                      />
-                    </div>
+                  <div className="mt-4 flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                    <span>
+                      Monthly rollover: <strong className="text-slate-900">{fmtU(metrics.rollover_tokens)} {unit}</strong>
+                    </span>
+                    <span>
+                      Refill balance: <strong className="text-slate-900">{fmtU(metrics.refill_balance)} {unit}</strong>
+                    </span>
+                    <span>
+                      Default model: <strong className="text-slate-900">{defaultModelName}</strong>
+                    </span>
                   </div>
-
-                  <div className="mt-4 pt-4 border-t" style={{ borderColor: Brand.line }}>
-                    <p className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
-                      Need more {unit}? <span className="font-semibold">Contact sales for refill options</span>
-                    </p>
-                  </div>
-                </div>
+                </section>
 
                 {/* Per-model + cache analytics: internal supa-admin view only (org/Ed-Token view keeps a clean meter). */}
                 {isSupaAdminView && (<>
@@ -744,101 +781,6 @@ const TokenUsage: React.FC = () => {
                   })()}
                 </div>
                 </>)}
-
-                {/* Monthly Token Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
-                    <h3 className="text-lg font-semibold mb-4" style={{ color: Brand.navy }}>
-                      Monthly {unitS} Metrics
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Used This Month</span>
-                        <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          {fmtU(metrics.used_text_this_month)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Monthly Cap</span>
-                        <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          {fmtU(metrics.monthly_cap)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Monthly Balance</span>
-                        <span className="text-lg font-bold" style={{ color: Brand.teal }}>
-                          {fmtU(metrics.monthly_balance)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Rollover from Prev Month</span>
-                        <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          {fmtU(metrics.rollover_tokens)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Monthly Progress</span>
-                        <span className="text-sm font-semibold" style={{ color: Brand.navy }}>
-                          {metrics.monthly_usage_percent.toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.min(metrics.monthly_usage_percent, 100)}%`,
-                            background: metrics.monthly_usage_percent >= 95 ? '#ef4444' : metrics.monthly_usage_percent >= 80 ? Brand.orange : Brand.teal
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
-                    <h3 className="text-lg font-semibold mb-4" style={{ color: Brand.navy }}>
-                      Daily Usage
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>{unit} Used Today</span>
-                        <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          {fmtU(metrics.used_text_today)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Daily Limit</span>
-                        <span className="text-lg font-bold" style={{ color: Brand.navy }}>
-                          {fmtU(DAILY_LIMIT)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Remaining Today</span>
-                        <span className="text-lg font-bold" style={{ color: Brand.teal }}>
-                          {fmtU(Math.max(0, DAILY_LIMIT - metrics.used_text_today))}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>Daily Progress</span>
-                        <span className="text-sm font-semibold" style={{ color: Brand.navy }}>
-                          {metrics.daily_usage_percent.toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.min(metrics.daily_usage_percent, 100)}%`,
-                            background: metrics.daily_usage_percent >= 90 ? '#ef4444' : metrics.daily_usage_percent >= 75 ? Brand.orange : Brand.teal
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Image Generation Statistics */}
                 <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
@@ -944,7 +886,7 @@ const TokenUsage: React.FC = () => {
                           Total Refill Balance
                         </span>
                         <span className="text-2xl font-bold" style={{ color: Brand.teal }}>
-                          {metrics.refill_balance.toLocaleString()}
+                          {fmtU(metrics.refill_balance)} {unit}
                         </span>
                       </div>
                     </div>
@@ -992,13 +934,13 @@ const TokenUsage: React.FC = () => {
                             return (
                               <tr key={refill.id} className={isExpired || isFullyConsumed ? 'opacity-50' : ''}>
                                 <td className="px-4 py-3 text-sm font-semibold" style={{ color: Brand.navy }}>
-                                  {refill.amount.toLocaleString()}
+                                  {fmtU(refill.amount)}
                                 </td>
                                 <td className="px-4 py-3 text-sm" style={{ color: Brand.orange }}>
-                                  {refill.consumed.toLocaleString()}
+                                  {fmtU(refill.consumed)}
                                 </td>
                                 <td className="px-4 py-3 text-sm font-semibold" style={{ color: Brand.teal }}>
-                                  {(refill.amount - refill.consumed).toLocaleString()}
+                                  {fmtU(refill.amount - refill.consumed)}
                                 </td>
                                 <td className="px-4 py-3 text-sm" style={{ color: Brand.navy, opacity: 0.6 }}>
                                   {new Date(refill.purchased_at).toLocaleDateString()}
@@ -1034,58 +976,17 @@ const TokenUsage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Enforcement Status */}
-                <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
-                  <h3 className="text-lg font-semibold mb-4" style={{ color: Brand.navy }}>
-                    Enforcement Status
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-lg border" style={{ borderColor: Brand.line }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium" style={{ color: Brand.navy }}>Daily Limit</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          metrics.used_text_today >= DAILY_LIMIT ? 'bg-red-100 text-red-700' :
-                          metrics.used_text_today >= DAILY_WARNING_THRESHOLD ? 'bg-amber-100 text-amber-700' :
-                          'bg-green-100 text-green-700'
-                        }`}>
-                          {metrics.used_text_today >= DAILY_LIMIT ? 'Exceeded' : 'OK'}
-                        </span>
-                      </div>
-                      <div className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        {metrics.used_text_today.toLocaleString()} / {DAILY_LIMIT.toLocaleString()} tokens
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-lg border" style={{ borderColor: Brand.line }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium" style={{ color: Brand.navy }}>Per-Chat Limit</span>
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                          OK
-                        </span>
-                      </div>
-                      <div className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        7,500 tokens per chat
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-lg border" style={{ borderColor: Brand.line }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium" style={{ color: Brand.navy }}>Monthly Limit</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          metrics.used_text_this_month >= metrics.monthly_cap ? 'bg-red-100 text-red-700' :
-                          metrics.used_text_this_month >= metrics.monthly_cap * 0.9 ? 'bg-amber-100 text-amber-700' :
-                          'bg-green-100 text-green-700'
-                        }`}>
-                          {metrics.used_text_this_month >= metrics.monthly_cap ?
-                            (metrics.refill_balance > 0 ? 'Using Refills' : 'Exceeded') :
-                            'OK'}
-                        </span>
-                      </div>
-                      <div className="text-xs" style={{ color: Brand.navy, opacity: 0.6 }}>
-                        {metrics.used_text_this_month.toLocaleString()} / {metrics.monthly_cap.toLocaleString()} tokens
-                      </div>
-                    </div>
+                {/* This safeguard is deliberately separate from the three allocation periods above. */}
+                <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">Per-chat safeguard</h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                      A conversation-level safety ceiling, separate from total, monthly, and daily allocation limits.
+                    </p>
                   </div>
+                  <span className="w-fit rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                    {fmtU(7_500)} {unit} per chat
+                  </span>
                 </div>
 
                 {/* Purchase History */}
@@ -1130,7 +1031,7 @@ const TokenUsage: React.FC = () => {
                                 {new Date(purchase.purchase_date).toLocaleDateString()}
                               </td>
                               <td className="px-4 py-3 text-sm font-semibold" style={{ color: Brand.teal }}>
-                                {purchase.tokens_purchased.toLocaleString()}
+                                {fmtU(purchase.tokens_purchased)}
                               </td>
                               <td className="px-4 py-3 text-sm font-semibold" style={{ color: Brand.navy }}>
                                 {purchase.currency} {purchase.amount_paid.toLocaleString()}
@@ -1211,10 +1112,10 @@ const TokenUsage: React.FC = () => {
                                 {user.user_email}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" style={{ color: Brand.teal }}>
-                                {user.used_text_this_month.toLocaleString()}
+                                {fmtU(user.used_text_this_month)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" style={{ color: Brand.orange }}>
-                                {user.used_text_total_ytd.toLocaleString()}
+                                {fmtU(user.used_text_total_ytd)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: Brand.navy }}>
                                 {user.image_count_craft1.toLocaleString()}
