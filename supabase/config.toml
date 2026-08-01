@@ -1,5 +1,12 @@
 project_id = "${SUPABASE_PROJECT_ID}"
 
+# Required for background tasks (EdgeRuntime.waitUntil) to complete locally.
+# Under the default policy the CLI kills the worker the moment the response is
+# sent, so token metering silently never runs and local testing reports a false
+# pass. Does not affect deployed functions.
+[edge_runtime]
+policy = "per_worker"
+
 [auth]
 enable_signup = true
 

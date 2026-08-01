@@ -31,6 +31,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { sanitizeResponse } from '../_shared/identity_guard.ts';
+import { settleInBackground } from '../_shared/stream_metering.ts';
 
 const ALLOWED_ORIGINS = [
   'https://pop.greyed.org',
@@ -343,18 +344,26 @@ Deno.serve(async (req: Request) => {
       let full = '';
       let usage: any = null;
 
-      const finish = async () => {
-        const clean = sanitizeResponse(full).sanitized;
-        send('message.completed', { text: clean });
-        try { controller.close(); } catch { /* already closed */ }
-
-        // Meter AFTER responding so the user never waits on bookkeeping.
-        const totalTokens = Number(usage?.total_tokens ?? 0) ||
-          (estimated + estimateTokens(full));
+      /**
+       * Write the usage row. Never rejects — metering must not be able to break a reply.
+       *
+       * supabase-js RESOLVES with { data, error } when the database rejects a call; it
+       * does not throw. A try/catch alone therefore swallows every DB-level failure and
+       * the success log still prints. The `error` field has to be read explicitly.
+       */
+      const recordUsage = async () => {
+        const reported = Number(usage?.total_tokens ?? 0);
+        // U4.3 is a reasoning model: thinking tokens are billed upstream but never appear
+        // in `full`, so the character-count estimate is a FLOOR, not a measurement. Trust
+        // the reported total whenever we have one, and flag rows that fell back to the
+        // estimate so under-metered requests stay identifiable.
+        const estimatedOnly = reported <= 0;
+        const totalTokens = estimatedOnly ? estimated + estimateTokens(full) : reported;
         const cachedTokens = Number(usage?.prompt_tokens_details?.cached_tokens ?? 0);
+        const reasoningTokens = Number(usage?.completion_tokens_details?.reasoning_tokens ?? 0);
 
         try {
-          const { data: rec } = await supabase.rpc('record_uhuru_token_usage_v2', {
+          const { data: rec, error } = await supabase.rpc('record_uhuru_token_usage_v2', {
             p_user_id: userId,
             p_tokens_used: Math.max(1, Math.round(totalTokens)),
             p_model_key: modelKey,
@@ -364,10 +373,37 @@ Deno.serve(async (req: Request) => {
             p_image_quality: null,
             p_cached_tokens: Math.max(0, Math.round(cachedTokens)),
           });
-          console.log(JSON.stringify({ evt: 'u4.metered', modelKey, totalTokens, cachedTokens, result: rec }));
+
+          if (error) {
+            console.error(JSON.stringify({
+              evt: 'u4.meter_failed', modelKey, totalTokens, cachedTokens,
+              code: error.code, message: error.message, details: error.details,
+            }));
+            return;
+          }
+
+          console.log(JSON.stringify({
+            evt: 'u4.metered', modelKey, totalTokens, cachedTokens, reasoningTokens,
+            estimatedOnly, result: rec,
+          }));
         } catch (e) {
-          console.error('metering failed', e);
+          console.error(JSON.stringify({ evt: 'u4.meter_threw', modelKey, error: String(e) }));
         }
+      };
+
+      const finish = async () => {
+        const clean = sanitizeResponse(full).sanitized;
+        send('message.completed', { text: clean });
+
+        // Metering MUST outlive the response stream. Starting it AFTER controller.close()
+        // lets the edge runtime tear the isolate down mid-write — which is precisely how
+        // the meter froze when U4 became the default chat path: chat kept working, the
+        // ledger silently stopped. The reply text is already flushed above, so the cost
+        // of settling first is a delayed stream close, never a delayed answer.
+        // See _shared/stream_metering.test.ts for the regression coverage.
+        await settleInBackground(recordUsage());
+
+        try { controller.close(); } catch { /* already closed */ }
       };
 
       try {
