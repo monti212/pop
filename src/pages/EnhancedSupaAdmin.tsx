@@ -19,6 +19,10 @@ interface LiveMetrics {
   totalTokensUsed: number;
   tokensUsedToday: number;
   tokensUsedThisMonth: number;
+  /** Credits consumed year to date. Read directly — never derived as cap − remaining,
+   *  which understates usage as soon as a refill exists. */
+  usedTextYtd: number;
+  /** Clamped at 0 and INCLUSIVE of unexpired refills (get_token_metrics.total_plan_balance). */
   tokenCapRemaining: number;
   totalConversations: number;
   totalMessages: number;
@@ -82,10 +86,31 @@ export default function EnhancedSupaAdmin() {
       ]);
 
       const today = new Date().toISOString().split('T')[0];
-      const [messagesTodayData, tokenBalanceData] = await Promise.all([
+      const [messagesTodayData, tokenBalanceData, tokenMetricsData] = await Promise.all([
         supabase.from('messages').select('*', { count: 'exact', head: true }).gte('created_at', today),
-        supabase.from('organization_token_balances').select('*').eq('organization_name', 'Pencils of Promise').maybeSingle()
+        supabase.from('organization_token_balances').select('*').eq('organization_name', 'Pencils of Promise').maybeSingle(),
+        // Balances MUST come from get_token_metrics, not from the raw row: it is the
+        // only source that clamps at zero and adds unexpired refills. Subtracting
+        // used_text_total_ytd from total_token_cap by hand reports a negative balance
+        // once the org is over cap, and ignores every refill ever purchased.
+        supabase.rpc('get_token_metrics', { p_organization_name: 'Pencils of Promise' })
       ]);
+
+      const tokenMetrics: any = Array.isArray(tokenMetricsData.data)
+        ? tokenMetricsData.data[0]
+        : tokenMetricsData.data;
+
+      if (tokenMetricsData.error) {
+        console.error('get_token_metrics failed; balances fall back to the raw row:', tokenMetricsData.error.message);
+      }
+
+      const usedTextYtd = Number(tokenMetrics?.used_text_total_ytd ?? tokenBalanceData.data?.used_text_total_ytd ?? 0);
+      const totalTokenCap = Number(tokenMetrics?.total_token_cap ?? tokenBalanceData.data?.total_token_cap ?? 10_250_000);
+      const refillBalance = Number(tokenMetrics?.refill_balance ?? 0);
+      // total_plan_balance = GREATEST(0, cap - ytd) + refills
+      const tokenCapRemaining = Number(
+        tokenMetrics?.total_plan_balance ?? Math.max(0, totalTokenCap - usedTextYtd) + refillBalance
+      );
 
       const newMetrics: LiveMetrics = {
         timestamp: new Date().toISOString(),
@@ -96,18 +121,19 @@ export default function EnhancedSupaAdmin() {
         totalTokensUsed: orgData.data?.total_tokens_used || 0,
         tokensUsedToday: tokenBalanceData.data?.used_text_today || 0,
         tokensUsedThisMonth: tokenBalanceData.data?.used_text_this_month || 0,
-        tokenCapRemaining: (tokenBalanceData.data?.total_token_cap || 10250000) - (tokenBalanceData.data?.used_text_total_ytd || 0),
+        usedTextYtd,
+        tokenCapRemaining,
         totalConversations: conversationsData.count || 0,
         totalMessages: messagesData.count || 0,
         messagesToday: messagesTodayData.count || 0,
         totalFilesProcessed: orgData.data?.total_files_processed || 0,
         imagesGeneratedToday: tokenBalanceData.data?.image_low_used || 0,
         totalImagesGenerated: (tokenBalanceData.data?.image_low_used || 0) + (tokenBalanceData.data?.image_med_used || 0) + (tokenBalanceData.data?.image_high_used || 0),
-        totalTokenCap: tokenBalanceData.data?.total_token_cap || 10_250_000,
+        totalTokenCap,
         monthlyTokenCap: tokenBalanceData.data?.monthly_token_cap || 833_333,
         dailyTokenCap: tokenBalanceData.data?.daily_token_cap || DAILY_LIMIT,
         enforcementEnabled: tokenBalanceData.data?.enforcement_enabled ?? false,
-        refillBalance: 0,
+        refillBalance,
         monthlyUsagePercent: tokenBalanceData.data ? (tokenBalanceData.data.used_text_this_month / (tokenBalanceData.data.monthly_token_cap || 833_333)) * 100 : 0,
         dailyUsagePercent: tokenBalanceData.data ? (tokenBalanceData.data.used_text_today / (tokenBalanceData.data.daily_token_cap || DAILY_LIMIT)) * 100 : 0,
       };
@@ -442,13 +468,22 @@ export default function EnhancedSupaAdmin() {
                       <div
                         className="h-full rounded-full"
                         style={{
-                          width: `${((metrics.totalTokenCap - metrics.tokenCapRemaining) / metrics.totalTokenCap) * 100}%`,
+                          width: `${Math.min(100, Math.max(0, (metrics.usedTextYtd / (metrics.totalTokenCap || 1)) * 100))}%`,
                           background: Brand.teal
                         }}
                       />
                     </div>
                     <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.6 }}>
                       Total cap: {formatNumber(metrics.totalTokenCap)} credits
+                      {metrics.refillBalance > 0 && <> · plus {formatNumber(metrics.refillBalance)} in refills</>}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.6 }}>
+                      YTD used: {formatNumber(metrics.usedTextYtd)} credits
+                      {metrics.usedTextYtd > metrics.totalTokenCap && (
+                        <span style={{ color: Brand.orange, fontWeight: 600 }}>
+                          {' '}· over plan by {formatNumber(metrics.usedTextYtd - metrics.totalTokenCap)}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -534,16 +569,16 @@ export default function EnhancedSupaAdmin() {
               />
               <TokenMetricCard
                 title="YTD Usage"
-                value={formatNumber(metrics.totalTokenCap - metrics.tokenCapRemaining)}
+                value={formatNumber(metrics.usedTextYtd)}
                 max={metrics.totalTokenCap}
-                percentage={((metrics.totalTokenCap - metrics.tokenCapRemaining) / metrics.totalTokenCap) * 100}
+                percentage={Math.max(0, (metrics.usedTextYtd / (metrics.totalTokenCap || 1)) * 100)}
                 color="#3B82F6"
               />
               <TokenMetricCard
                 title="Remaining Balance"
                 value={formatNumber(metrics.tokenCapRemaining)}
                 max={metrics.totalTokenCap}
-                percentage={100 - ((metrics.totalTokenCap - metrics.tokenCapRemaining) / metrics.totalTokenCap) * 100}
+                percentage={Math.min(100, Math.max(0, (metrics.tokenCapRemaining / (metrics.totalTokenCap || 1)) * 100))}
                 color="#10B981"
               />
             </div>
