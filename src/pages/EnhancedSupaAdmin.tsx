@@ -22,7 +22,8 @@ interface LiveMetrics {
   /** Credits consumed year to date. Read directly — never derived as cap − remaining,
    *  which understates usage as soon as a refill exists. */
   usedTextYtd: number;
-  /** Clamped at 0 and INCLUSIVE of unexpired refills (get_token_metrics.total_plan_balance). */
+  /** get_token_metrics.total_plan_balance: plan headroom + refills NETTED against
+   *  overage (oldest first). Never negative; never over-reports after a top-up. */
   tokenCapRemaining: number;
   totalConversations: number;
   totalMessages: number;
@@ -107,9 +108,10 @@ export default function EnhancedSupaAdmin() {
       const usedTextYtd = Number(tokenMetrics?.used_text_total_ytd ?? tokenBalanceData.data?.used_text_total_ytd ?? 0);
       const totalTokenCap = Number(tokenMetrics?.total_token_cap ?? tokenBalanceData.data?.total_token_cap ?? 10_250_000);
       const refillBalance = Number(tokenMetrics?.refill_balance ?? 0);
-      // total_plan_balance = GREATEST(0, cap - ytd) + refills
+      // total_plan_balance = plan headroom + refills netted against overage
+      // (overage beyond the cap consumes refills oldest-first; see get_token_metrics).
       const tokenCapRemaining = Number(
-        tokenMetrics?.total_plan_balance ?? Math.max(0, totalTokenCap - usedTextYtd) + refillBalance
+        tokenMetrics?.total_plan_balance ?? Math.max(0, totalTokenCap + refillBalance - usedTextYtd)
       );
 
       const newMetrics: LiveMetrics = {
@@ -475,7 +477,7 @@ export default function EnhancedSupaAdmin() {
                     </div>
                     <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.6 }}>
                       Total cap: {formatNumber(metrics.totalTokenCap)} credits
-                      {metrics.refillBalance > 0 && <> · plus {formatNumber(metrics.refillBalance)} in refills</>}
+                      {metrics.refillBalance > 0 && <> · active refill pool {formatNumber(metrics.refillBalance)} (overage nets against it)</>}
                     </p>
                     <p className="text-xs mt-1" style={{ color: Brand.navy, opacity: 0.6 }}>
                       YTD used: {formatNumber(metrics.usedTextYtd)} credits

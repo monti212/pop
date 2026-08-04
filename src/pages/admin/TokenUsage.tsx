@@ -47,6 +47,12 @@ interface TokenMetrics {
   monthly_usage_percent: number;
   ytd_usage_percent: number;
   image_usage_percent: number;
+  /** SUM(amount) of unexpired refills still positive after netting overage — the balance denominator. */
+  active_refill_pool: number;
+  /** Plan cap + every token_purchase_history row: everything the org has ever bought. */
+  lifetime_purchased: number;
+  /** tokens_remaining as a % of active_refill_pool (falls back to cap when no refills). */
+  remaining_percent: number;
 }
 
 interface UserTokenUsage {
@@ -606,16 +612,54 @@ const TokenUsage: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    {/* Refill-centric balance: the pool is the refills still in positive
+                        (overage beyond the plan cap nets against them, oldest first),
+                        NOT the contract cap. All three figures come from the RPC — no
+                        client-side subtraction, that is how "-5,163,590" shipped twice. */}
+                    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-base font-semibold text-slate-900">Token balance</h3>
+                          <p className="mt-0.5 text-xs text-slate-500">Active refill pool · overage already deducted</p>
+                        </div>
+                        <span className="rounded-xl p-2.5 bg-violet-50 text-violet-700">
+                          <Layers3 className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                      </div>
+
+                      <div className="mt-6">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Active refill pool</p>
+                        <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
+                          {fmtU(metrics.active_refill_pool)}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">{unit}</p>
+                      </div>
+
+                      <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            metrics.remaining_percent <= 10 ? 'bg-rose-500' : metrics.remaining_percent <= 25 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${Math.min(Math.max(metrics.remaining_percent, 0), 100)}%` }}
+                        />
+                      </div>
+                      <p className="mt-1.5 text-xs text-slate-500">
+                        {metrics.remaining_percent.toFixed(1)}% of the pool remaining
+                      </p>
+
+                      <div className="mt-3 flex items-start justify-between gap-4 text-sm">
+                        <div>
+                          <p className="text-slate-500">Tokens remaining</p>
+                          <p className="mt-0.5 font-semibold text-emerald-700">{fmtU(metrics.tokens_remaining)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-slate-500">Bought since launch</p>
+                          <p className="mt-0.5 font-semibold text-slate-900">{fmtU(metrics.lifetime_purchased)}</p>
+                        </div>
+                      </div>
+                    </article>
+
                     {[
-                      {
-                        title: 'Total limit',
-                        scope: 'Full contract allocation',
-                        usedLabel: 'Used year to date',
-                        limit: metrics.total_token_cap,
-                        used: metrics.used_text_total_ytd,
-                        icon: Layers3,
-                        tone: 'bg-violet-50 text-violet-700',
-                      },
                       {
                         title: 'Monthly limit',
                         scope: 'Resets each calendar month',
