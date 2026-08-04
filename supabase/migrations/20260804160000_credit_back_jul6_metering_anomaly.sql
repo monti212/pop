@@ -33,6 +33,18 @@
   1,370,894 (4,836,410 -> 6,207,304 at time of writing).
 */
 
+-- The audit log's action_type CHECK predates the idea of crediting a metering
+-- defect. Extend it rather than mislabel the credit as a 'cap_adjustment':
+-- an explicit action_type is what keeps anomaly credits discoverable later.
+ALTER TABLE token_cap_audit_log
+  DROP CONSTRAINT IF EXISTS token_cap_audit_log_action_type_check;
+ALTER TABLE token_cap_audit_log
+  ADD CONSTRAINT token_cap_audit_log_action_type_check
+  CHECK (action_type = ANY (ARRAY[
+    'cap_adjustment'::text, 'refill_added'::text, 'refill_consumed'::text,
+    'monthly_reset'::text, 'daily_reset'::text, 'anomaly_credit'::text
+  ]));
+
 DO $$
 DECLARE
   v_row_id constant uuid := '92f715ff-1e25-452b-969c-a29fd8c3799f';
