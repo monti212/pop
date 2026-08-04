@@ -1055,7 +1055,16 @@ Respond with ONLY valid JSON, no markdown, no explanation:
         });
       },
       fallbackInputTokens,
-      sanitize: sanitizeResponse,
+      // Update nudge for stale app bundles. The ONLY chat callers left on this
+      // legacy endpoint are users whose service-worker cache predates the U4
+      // release (the new UI routes all chat to uhuru-llm-api-v4) — their cached
+      // frontend cannot be changed, but this response can. The line disappears
+      // from their experience automatically once they reopen the app and the
+      // v1.1.0 service worker swaps them onto the new bundle. Chat path only:
+      // images and embeddings on this function serve the CURRENT UI and are
+      // untouched.
+      sanitize: (text) =>
+        `${sanitizeResponse(text)}\n\n---\n🔄 **A new version of Uhuru is ready.** Please close the app fully and reopen it to update — you'll get the new U4 models and better answers.`,
     }), {
       headers: {
         'Content-Type': 'text/event-stream; charset=utf-8',
