@@ -1,4 +1,9 @@
-const CACHE_VERSION = 'v1.0.1';
+// BUMP THIS ON EVERY RELEASE THAT MUST REACH USERS PROMPTLY. The activate
+// handler only deletes caches from OTHER versions, so while this string is
+// unchanged a stale index.html in DYNAMIC_CACHE (and its cache-first-pinned
+// assets) survives every deploy. That is how admins were still seeing the
+// pre-July token UI in August: old bundle from the SW cache, live API data.
+const CACHE_VERSION = 'v1.1.0';
 const CACHE_NAME = `uhuru-ai-${CACHE_VERSION}`;
 
 const STATIC_CACHE = `${CACHE_NAME}-static`;
