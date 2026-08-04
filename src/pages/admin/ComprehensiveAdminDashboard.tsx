@@ -3,8 +3,11 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, RefreshCw, Users, MessageSquare, Activity,
   Zap, AlertTriangle,
-  Loader, Search
+  Loader, Search, BookOpen, TrendingUp, StickyNote, Smartphone, Mail
 } from 'lucide-react';
+import {
+  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
+} from 'recharts';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/authService';
@@ -51,10 +54,58 @@ interface PlatformMetrics {
 
 type ReportingPeriod = 'month' | 'quarter' | 'all-time' | 'custom';
 
+/** get_admin_platform_overview (admin-gated, SECURITY DEFINER over auth.users). */
+interface PlatformOverview {
+  users: {
+    total_users: number;
+    email_signups: number;
+    phone_signups: number;
+    no_email_signups: number;
+    confirmed: number;
+    active_30d: number;
+    new_30d: number;
+    new_90d: number;
+  };
+  signups_monthly: Array<{ month: string; signups: number }>;
+  kb: {
+    active_docs: number;
+    standard_tokens: number;
+    micro_tokens: number;
+    original_est_tokens: number;
+    pinned_docs: number;
+    pinned_standard_tokens: number;
+  };
+}
+
+interface UsagePoint {
+  d: string;
+  daily: number;
+  cumulative: number;
+  requests: number;
+}
+
+/* Notes surfaced to PoP admins on the dashboard. Content owned by the GreyEd team. */
+const GREYED_TEAM_NOTES: Array<{ title: string; body: string }> = [
+  { title: 'Uhuru 4 family live', body: 'New model family with both language and vision capabilities.' },
+  { title: 'U2.0 removed', body: 'The previous-generation model has been retired.' },
+  { title: 'Output quality improved', body: 'Instantly noticeable step up in answer quality.' },
+  {
+    title: 'Deeper knowledge-base usage',
+    body: 'U4.0 reads the curriculum knowledge base in more depth, which increases token usage per answer. Verdict: net positive — output quality is dramatically greater than before.',
+  },
+  { title: 'U5.0', body: 'Release date to be confirmed.' },
+  {
+    title: 'Teacher training is ready',
+    body: 'We kindly ask PoP to confirm the Wednesday one-hour slot. We can split into 2 classes of ~50 teachers each for more personalised sessions. Ready to start when schools reopen.',
+  },
+];
+
 const ComprehensiveAdminDashboard: React.FC = () => {
   useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'per-account' | 'topics'>('overview');
   const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics | null>(null);
+  const [overview, setOverview] = useState<PlatformOverview | null>(null);
+  const [usageSeries, setUsageSeries] = useState<UsagePoint[]>([]);
   const [userMetrics, setUserMetrics] = useState<UserUsageMetrics[]>([]);
   const [conversationTopics, setConversationTopics] = useState<ConversationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -319,6 +370,35 @@ const ComprehensiveAdminDashboard: React.FC = () => {
   }, [getReportingRange]);
 
   // Main data fetch function
+  // True totals + signup channels + KB footprint. Optional: if the RPC is not
+  // deployed yet (or the caller is not admin) the dashboard falls back to the
+  // legacy user_profiles count rather than erroring.
+  const fetchOverview = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('get_admin_platform_overview');
+    if (rpcError) {
+      console.warn('get_admin_platform_overview unavailable:', rpcError.message);
+      return;
+    }
+    if (data?.users) setOverview(data as PlatformOverview);
+  }, []);
+
+  // Whole-history usage series from the org ledger (admin-readable RLS).
+  const fetchUsageSeries = useCallback(async () => {
+    const { data, error: qError } = await supabase
+      .from('organization_token_usage')
+      .select('usage_date, tokens_used, request_count')
+      .order('usage_date', { ascending: true });
+    if (qError) {
+      console.warn('organization_token_usage unavailable:', qError.message);
+      return;
+    }
+    let running = 0;
+    setUsageSeries((data || []).map((r: any) => {
+      running += r.tokens_used || 0;
+      return { d: r.usage_date, daily: r.tokens_used || 0, cumulative: running, requests: r.request_count || 0 };
+    }));
+  }, []);
+
   const fetchAllData = useCallback(async () => {
     setIsRefreshing(true);
     setError(null);
@@ -328,6 +408,8 @@ const ComprehensiveAdminDashboard: React.FC = () => {
         fetchPlatformMetrics(),
         fetchUserMetrics(),
         fetchConversationTopics(),
+        fetchOverview(),
+        fetchUsageSeries(),
       ]);
       setLastUpdate(new Date());
     } catch (err: any) {
@@ -336,7 +418,7 @@ const ComprehensiveAdminDashboard: React.FC = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [fetchPlatformMetrics, fetchUserMetrics, fetchConversationTopics]);
+  }, [fetchPlatformMetrics, fetchUserMetrics, fetchConversationTopics, fetchOverview, fetchUsageSeries]);
 
   // Initial load
   useEffect(() => {
@@ -529,10 +611,13 @@ const ComprehensiveAdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard
                 title="Total Users"
-                value={platformMetrics.totalUsers.toLocaleString()}
+                /* auth.users truth via RPC; user_profiles lags signups. */
+                value={(overview?.users.total_users ?? platformMetrics.totalUsers).toLocaleString()}
                 icon={Users}
                 color={Brand.teal}
-                subtitle={`${platformMetrics.activeUsersToday} active today`}
+                subtitle={overview
+                  ? `${overview.users.active_30d} active in last 30 days · ${overview.users.new_90d} new in 90 days`
+                  : `${platformMetrics.activeUsersToday} active today`}
               />
               <MetricCard
                 title="Total Messages"
@@ -554,6 +639,135 @@ const ComprehensiveAdminDashboard: React.FC = () => {
                 color={Brand.orange}
                 subtitle={`${platformMetrics.tokensLast24h.toLocaleString()} in last 24h`}
               />
+            </div>
+
+            {/* Notes from the GreyEd team — release + training updates for PoP */}
+            <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
+              <div className="flex items-center gap-2 mb-4">
+                <StickyNote className="w-5 h-5" style={{ color: Brand.orange }} />
+                <h3 className="text-lg font-semibold" style={{ color: Brand.navy }}>
+                  Notes from GreyEd Team
+                </h3>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Monti &amp; Gaone</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {GREYED_TEAM_NOTES.map((note) => (
+                  <div key={note.title} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-sm font-semibold" style={{ color: Brand.navy }}>{note.title}</p>
+                    <p className="mt-1 text-sm text-slate-600">{note.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Sign-up channels + growth (auth.users truth via admin RPC) */}
+            {overview && (
+              <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="w-5 h-5" style={{ color: Brand.teal }} />
+                  <h3 className="text-lg font-semibold" style={{ color: Brand.navy }}>
+                    Teachers on the platform
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="rounded-lg border border-slate-200 p-4">
+                    <div className="flex items-center gap-2 text-slate-500 text-xs uppercase tracking-wide"><Mail className="w-3.5 h-3.5" /> Email sign-ups</div>
+                    <p className="mt-1 text-2xl font-semibold" style={{ color: Brand.navy }}>{overview.users.email_signups.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-4">
+                    <div className="flex items-center gap-2 text-slate-500 text-xs uppercase tracking-wide"><Smartphone className="w-3.5 h-3.5" /> Phone sign-ups</div>
+                    <p className="mt-1 text-2xl font-semibold" style={{ color: Brand.navy }}>{overview.users.phone_signups.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-4">
+                    <div className="text-slate-500 text-xs uppercase tracking-wide">Non-email sign-ups</div>
+                    <p className="mt-1 text-2xl font-semibold" style={{ color: Brand.navy }}>{overview.users.no_email_signups.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-4">
+                    <div className="text-slate-500 text-xs uppercase tracking-wide">Confirmed accounts</div>
+                    <p className="mt-1 text-2xl font-semibold" style={{ color: Brand.navy }}>{overview.users.confirmed.toLocaleString()}</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-slate-500">
+                  {overview.users.new_30d} joined in the last 30 days · {overview.users.new_90d} in the last 90 days.
+                </p>
+              </div>
+            )}
+
+            {/* Total usage over time — org token ledger, full history */}
+            {usageSeries.length > 0 && (
+              <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
+                <h3 className="text-lg font-semibold mb-1" style={{ color: Brand.navy }}>
+                  Platform usage over time
+                </h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Daily Ed Tokens served (bars) and cumulative total (line). Cumulative:{' '}
+                  {usageSeries[usageSeries.length - 1].cumulative.toLocaleString()} to date.
+                </p>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={usageSeries} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="d" tick={{ fontSize: 11 }} minTickGap={40} />
+                      <YAxis yAxisId="daily" tick={{ fontSize: 11 }} tickFormatter={(v: number) => v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(0)}k` : `${v}`} />
+                      <YAxis yAxisId="cum" orientation="right" tick={{ fontSize: 11 }} tickFormatter={(v: number) => v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : `${(v / 1e3).toFixed(0)}k`} />
+                      <Tooltip formatter={(value: any, name: any) => [Number(value).toLocaleString(), name]} />
+                      <Legend />
+                      <Bar yAxisId="daily" dataKey="daily" name="Daily tokens" fill={Brand.teal} radius={[2, 2, 0, 0]} />
+                      <Line yAxisId="cum" type="monotone" dataKey="cumulative" name="Cumulative" stroke={Brand.orange} strokeWidth={2} dot={false} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Knowledge base footprint */}
+            {overview && (
+              <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <BookOpen className="w-5 h-5" style={{ color: Brand.teal }} />
+                  <h3 className="text-lg font-semibold" style={{ color: Brand.navy }}>
+                    Knowledge base footprint
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatRow label="Active documents" value={overview.kb.active_docs} />
+                  <StatRow label="Serving tier (standard summaries)" value={`${overview.kb.standard_tokens.toLocaleString()} tokens`} />
+                  <StatRow label="Always-on curriculum core" value={`${overview.kb.pinned_docs} docs · ${overview.kb.pinned_standard_tokens.toLocaleString()} tokens`} />
+                  <StatRow label="Original source material" value={`≈${Math.round(overview.kb.original_est_tokens / 1000).toLocaleString()}k tokens`} />
+                </div>
+                <p className="mt-3 text-xs text-slate-500">
+                  The serving tier is what answers draw on; U4.0 reads it in more depth than U2.0 did, which raises tokens
+                  per answer while grounding responses in the PoP curriculum.
+                </p>
+              </div>
+            )}
+
+            {/* Reading the numbers — interpretation for the PoP data report */}
+            <div className="bg-white rounded-xl p-6 border shadow-sm" style={{ borderColor: Brand.line }}>
+              <h3 className="text-lg font-semibold mb-3" style={{ color: Brand.navy }}>
+                Reading the numbers
+              </h3>
+              <ul className="space-y-2 text-sm text-slate-600 list-disc pl-5">
+                <li>
+                  <strong style={{ color: Brand.navy }}>Depth per answer is up by design.</strong> Since the U4 upgrade each
+                  answer draws on far more curriculum context, so tokens per answer rose while answer quality rose with it —
+                  token growth reflects richer answers, not just more traffic.
+                </li>
+                <li>
+                  <strong style={{ color: Brand.navy }}>Usage concentrates around training moments.</strong> The January
+                  onboarding and the June session are clearly visible in the chart; a committed core of teachers carries
+                  steady week-to-week usage between them.
+                </li>
+                <li>
+                  <strong style={{ color: Brand.navy }}>Cumulative consumption keeps climbing.</strong> The cumulative line
+                  above is the clearest picture of total value delivered to date.
+                </li>
+                <li>
+                  <strong style={{ color: Brand.navy }}>Per-teacher figures need care.</strong> A small number of accounts
+                  account for a large share of tokens — mostly heavy curriculum-grounded sessions during trainings. Month
+                  figures on per-user views are cumulative since July due to a known metering quirk being corrected.
+                </li>
+              </ul>
             </div>
 
             {/* Platform Statistics */}
