@@ -95,8 +95,12 @@ BEGIN
   INTO v_pool, v_refill_remaining
   FROM (
     SELECT tr.amount,
+           -- Tie-break beyond purchased_at: two refills inserted in one transaction
+           -- share now(), and without a total order the pool (and its percentage)
+           -- would depend on physical row order. The summed remainder is
+           -- order-independent; the FILTERed pool is not.
            GREATEST(0, tr.amount - GREATEST(0, v_overage
-             - COALESCE(SUM(tr.amount) OVER (ORDER BY tr.purchased_at
+             - COALESCE(SUM(tr.amount) OVER (ORDER BY tr.purchased_at, tr.created_at, tr.id
                  ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0)))::bigint
              AS eff_remaining
     FROM token_refills tr

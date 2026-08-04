@@ -644,7 +644,9 @@ const TokenUsage: React.FC = () => {
                         />
                       </div>
                       <p className="mt-1.5 text-xs text-slate-500">
-                        {metrics.remaining_percent.toFixed(1)}% of the pool remaining
+                        {/* Clamp: under-cap orgs holding a refill push the raw ratio over 100
+                            (plan headroom is in the numerator, only the pool is in the denominator). */}
+                        {Math.min(metrics.remaining_percent, 100).toFixed(1)}% of the pool remaining
                       </p>
 
                       <div className="mt-3 flex items-start justify-between gap-4 text-sm">

@@ -1,8 +1,12 @@
 // BUMP THIS ON EVERY RELEASE THAT MUST REACH USERS PROMPTLY. The activate
 // handler only deletes caches from OTHER versions, so while this string is
-// unchanged a stale index.html in DYNAMIC_CACHE (and its cache-first-pinned
-// assets) survives every deploy. That is how admins were still seeing the
-// pre-July token UI in August: old bundle from the SW cache, live API data.
+// unchanged the INSTALL-TIME snapshot of '/' + '/index.html' in STATIC_CACHE
+// (taken once by cache.addAll and never refreshed) and the cache-first-pinned
+// hashed assets survive every deploy; offline/failed navigations fall back to
+// that snapshot via caches.match('/index.html'). That is how admins were still
+// seeing the pre-July token UI in August: old bundle from the SW cache, live
+// API data. (A build-injected version, e.g. git SHA, would remove the need to
+// remember this bump.)
 const CACHE_VERSION = 'v1.1.0';
 const CACHE_NAME = `uhuru-ai-${CACHE_VERSION}`;
 
