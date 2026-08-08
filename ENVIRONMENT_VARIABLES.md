@@ -76,12 +76,12 @@ The main AI chat service that calls external LLM providers.
 | Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
 | `UHURU_API_URL` | API endpoint URL for LLM responses | Yes | `https://api.provider.com/v1/responses` |
-| `UHURU_IMAGES_URL` | API endpoint URL for image generation | Yes | `https://api.provider.com/v1/images/generations` |
-| `UHURU_API_KEY` | API key for LLM provider | Yes | `your-api-key` |
+| `UHURU_IMAGES_URL` | OpenAI Images API endpoint for image generation | Yes | `https://api.openai.com/v1/images/generations` |
+| `UHURU_API_KEY` | API key — must be a valid OpenAI key (also used by embeddings) | Yes | `sk-your-openai-api-key` |
 | `UHURU_20_API_KEY` | API key for model 2.0 (optional, can use UHURU_API_KEY) | No | `your-api-key` |
 | `UHURU_MODEL_20` | Text model identifier for Uhuru 2.0 (used for chat) | Yes | `uhuru-2.0-base` |
-| `UHURU_IMAGE_MODEL_20` | Image model for Craft-1 | Yes | `uhuru-craft-1` |
-| `UHURU_IMAGE_MODEL_21` | Image model for Craft-2 (advanced) | Yes | `uhuru-craft-2` |
+| `UHURU_IMAGE_MODEL_20` | OpenAI image model for Craft-1 tier | Yes | `gpt-image-1` |
+| `UHURU_IMAGE_MODEL_21` | OpenAI image model for Craft-2 tier | Yes | `gpt-image-1` |
 | `UHURU_EXTRA_HEADERS` | Optional JSON object with additional headers | No | `{"X-Custom":"value"}` |
 | `UHURU_INTERNAL_API_KEY` | Internal authentication key for Supabase edge function calls | Yes | `your-secure-random-uuid` |
 
@@ -126,10 +126,10 @@ Dedicated WhatsApp AI service with minimal system prompts. This is a streamlined
 | Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
 | `UHURU_API_URL` | API endpoint URL for LLM responses | Yes | `https://api.provider.com/v1/responses` |
-| `UHURU_IMAGES_URL` | API endpoint URL for image generation | Yes | `https://api.provider.com/v1/images/generations` |
-| `UHURU_API_KEY` | API key for LLM provider | Yes | `your-api-key` |
+| `UHURU_IMAGES_URL` | OpenAI Images API endpoint for image generation | Yes | `https://api.openai.com/v1/images/generations` |
+| `UHURU_API_KEY` | API key — must be a valid OpenAI key (also used by embeddings) | Yes | `sk-your-openai-api-key` |
 | `UHURU_MODEL_20` | Text model identifier for Uhuru 2.0 (WhatsApp uses 2.0 only) | Yes | `uhuru-2.0-base` |
-| `UHURU_IMAGE_MODEL_20` | Image model for Craft-1 | Yes | `uhuru-craft-1` |
+| `UHURU_IMAGE_MODEL_20` | OpenAI image model for Craft-1 tier | Yes | `gpt-image-1` |
 | `UHURU_INTERNAL_API_KEY` | Internal authentication key for Supabase edge function calls | Yes | `your-secure-random-uuid` |
 | `UHURU_EXTRA_HEADERS` | Optional JSON object with additional headers | No | `{"X-Custom":"value"}` |
 
