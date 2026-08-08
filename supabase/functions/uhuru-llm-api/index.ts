@@ -1,3 +1,25 @@
+/*
+ * ============================================================================
+ * SUNSET — LEGACY (Uhuru 2.0)
+ * ============================================================================
+ *
+ * STATUS:      Sunset. Maintenance only — no new features.
+ * SUPERSEDED:  supabase/functions/uhuru-llm-api-v4  (Helios U4.0 / U4.3)
+ *
+ * This function serves ONLY legacy modelVersion "2.0". Routing lives in
+ * src/services/chatService.ts: any modelVersion starting with "4" goes to
+ * uhuru-llm-api-v4; everything else falls back here.
+ *
+ * U4 is the active path going forward. Build new work — knowledge base,
+ * context, metering — in uhuru-llm-api-v4, NOT here. Note the two differ:
+ * this function retrieves knowledge via get_relevant_knowledge_base, while
+ * U4 uses pinned/scoped context via get_pinned_context.
+ *
+ * Changes here should be limited to keeping existing 2.0 users working
+ * until they are migrated off, at which point this function can be deleted.
+ * ============================================================================
+ */
+
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import {
   estimateTokensFromText,
@@ -52,34 +74,66 @@ async function fetchRelevantKnowledgeBase(
       data = result.data;
       error = result.error;
     } catch (chunkError) {
-      console.log('⚠️ Chunk-based retrieval not available, falling back to document summaries');
-      // Fall back to old method if chunks table doesn't exist yet
+      error = chunkError;
+    }
+
+    // The chunk pipeline is NOT provisioned: get_relevant_chunks_hybrid does not
+    // exist in the database. supabase-js RESOLVES with { error } for a missing RPC
+    // instead of throwing, so driving this fallback from the catch block above meant
+    // it never ran — every request shipped an EMPTY knowledge base to the model.
+    // Drive it off the returned error, not an exception.
+    if (error || !data || data.length === 0) {
+      if (error) {
+        console.log('⚠️ Chunk retrieval unavailable, falling back to document summaries:', error.message || error);
+      }
+
       const fallbackResult = await supabaseClient.rpc('get_relevant_knowledge_base', {
         query_text: userQuery,
         max_token_budget: maxTokenBudget,
         use_standard_summaries: useStandardSummaries
       });
 
-      if (!fallbackResult.error && fallbackResult.data && fallbackResult.data.length > 0) {
-        // Convert document-level data to chunk-like format
-        const legacyData = fallbackResult.data.map((doc: any) => ({
-          chunk_id: doc.document_id,
-          document_id: doc.document_id,
-          document_title: doc.document_title,
-          content: doc.summary_content,
-          heading: null,
-          relevance_score: doc.relevance_score,
-          token_count: doc.token_count,
-          section_path: null
-        }));
-
-        return formatLegacyKnowledgeBase(legacyData);
+      if (fallbackResult.error) {
+        console.error('❌ Document-summary fallback failed:', fallbackResult.error.message);
+        return { content: '', documentIds: [], chunkIds: [] };
       }
-    }
 
-    if (error || !data || data.length === 0) {
-      console.log('⚠️ No relevant chunks found');
-      return { content: '', documentIds: [], chunkIds: [] };
+      if (!fallbackResult.data || fallbackResult.data.length === 0) {
+        console.log('⚠️ No relevant knowledge documents found');
+        return { content: '', documentIds: [], chunkIds: [] };
+      }
+
+      // Convert document-level data to chunk-like format
+      const legacyData = fallbackResult.data.map((doc: any) => ({
+        chunk_id: doc.document_id,
+        document_id: doc.document_id,
+        document_title: doc.document_title,
+        content: doc.summary_content,
+        heading: null,
+        relevance_score: doc.relevance_score,
+        token_count: doc.token_count,
+        section_path: null
+      }));
+
+      console.log(`✅ Retrieved ${legacyData.length} knowledge documents via summary fallback`);
+
+      const legacy = formatLegacyKnowledgeBase(legacyData);
+
+      // Document-level usage stats. update_chunk_usage_stats is not provisioned
+      // either, so the document counterpart is what keeps usage_count moving.
+      if (legacy.documentIds.length > 0) {
+        void Promise.resolve(
+          supabaseClient.rpc('update_knowledge_usage_stats', { doc_ids: legacy.documentIds })
+        )
+          .then(({ error: statsError }: any) => {
+            if (statsError) console.warn('Failed to update knowledge usage stats:', statsError.message);
+          })
+          .catch((err: any) => {
+            console.warn('Failed to update knowledge usage stats:', err);
+          });
+      }
+
+      return legacy;
     }
 
     console.log(`✅ Retrieved ${data.length} relevant chunks (total ${data.reduce((sum: number, d: any) => sum + (d.token_count || 0), 0)} tokens)`);
