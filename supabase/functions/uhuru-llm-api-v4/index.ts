@@ -239,19 +239,39 @@ Deno.serve(async (req: Request) => {
   }
 
   // --- Pinned context (PoP + syllabus) --------------------------------------
+  // supabase-js RESOLVES with { data: null, error } when an RPC fails — it does
+  // not throw. Discarding `error` here meant a failing get_pinned_context left
+  // `pinned` null and silently stripped the ENTIRE knowledge base out of the
+  // prompt, with no log line to show it had happened. Always surface the reason.
   let pinned: any = null;
   try {
-    const { data } = await supabase.rpc('get_pinned_context', {
+    const { data, error } = await supabase.rpc('get_pinned_context', {
       p_grade_level: gradeLevel,
       p_subject: subject,
       p_max_tokens: 12000,
     });
+    if (error) {
+      console.error('❌ [KB] get_pinned_context failed:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        gradeLevel,
+        subject,
+      });
+    }
     pinned = data;
   } catch (e) {
-    console.warn('pinned context unavailable:', e);
+    console.error('❌ [KB] pinned context threw:', e);
   }
 
   const prefix = buildCacheablePrefix(pinned);
+
+  // Definitive per-request signal for whether the KB actually reached the model.
+  if (prefix.docCount > 0) {
+    console.log(`✅ [KB] Pinned context applied: ${prefix.docCount} docs, ${prefix.tokens} tokens, fingerprint=${prefix.fingerprint}, grade=${gradeLevel || 'any'}, subject=${subject || 'any'}`);
+  } else {
+    console.warn(`⚠️ [KB] NO knowledge base in prompt (0 docs) — grade=${gradeLevel || 'any'}, subject=${subject || 'any'}, rpcReturned=${pinned === null ? 'null' : 'empty'}`);
+  }
   const suffix = buildVariableSuffix({ displayName, language, region, verbosity });
   const systemPrompt = prefix.text + suffix;
 

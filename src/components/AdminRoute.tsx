@@ -8,13 +8,21 @@ const AdminRoute: React.FC = () => {
 
   useEffect(() => {
     if (!isLoading) {
-      // Only allow admin users with is_admin flag or specific team roles
+      // Staff surface: supa_admin, admin, and prime (treated as staff).
+      //
+      // NOTE: this guard only decides which pages RENDER. What the pages can READ
+      // is decided independently by RLS via is_admin(). Keep the two in sync — if a
+      // role can reach a page but fails the RLS check, the page renders with silent
+      // zeros (an RLS denial returns an empty set, not an error), which is exactly
+      // how the knowledge base appeared to hold 0 of its 185 documents.
+      //
+      // The previous `(profile as any).is_admin === true` check was dead: there is
+      // no is_admin column on user_profiles, so it always evaluated to false.
       if (user && profile) {
-        const isAdmin = (profile as any).is_admin === true ||
-                       profile.team_role === 'supa_admin' ||
-                       (profile.team_role as string) === 'optimus_prime' || // Legacy support
+        const isAdmin = profile.team_role === 'supa_admin' ||
                        profile.team_role === 'admin' ||
-                       profile.team_role === 'prime';
+                       profile.team_role === 'prime' ||
+                       (profile.team_role as string) === 'optimus_prime'; // legacy
         setHasAccess(isAdmin);
       } else {
         setHasAccess(false);

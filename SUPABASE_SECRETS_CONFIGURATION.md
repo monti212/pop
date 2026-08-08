@@ -22,8 +22,8 @@ You need to configure the following secrets in your Supabase Dashboard for your 
 | Variable | Description | Example Value |
 |----------|-------------|---------------|
 | `UHURU_API_URL` | API endpoint URL for LLM responses using Responses API | `https://api.orionx.ai/v1/chat/response` |
-| `UHURU_IMAGES_URL` | API endpoint URL for image generation | `https://api.orionx.ai/v1/images/generations` |
-| `UHURU_API_KEY` | Your API key for authentication | `your-api-key-here` |
+| `UHURU_IMAGES_URL` | OpenAI Images API endpoint for image generation | `https://api.openai.com/v1/images/generations` |
+| `UHURU_API_KEY` | API key for authentication — must be a valid OpenAI key (also used by the embeddings path) | `sk-your-openai-api-key` |
 
 ### Model Configuration
 
@@ -33,12 +33,14 @@ You need to configure the following secrets in your Supabase Dashboard for your 
 
 ### Image Model Configuration
 
+Image generation uses the **OpenAI Images API** (`UHURU_IMAGES_URL=https://api.openai.com/v1/images/generations`), authenticated with `UHURU_API_KEY`.
+
 | Variable | Description | Example Value |
 |----------|-------------|---------------|
-| `UHURU_IMAGE_MODEL_20` | Standard image model (Craft-1) | `uhuru-craft-1` |
-| `UHURU_IMAGE_MODEL_21` | Advanced image model with background transparency support (Craft-2) | `uhuru-craft-2` |
+| `UHURU_IMAGE_MODEL_20` | OpenAI image model for the Craft-1 tier | `gpt-image-1` |
+| `UHURU_IMAGE_MODEL_21` | OpenAI image model for the Craft-2 tier (transparent background) | `gpt-image-1` |
 
-**Note**: Only model version 2.0 is supported for text generation. Image generation supports both 2.0 (Craft-1) and 2.1 (Craft-2).
+**Note**: Only model version 2.0 is supported for text generation. Both image tiers use `gpt-image-1` (returns base64 directly and supports transparent backgrounds). If your OpenAI organization isn't verified for `gpt-image-1`, use `dall-e-3` instead — but note `dall-e-3` does not support the Craft-2 transparent-background option.
 
 ### Additional Configuration
 
@@ -55,15 +57,15 @@ Configure these secrets in your Supabase Dashboard:
 ```bash
 # Core API Configuration
 UHURU_API_URL=https://api.orionx.ai/v1/chat/response
-UHURU_IMAGES_URL=https://api.orionx.ai/v1/images/generations
-UHURU_API_KEY=<your-api-key>
+UHURU_IMAGES_URL=https://api.openai.com/v1/images/generations
+UHURU_API_KEY=<your-openai-api-key>
 
 # Model Configuration
 UHURU_MODEL_20=uhuru-2.0-base
 
-# Image Models
-UHURU_IMAGE_MODEL_20=uhuru-craft-1
-UHURU_IMAGE_MODEL_21=uhuru-craft-2
+# Image Models (OpenAI)
+UHURU_IMAGE_MODEL_20=gpt-image-1
+UHURU_IMAGE_MODEL_21=gpt-image-1
 
 # Internal Authentication
 UHURU_INTERNAL_API_KEY=<generate-a-uuid>
