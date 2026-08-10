@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Database, Menu, X, Zap, MessageCircle, FileText } from 'lucide-react';
+import { Activity, Database, Menu, X, Zap, MessageCircle } from 'lucide-react';
 import { supabase } from '../services/authService';
 
 const Brand = {
@@ -80,11 +80,9 @@ const AdminSidebar: React.FC = () => {
       icon: MessageCircle,
       label: 'WhatsApp Messages',
     },
-    {
-      path: '/admin/cost-breakdown',
-      icon: FileText,
-      label: 'Cost Breakdown',
-    },
+    // Cost Breakdown is internal-only: the page exposes GreyEd cost/margin data,
+    // and /admin is now reachable by client-team (prime) accounts. The route
+    // lives behind SupaAdminRoute in App.tsx; no sidebar link is shown here.
     {
       path: '/admin/knowledge-base',
       icon: Database,
