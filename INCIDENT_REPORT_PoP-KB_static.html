@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GreyEd — Incident Report GE-IR-2026-0806 (Illustrated)</title>
+<style>
+:root{--navy:#1e3350;--blue:#0170b9;--amber:#d97706;--teal:#0d9c8a;--ink:#26303e;--mut:#5c6675;--line:#e3e0d8;--sand:#faf7f0;--card:#ffffff;--good:#1a7f4e;--bad:#c0392b}
+*{box-sizing:border-box;margin:0}
+body{font:16px/1.65 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--sand);padding:0}
+.page{max-width:880px;margin:0 auto;padding:48px 28px 80px}
+header.rep{border-bottom:3px solid var(--navy);padding-bottom:18px;margin-bottom:26px}
+.kicker{letter-spacing:.14em;text-transform:uppercase;font-size:12px;color:var(--blue);font-weight:700}
+h1{font-size:27px;line-height:1.25;color:var(--navy);margin:6px 0 10px}
+.meta{font-size:13.5px;color:var(--mut)}
+.meta b{color:var(--ink)}
+h2{font-size:20px;color:var(--navy);margin:38px 0 12px;padding-top:10px;border-top:1px solid var(--line)}
+h3{font-size:16px;color:var(--navy);margin:18px 0 6px}
+p,li{margin-bottom:10px}
+ul,ol{padding-left:22px}
+.lead{font-style:italic;color:var(--mut);margin-bottom:16px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin:12px 0}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;background:var(--card)}
+th{background:#f1ede3;color:var(--navy)}
+.fig{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 18px 10px;margin:18px 0}
+.fig figcaption{font-size:13px;color:var(--mut);margin-top:8px}
+.fig figcaption b{color:var(--navy)}
+.note{background:#fdf6e7;border-left:4px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0}
+.ok{color:var(--good);font-weight:700}.no{color:var(--bad);font-weight:700}
+svg text{font-family:inherit}
+@media print{body{background:#fff}.fig{break-inside:avoid}}
+</style></head><body class="page">
+
+<header class="rep">
+  <div class="kicker">GreyEd · Incident Report · Illustrated edition (static)</div>
+  <h1>Knowledge Base Dashboard, Upload Access &amp; Knowledge Delivery</h1>
+  <div class="meta"><b>Reference</b> GE-IR-2026-0806 · <b>Prepared for</b> Pencils of Promise · <b>Observed</b> Thu 6 Aug 2026 · <b>Fixes live</b> by Sat morning 8 Aug 2026 · <b>Issued</b> Sat 8 Aug 2026<br>
+  <b>Data impact:</b> none — the materials library was intact throughout. This platform is dedicated to Pencils of Promise: your Knowledge Base serves your teachers only.</div>
+</header>
+
+<p class="lead">Prepared for the Pencils of Promise team. Thank you for escalating this immediately on Thursday — this report sets out what we found, what we fixed, and how knowledge delivery is now verifiable on an ongoing basis. Each section is paired with a figure; an animated edition of this same document is available for viewing in a browser.</p>
+
+<h2>1 · Executive summary</h2>
+<p>On Thursday 6 August your team reported three things: the Knowledge Base dashboard showing <b>0 documents</b>, an upload (<i>english-b4-b6.pdf</i>) failing with a security-policy error, and — given both of those — the concern that Uhuru's output does not integrate your materials accurately. We understand why this looked like a major setback, and why you escalated: the symptoms you saw were genuinely alarming, and your team could not have diagnosed them from what the screen showed.</p>
+<ol>
+<li><b>Your materials were never missing.</b> The library held <b>185 documents (156 active)</b> throughout — including the English B4–B6 curriculum document itself, active in the library since <b>3 November 2025</b>. Nothing was deleted, disabled, or lost.</li>
+<li><b>The dashboard zeros and the blocked upload were caused by a gap on our side.</b> We had not provisioned your team's account tier with Knowledge Base data access. The page was reachable, but the security layer answered every read with an empty result instead of a clear "no permission" message — so the dashboard showed zeros — and the same policy declined the upload. We are sorry: this was our provisioning gap, not anything your team did.</li>
+<li><b>For the current-generation models (Uhuru 4.0 / 4.3), knowledge delivery was verified working</b> directly against the production database (§4). The AI reads the Knowledge Base with system-level credentials, so the account-permission gap could not affect what the AI retrieves.</li>
+<li><b>Your quality concern had a real cause — and we found it.</b> A genuine defect in the previous-generation pipeline (<b>Uhuru 2.0</b>), which still serves users on outdated app versions, meant those conversations received <b>no Knowledge Base material at all</b> — roughly a third of chat requests in the last 30 days (34 conversations, 16 users). This very likely explains the experience behind your report. Fixed and live in production (§5).</li>
+</ol>
+<p>In short: what you saw on screen was exactly as you described; the interpretation it suggested — that the library was gone — was not the case; and the quality instinct behind your escalation pointed at something real, which is now fixed. Every AI response now writes a log entry recording exactly how much Knowledge Base material it included.</p>
+
+<h2>2 · What was reported</h2>
+<table>
+<tr><th>#</th><th>Observation (6 Aug)</th><th>Finding</th></tr>
+<tr><td>1</td><td>Dashboard: "Total Documents 0 · 0 active", "Token Savings 0%", "Avg per Query 0"</td><td>Confirmed — a permission check rendered as zeros (§3.1). The library itself held 185 documents</td></tr>
+<tr><td>2</td><td>Upload of <i>english-b4-b6.pdf</i> failed: "new row violates row-level security policy"</td><td>Confirmed — declined by the upload-authorization policy (§3.2). This document has been active in the library since 3 Nov 2025 (§6)</td></tr>
+<tr><td>3</td><td>"The output the platform currently generates does not integrate our materials accurately"</td><td>Partly substantiated — not via permissions, but via an Uhuru 2.0 pipeline defect found and fixed during this investigation (§5). Uhuru 4.0/4.3 delivery verified working (§4)</td></tr>
+</table>
+
+<h2>3 · The permissions issue (dashboard and upload)</h2>
+<p>Both visible symptoms trace to one mistake on our side: <b>we had not provisioned your team's account tier with Knowledge Base data access.</b></p>
+
+<figure class="fig">
+<svg viewBox="0 0 820 230" role="img" aria-label="Diagram: account passes the open app-page door, is stopped at the closed database security door; the full library of 185 documents sits intact behind it">
+  <text x="14" y="24" font-size="13" fill="#5c6675" font-weight="600">FIGURE 1 — “TWO DOORS”: why the page opened but showed zeros</text>
+  <!-- account -->
+  <circle cx="70" cy="130" r="22" fill="#0170b9"/><rect x="48" y="158" width="44" height="10" rx="5" fill="#0170b9" opacity=".35"/>
+  <text x="70" y="200" font-size="12.5" text-anchor="middle" fill="#26303e">Your team's</text><text x="70" y="216" font-size="12.5" text-anchor="middle" fill="#26303e">account</text>
+  <!-- arrow 1 -->
+  <line x1="104" y1="130" x2="196" y2="130" stroke="#8a93a2" stroke-width="2"/><polygon points="196,130 186,124 186,136" fill="#8a93a2"/>
+  <!-- door 1 open -->
+  <rect x="205" y="62" width="96" height="136" rx="6" fill="none" stroke="#1a7f4e" stroke-width="2.5"/>
+  <rect x="211" y="70" width="38" height="120" fill="#1a7f4e" opacity=".18" transform="skewY(-8) translate(24,30)"/>
+  <text x="253" y="52" font-size="12.5" text-anchor="middle" fill="#1a7f4e" font-weight="700">DOOR 1 · OPEN ✓</text>
+  <text x="253" y="216" font-size="12" text-anchor="middle" fill="#5c6675">App page gate</text>
+  <!-- arrow 2 -->
+  <line x1="310" y1="130" x2="402" y2="130" stroke="#8a93a2" stroke-width="2"/><polygon points="402,130 392,124 392,136" fill="#8a93a2"/>
+  <!-- door 2 closed -->
+  <rect x="410" y="62" width="96" height="136" rx="6" fill="#c0392b" opacity=".12" stroke="#c0392b" stroke-width="2.5"/>
+  <line x1="426" y1="112" x2="490" y2="148" stroke="#c0392b" stroke-width="3"/><line x1="490" y1="112" x2="426" y2="148" stroke="#c0392b" stroke-width="3"/>
+  <text x="458" y="52" font-size="12.5" text-anchor="middle" fill="#c0392b" font-weight="700">DOOR 2 · CLOSED ✗</text>
+  <text x="458" y="216" font-size="12" text-anchor="middle" fill="#5c6675">Database security layer</text>
+  <!-- shelf -->
+  <g transform="translate(560,70)">
+    <rect x="0" y="0" width="220" height="120" rx="8" fill="#faf7f0" stroke="#e3e0d8"/>
+    <g fill="#0170b9"><rect x="14" y="16" width="10" height="40" rx="2"/><rect x="28" y="12" width="10" height="44" rx="2" opacity=".8"/><rect x="42" y="18" width="10" height="38" rx="2" opacity=".6"/><rect x="56" y="14" width="10" height="42" rx="2" opacity=".9"/><rect x="70" y="16" width="10" height="40" rx="2" opacity=".7"/></g>
+    <g fill="#d97706"><rect x="14" y="66" width="10" height="40" rx="2"/><rect x="28" y="70" width="10" height="36" rx="2" opacity=".8"/><rect x="42" y="64" width="10" height="42" rx="2" opacity=".6"/><rect x="56" y="68" width="10" height="38" rx="2" opacity=".85"/></g>
+    <text x="130" y="52" font-size="22" fill="#1e3350" font-weight="800">185</text>
+    <text x="94" y="74" font-size="12.5" fill="#26303e">documents intact,</text>
+    <text x="94" y="90" font-size="12.5" fill="#26303e">156 active — untouched</text>
+  </g>
+  <text x="458" y="240" font-size="0">.</text>
+</svg>
+<figcaption><b>What the zeros meant.</b> The account walked through an open first door (the page rendered) and met a closed second door (the data layer). A closed second door answers with an <i>empty result</i>, not an error — so the page displayed “0” while the full shelf sat intact behind it.</figcaption>
+</figure>
+
+<p><b>3.1 Why the dashboard showed zeros.</b> The Knowledge Base page was reachable by your team's accounts, but the database security layer released document data only to a small set of administrator accounts. A denied read returns an <i>empty result</i> rather than an error, so the page rendered “0” everywhere instead of saying “this account does not have permission.” The zeros described the viewer's access level — not the library's contents.</p>
+<p><b>3.2 Why the upload was declined.</b> Since November 2025, Knowledge Base uploads have been restricted at the database level to administrator accounts — a deliberate safeguard, because uploaded documents shape the AI's teaching for every teacher on your platform. Until now, uploads were handled through administrator accounts on your behalf; Thursday's upload came from a team account outside that list, so the security layer declined it as designed. The on-screen message was the database's raw policy error — technically correct, unhelpfully worded.</p>
+<p><b>3.3 Why this could not affect the AI.</b> The AI does not read the Knowledge Base “as” any user account. It retrieves knowledge with system-level credentials through a separate pipeline, so a user-account permission gap does not, by design, change what the AI reads. That said, retrieval can fail for <i>other</i> reasons — §5 is exactly such a case — which is why we have now added per-response logging.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 820 250" role="img" aria-label="Diagram: one library with two independent corridors — dashboard corridor through user permissions (was blocked, now fixed) and AI corridor with a system key (never blocked)">
+  <text x="14" y="24" font-size="13" fill="#5c6675" font-weight="600">FIGURE 2 — TWO INDEPENDENT PATHS OUT OF ONE LIBRARY</text>
+  <!-- library center -->
+  <rect x="330" y="90" width="160" height="80" rx="10" fill="#1e3350"/>
+  <text x="410" y="124" font-size="14" text-anchor="middle" fill="#fff" font-weight="700">Knowledge Library</text>
+  <text x="410" y="144" font-size="12.5" text-anchor="middle" fill="#cfd8e6">185 documents</text>
+  <!-- left corridor: dashboard -->
+  <line x1="330" y1="130" x2="238" y2="130" stroke="#8a93a2" stroke-width="2"/>
+  <rect x="160" y="102" width="78" height="56" rx="8" fill="#fff" stroke="#c0392b" stroke-width="2"/>
+  <text x="199" y="126" font-size="11.5" text-anchor="middle" fill="#c0392b" font-weight="700">user</text>
+  <text x="199" y="141" font-size="11.5" text-anchor="middle" fill="#c0392b" font-weight="700">permissions</text>
+  <line x1="160" y1="130" x2="92" y2="130" stroke="#8a93a2" stroke-width="2"/><polygon points="92,130 102,124 102,136" fill="#8a93a2"/>
+  <rect x="14" y="102" width="78" height="56" rx="8" fill="#faf7f0" stroke="#e3e0d8"/>
+  <text x="53" y="126" font-size="12" text-anchor="middle" fill="#26303e">Dashboard</text>
+  <text x="53" y="142" font-size="11" text-anchor="middle" fill="#5c6675">what people see</text>
+  <text x="199" y="86" font-size="12" text-anchor="middle" fill="#c0392b" font-weight="700">✗ was blocked here</text>
+  <text x="199" y="176" font-size="12" text-anchor="middle" fill="#1a7f4e" font-weight="700">✓ now open</text>
+  <!-- right corridor: AI -->
+  <line x1="490" y1="130" x2="582" y2="130" stroke="#0170b9" stroke-width="3"/>
+  <g transform="translate(586,104)"><rect width="78" height="56" rx="8" fill="#fff" stroke="#0170b9" stroke-width="2"/>
+  <text x="39" y="24" font-size="11.5" text-anchor="middle" fill="#0170b9" font-weight="700">system</text><text x="39" y="39" font-size="11.5" text-anchor="middle" fill="#0170b9" font-weight="700">key 🔑</text></g>
+  <line x1="664" y1="132" x2="732" y2="132" stroke="#0170b9" stroke-width="3"/><polygon points="732,132 722,126 722,138" fill="#0170b9"/>
+  <rect x="736" y="104" width="72" height="56" rx="8" fill="#e8f2fa" stroke="#0170b9"/>
+  <text x="772" y="128" font-size="12" text-anchor="middle" fill="#0170b9" font-weight="700">Uhuru AI</text>
+  <text x="772" y="144" font-size="11" text-anchor="middle" fill="#5c6675">teaching</text>
+  <text x="625" y="86" font-size="12" text-anchor="middle" fill="#1a7f4e" font-weight="700">✓ never passed through user permissions</text>
+  <text x="410" y="226" font-size="12.5" text-anchor="middle" fill="#5c6675">The corridors are separate: closing the left one cannot close the right one.</text>
+</svg>
+<figcaption><b>Why the AI kept its access.</b> The dashboard reads the library <i>as a person</i>; the AI reads it <i>as the system</i>. The Thursday block lived entirely in the left corridor.</figcaption>
+</figure>
+
+<h2>4 · Verification — current-generation knowledge delivery</h2>
+<p>Run directly against the production database during the investigation:</p>
+
+<figure class="fig">
+<svg viewBox="0 0 820 240" role="img" aria-label="Bar chart: material returned per production retrieval test — baseline 11,950 tokens across 11 documents; B1–B3 Mathematics 5,930 tokens across 5 documents; B4–B6 Science 6,115 tokens across 5 documents">
+  <text x="14" y="24" font-size="13" fill="#5c6675" font-weight="600">FIGURE 3 — MATERIAL DELIVERED PER PRODUCTION TEST (tokens of curriculum injected)</text>
+  <g font-size="12.5" fill="#26303e">
+    <text x="14" y="76">Baseline — every conversation</text>
+    <text x="14" y="136">Scoped · B1–B3 Mathematics</text>
+    <text x="14" y="196">Scoped · B4–B6 Science</text>
+  </g>
+  <!-- scale: 640px usable from x=250, max 12000 -->
+  <g>
+    <rect x="250" y="58" width="637" height="0" fill="none"/>
+    <rect x="250" y="58" width="530" height="22" rx="4" fill="#0170b9"><title>Baseline: 11,950 tokens · 11 documents</title></rect>
+    <text x="560" y="74" font-size="12.5" fill="#fff" font-weight="700" text-anchor="middle">11,950 tokens · 11 docs</text>
+    <rect x="250" y="118" width="263" height="22" rx="4" fill="#0170b9" opacity=".78"><title>B1–B3 Mathematics: 5,930 tokens · 5 documents</title></rect>
+    <text x="524" y="134" font-size="12.5" fill="#26303e">5,930 tokens · 5 docs</text>
+    <rect x="250" y="178" width="271" height="22" rx="4" fill="#0170b9" opacity=".78"><title>B4–B6 Science: 6,115 tokens · 5 documents</title></rect>
+    <text x="532" y="194" font-size="12.5" fill="#26303e">6,115 tokens · 5 docs</text>
+  </g>
+  <line x1="250" y1="46" x2="250" y2="208" stroke="#e3e0d8"/>
+  <text x="250" y="226" font-size="11" fill="#5c6675">0</text><text x="770" y="226" font-size="11" fill="#5c6675" text-anchor="end">≈12,000-token allocation</text>
+</svg>
+<figcaption><b>Production tests, run during the investigation.</b> Tolerant matching also verified: a teacher selecting “B2 / Maths” correctly receives the B1–B3 Mathematics set. Grade/subject-scoped sets are deliberately smaller — they add only what fits the class being planned.</figcaption>
+</figure>
+
+<table>
+<tr><th>Check</th><th>Result</th></tr>
+<tr><td>Library integrity</td><td><b>185 documents</b>, 156 active — intact</td></tr>
+<tr><td>Baseline retrieval (Uhuru 4.0 / 4.3)</td><td><b>11 core documents, ~11,950 tokens</b> returned for injection</td></tr>
+<tr><td>Scoped — B1–B3 · Mathematics</td><td>5 documents, ~5,930 tokens</td></tr>
+<tr><td>Scoped — B4–B6 · Science</td><td>5 documents, ~6,115 tokens</td></tr>
+<tr><td>Tolerant matching — “B2 / Maths”</td><td>Correctly resolves to B1–B3 Mathematics <span class="ok">✓</span></td></tr>
+</table>
+<p>No changes were made to the current-generation (Uhuru 4.0 / 4.3) models or their retrieval design during this incident — the pipeline tested above is the one that has been serving those conversations. What we added is instrumentation: every response now logs the exact document count and material volume it carried. Because that logging is new, we can certify behaviour from now on per response; for historical conversations we rely on the architecture and the tests above — one more reason the logging now exists.</p>
+
+<h2>5 · The second finding: a real defect in the Uhuru 2.0 pipeline</h2>
+<p>We would rather you hear this from us than discover it later: while verifying the above, we found a genuine retrieval defect — unrelated to permissions — in the <b>previous-generation pipeline (Uhuru 2.0)</b>, which still serves users whose app version has not yet updated to Uhuru 4.0.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 820 250" role="img" aria-label="Bar chart of the last 30 days of conversations by pipeline: Uhuru 4.0 43, Uhuru 4.3 32, Uhuru 2.0 34 — the 2.0 conversations received no knowledge material until the fix">
+  <text x="14" y="24" font-size="13" fill="#5c6675" font-weight="600">FIGURE 4 — LAST 30 DAYS OF CONVERSATIONS, BY PIPELINE</text>
+  <g font-size="12.5" fill="#26303e">
+    <text x="14" y="78">Uhuru 4.0</text>
+    <text x="14" y="128">Uhuru 4.3</text>
+    <text x="14" y="178">Uhuru 2.0</text>
+  </g>
+  <!-- scale: 43 => 560px -->
+  <rect x="110" y="60" width="560" height="24" rx="4" fill="#0170b9"><title>Uhuru 4.0 — 43 conversations · knowledge delivered</title></rect>
+  <text x="682" y="78" font-size="12.5" fill="#26303e">43 · knowledge delivered ✓</text>
+  <rect x="110" y="110" width="417" height="24" rx="4" fill="#d97706"><title>Uhuru 4.3 — 32 conversations · knowledge delivered</title></rect>
+  <text x="539" y="128" font-size="12.5" fill="#26303e">32 · knowledge delivered ✓</text>
+  <rect x="110" y="160" width="443" height="24" rx="4" fill="#0d9c8a"><title>Uhuru 2.0 — 34 conversations · NO knowledge material (defect, now fixed)</title></rect>
+  <rect x="110" y="160" width="443" height="24" rx="4" fill="url(#hatch)" opacity=".45"/>
+  <text x="565" y="178" font-size="12.5" fill="#c0392b" font-weight="700">34 · no knowledge ✗ (now fixed)</text>
+  <defs><pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="7" stroke="#fff" stroke-width="2.4"/></pattern></defs>
+  <line x1="110" y1="48" x2="110" y2="196" stroke="#e3e0d8"/>
+  <g font-size="11.5" fill="#5c6675"><text x="110" y="216">0</text><text x="670" y="216" text-anchor="end">roughly a third of recent conversations ran on 2.0</text></g>
+  <g transform="translate(14,232)" font-size="11.5" fill="#5c6675"><rect width="10" height="10" y="-9" fill="#0170b9"/><text x="15">Uhuru 4.0</text><rect width="10" height="10" x="86" y="-9" fill="#d97706"/><text x="101">Uhuru 4.3</text><rect width="10" height="10" x="172" y="-9" fill="#0d9c8a"/><text x="187">Uhuru 2.0 (hatched = ran without knowledge material until the fix)</text></g>
+</svg>
+<figcaption><b>Who was affected.</b> 34 conversations across 16 users in the last 30 days ran on Uhuru 2.0 and received no Knowledge Base material — very likely the substance behind “does not integrate our materials.” Fixed; 2.0 now retrieves from the same 185-document library, and users on old app versions are prompted to update.</figcaption>
+</figure>
+
+<ul>
+<li><b>Effect:</b> conversations on Uhuru 2.0 received <b>no Knowledge Base material at all</b> — retrieval failed silently and the conversation proceeded on the model's general knowledge alone.</li>
+<li><b>Recent scope:</b> 34 conversations across 16 users over the last 30 days — roughly a third of chat requests in that window.</li>
+<li><b>Relevance to your report:</b> lessons produced in those conversations genuinely would not have reflected your uploaded curriculum.</li>
+<li><b>Status:</b> fixed and deployed; Uhuru 2.0 now retrieves from the same library, its delivery is logged per response, and in-app prompts move remaining users to Uhuru 4.0.</li>
+</ul>
+
+<h2>6 · Resolution — current state</h2>
+
+<figure class="fig">
+<svg viewBox="0 0 820 300" role="img" aria-label="Isometric stack of the platform's four layers: app, security, library of 185 documents, and the AI pipelines — showing which layer failed for whom and that the library layer was intact">
+  <text x="14" y="24" font-size="13" fill="#5c6675" font-weight="600">FIGURE 5 — THE SYSTEM AS A STACK: what failed, for whom (3D view)</text>
+  <g transform="translate(230,40)">
+    <!-- iso plates, top to bottom -->
+    <g><polygon points="180,0 360,52 180,104 0,52" fill="#e8f2fa" stroke="#0170b9"/><text x="180" y="56" font-size="13" text-anchor="middle" fill="#0170b9" font-weight="700">App pages</text><text x="392" y="46" font-size="12" fill="#1a7f4e" font-weight="700">was open ✓</text></g>
+    <g transform="translate(0,62)"><polygon points="180,0 360,52 180,104 0,52" fill="#fdecec" stroke="#c0392b"/><text x="180" y="50" font-size="13" text-anchor="middle" fill="#c0392b" font-weight="700">Security layer</text><text x="180" y="68" font-size="11.5" text-anchor="middle" fill="#c0392b">closed to your tier → zeros + blocked upload</text><text x="392" y="46" font-size="12" fill="#1a7f4e" font-weight="700">now open to your team ✓</text></g>
+    <g transform="translate(0,124)"><polygon points="180,0 360,52 180,104 0,52" fill="#1e3350"/><text x="180" y="50" font-size="13" text-anchor="middle" fill="#fff" font-weight="700">Library — 185 documents</text><text x="180" y="68" font-size="11.5" text-anchor="middle" fill="#cfd8e6">intact the entire time</text><text x="392" y="46" font-size="12" fill="#1a7f4e" font-weight="700">never touched ✓</text></g>
+    <g transform="translate(0,186)"><polygon points="180,0 360,52 180,104 0,52" fill="#fff8ec" stroke="#d97706"/><text x="180" y="46" font-size="13" text-anchor="middle" fill="#b45f04" font-weight="700">AI pipelines</text><text x="180" y="64" font-size="11.5" text-anchor="middle" fill="#b45f04">4.0/4.3 delivered ✓ · 2.0 defect → fixed</text><text x="392" y="46" font-size="12" fill="#1a7f4e" font-weight="700">both delivering ✓</text></g>
+  </g>
+</svg>
+<figcaption><b>One picture of the whole incident.</b> Each layer is separate: the security plate failed <i>for your accounts' view</i>; the 2.0 slice of the AI plate failed <i>for outdated app versions</i>; the library plate — your materials — was never touched.</figcaption>
+</figure>
+
+<table>
+<tr><th>Change</th><th>Effect for your team</th></tr>
+<tr><td>Your team's accounts granted full Knowledge Base access</td><td>The dashboard now shows the complete library; your team can upload directly rather than routing through administrators</td></tr>
+<tr><td>Uhuru 2.0 retrieval defect fixed</td><td>All conversations — Uhuru 4.0/4.3 and 2.0 — now receive Knowledge Base material</td></tr>
+<tr><td>Per-response knowledge logging</td><td>Every AI answer records exactly what knowledge volume it carried</td></tr>
+<tr><td>Per-document usage tracking connected to the dashboard</td><td>The “Total Usage” statistic now counts every document served into a response</td></tr>
+<tr><td>Provisioning aligned</td><td>For your accounts, page access and data access are now granted together, so this specific mismatch cannot recur</td></tr>
+</table>
+<div class="note"><b>One statistic to read correctly:</b> per-document usage tracking is newly instrumented — the “Total Usage” counter began counting on <b>8 August</b> and reflects usage from this weekend forward. Usage before instrumentation was not tracked per document, so the number will start small and grow with real classroom use. Document counts, token savings, access, and uploads are live and accurate now.</div>
+<p><b>On <i>english-b4-b6.pdf</i>:</b> that curriculum document has been active in the library since <b>3 November 2025</b>, so Thursday's blocked upload did not leave a gap. If Thursday's file was a newer edition, uploading it again will now succeed — or we are happy to ingest it for you and confirm either way.</p>
+
+<h2>7 · On integration quality going forward</h2>
+<p>Each current-generation conversation is built to include the pinned Pencils of Promise core programme documents plus curriculum documents matched to the teacher's selected grade and subject, within a dedicated context allocation (~12,000 tokens per conversation) — and that inclusion is now confirmed in the logs, per response.</p>
+<ol>
+<li><b>We will monitor the new per-response logs daily for the next two weeks</b> and flag anything anomalous ourselves — the burden of catching problems should not sit with your team.</li>
+<li>If you can share <b>two or three concrete examples</b> where materials did not come through as expected — the request made, the output received, what was missing — we will investigate each against both pipelines and respond <b>within two business days</b>. Examples help us target the review; they are not needed to justify it.</li>
+</ol>
+
+<h2>8 · Preventive measures</h2>
+<ul>
+<li><b>Clear permission messaging</b> — dashboard pages will state “this account does not have access” rather than rendering empty data. <i>(In progress)</i></li>
+<li><b>Per-response knowledge-delivery logging</b> — live now, both pipelines.</li>
+<li><b>Aligned provisioning</b> — your team's page access and data access are now granted together. <i>(Done)</i></li>
+<li><b>Update prompts for users still on Uhuru 2.0</b> — in place, moving remaining users to Uhuru 4.0.</li>
+</ul>
+
+<h2>9 · Timeline</h2>
+<figure class="fig">
+<svg viewBox="0 0 820 150" role="img" aria-label="Timeline: Thursday observation and escalation, Friday root cause and verification plus 2.0 defect found and fixed, Saturday all fixes deployed and verified and report issued">
+  <text x="14" y="24" font-size="13" fill="#5c6675" font-weight="600">FIGURE 6 — FROM OBSERVATION TO VERIFIED FIX IN UNDER 48 HOURS</text>
+  <line x1="60" y1="70" x2="760" y2="70" stroke="#e3e0d8" stroke-width="3"/>
+  <line x1="60" y1="70" x2="760" y2="70" stroke="#0170b9" stroke-width="3"/>
+  <g><circle cx="90" cy="70" r="9" fill="#c0392b"/><text x="90" y="48" font-size="12.5" text-anchor="middle" fill="#1e3350" font-weight="700">Thu 6 Aug</text><text x="90" y="98" font-size="11.5" text-anchor="middle" fill="#5c6675">Zeros + blocked upload</text><text x="90" y="113" font-size="11.5" text-anchor="middle" fill="#5c6675">escalated 17:36</text></g>
+  <g><circle cx="410" cy="70" r="9" fill="#d97706"/><text x="410" y="48" font-size="12.5" text-anchor="middle" fill="#1e3350" font-weight="700">Fri 7 Aug</text><text x="410" y="98" font-size="11.5" text-anchor="middle" fill="#5c6675">Root cause isolated · production verification</text><text x="410" y="113" font-size="11.5" text-anchor="middle" fill="#5c6675">Uhuru 2.0 defect discovered &amp; fixed</text></g>
+  <g><circle cx="730" cy="70" r="9" fill="#1a7f4e"/><text x="730" y="48" font-size="12.5" text-anchor="middle" fill="#1e3350" font-weight="700">Sat 8 Aug</text><text x="730" y="98" font-size="11.5" text-anchor="middle" fill="#5c6675">All fixes live &amp; verified</text><text x="730" y="113" font-size="11.5" text-anchor="middle" fill="#5c6675">report issued</text></g>
+</svg>
+</figure>
+
+<h2>10 · Next step</h2>
+<p>We would welcome a <b>30-minute call early next week</b> to walk through the restored dashboard together and re-run the §4 verification live on production while you watch. We will bring the per-response log records from the intervening days so you can see actual knowledge delivery — not vendor assurances — and we are glad to provide log excerpts for your own team to review independently.</p>
+<p>Your materials are intact, they are reaching the AI on both pipelines, your team now has direct visibility and control over them — and the part of your report that pointed at output quality led us to a real defect that is now fixed. That escalation made the product better, and we appreciate it.</p>
+<p style="margin-top:26px"><b>Motheo “Monti” Kgengwenyane</b><br>GreyEd</p>
+
+</body></html>
