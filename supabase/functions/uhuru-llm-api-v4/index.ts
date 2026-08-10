@@ -316,6 +316,24 @@ Deno.serve(async (req: Request) => {
     gate: gate?.reason ?? 'no_gate',
   }));
 
+  // Record per-document usage so the admin dashboard's "Total Usage" reflects
+  // real serving. Placed after the gate so blocked requests don't count.
+  // Fire-and-forget: stats must never delay or fail a teaching response.
+  {
+    const servedDocIds: string[] = Array.isArray(pinned?.documents)
+      ? pinned.documents.map((d: any) => d?.id).filter(Boolean)
+      : [];
+    if (servedDocIds.length > 0) {
+      void Promise.resolve(
+        supabase.rpc('update_knowledge_usage_stats', { doc_ids: servedDocIds })
+      )
+        .then(({ error: statsError }: any) => {
+          if (statsError) console.warn('KB usage stats update failed:', statsError.message);
+        })
+        .catch((e: any) => console.warn('KB usage stats update failed:', e));
+    }
+  }
+
   // --- Upstream call (OpenAI-compatible, streaming) --------------------------
   let upstream: Response;
   try {
