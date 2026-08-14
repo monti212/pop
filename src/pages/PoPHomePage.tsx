@@ -1,16 +1,13 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  BookOpen,
   Droplets,
   GraduationCap,
-  HeartHandshake,
   Menu,
   School,
   Sparkles,
-  Target,
-  Users,
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import ConversationList from '../components/Chat/ConversationList';
 import SettingsModal from '../components/Settings/SettingsModal';
 import { useLanguage } from '../context/LanguageContext';
@@ -20,37 +17,28 @@ interface PoPHomePageProps {
   userSubscription: any;
 }
 
-const pillars = [
+const snapshots = [
   {
     icon: GraduationCap,
-    title: 'Teacher Support',
-    body: 'PoP backs public primary teachers with workshops, coaching, materials, and classroom practices that help students read with confidence.',
+    label: 'Teacher Support',
+    title: 'PoP helps teachers turn ordinary classrooms into stronger reading spaces.',
+    fact: 'Coaching, materials, and practical training keep the work close to daily lessons.',
     color: '#0170b9',
   },
   {
     icon: Droplets,
-    title: 'WASH',
-    body: 'Clean water, restrooms, filters, and hygiene education help make school a healthier place to learn, especially for girls.',
+    label: 'Healthy Schools',
+    title: 'Clean water and safe restrooms help students stay present and ready to learn.',
+    fact: 'WASH programs connect health, dignity, and attendance in one school day.',
     color: '#0096B3',
   },
   {
     icon: School,
-    title: 'School Builds',
-    body: 'Safe classrooms are built with local communities and governments, so new spaces belong to the people who use them every day.',
+    label: 'Built Together',
+    title: 'PoP builds with communities, not around them.',
+    fact: 'Families, local leaders, and governments help shape school projects from the ground up.',
     color: '#f5b233',
   },
-  {
-    icon: Target,
-    title: 'Measured Impact',
-    body: 'PoP keeps learning from data, observations, and feedback so each program can improve instead of simply repeat.',
-    color: '#FF6A00',
-  },
-];
-
-const promiseSteps = [
-  'Local leaders guide country work from within the communities they serve.',
-  'Families and communities contribute labor, materials, and decision-making.',
-  'Teachers receive practical support long after a classroom opens.',
 ];
 
 const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }) => {
@@ -58,7 +46,28 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
   const [showSettings, setShowSettings] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { interfaceLanguage, responseLanguage, setInterfaceLanguage, setResponseLanguage } = useLanguage();
+  const location = useLocation();
   const sidebarWidth = isSidebarCollapsed ? 64 : 240;
+  const entryIndex = useMemo(() => {
+    const randomBuffer = new Uint32Array(1);
+    crypto.getRandomValues(randomBuffer);
+    return randomBuffer[0] % snapshots.length;
+  }, [location.key]);
+  const [activeIndex, setActiveIndex] = useState(entryIndex);
+  const activeSnapshot = snapshots[activeIndex];
+  const ActiveIcon = activeSnapshot.icon;
+
+  useEffect(() => {
+    setActiveIndex(entryIndex);
+  }, [entryIndex]);
+
+  useEffect(() => {
+    const rotateSnapshot = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % snapshots.length);
+    }, 6500);
+
+    return () => window.clearInterval(rotateSnapshot);
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-[#F9F9F8] z-50 flex flex-col overflow-hidden">
@@ -93,129 +102,103 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
           />
         )}
 
-        <main className="flex-1 overflow-y-auto bg-[#F9F9F8]">
-          <section className="relative min-h-screen overflow-hidden px-5 py-10 sm:px-8 lg:px-12">
+        <main className="flex-1 overflow-hidden bg-[#F9F9F8]">
+          <section className="relative grid min-h-screen overflow-hidden px-5 py-10 sm:px-8 lg:px-12">
             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#0170b9] via-[#f5b233] to-[#FF6A00]" />
+            <motion.div
+              className="absolute left-[12%] top-[16%] h-24 w-24 rounded-16 border-8 border-[#0170b9]/20"
+              animate={{ rotate: [0, 14, -8, 0], x: [0, 18, -10, 0], y: [0, -14, 10, 0] }}
+              transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.div
+              className="absolute right-[8%] top-[18%] h-28 w-20 rounded-16 bg-[#f5b233]/25"
+              animate={{ rotate: [8, -12, 10, 8], y: [0, 24, -12, 0] }}
+              transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.div
+              className="absolute bottom-[13%] left-[24%] h-4 w-44 rounded-full bg-[#0170b9]/20"
+              animate={{ scaleX: [0.6, 1.15, 0.75, 0.6], x: [-40, 30, 0, -40] }}
+              transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.div
+              className="absolute bottom-[18%] right-[16%] h-4 w-56 rounded-full bg-[#f5b233]/30"
+              animate={{ scaleX: [1, 0.5, 1.2, 1], x: [24, -36, 16, 24] }}
+              transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
+            />
 
-            <div className="mx-auto flex max-w-7xl flex-col gap-8">
+            <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-10 self-center lg:grid-cols-[0.95fr_1.05fr]">
               <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
-                className="grid min-h-[42vh] items-center gap-8 pt-8 lg:grid-cols-[1.05fr_0.95fr]"
+                initial={{ opacity: 0, x: -28 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
+                className="space-y-5"
               >
-                <div className="space-y-5">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[#0170b9]/20 bg-white px-3 py-1.5 text-sm font-semibold text-[#0170b9] shadow-sm">
-                    <Sparkles className="h-4 w-4 text-[#f5b233]" />
-                    Pencils of Promise
-                  </div>
-                  <h1 className="max-w-3xl text-4xl font-bold leading-tight text-[#19324A] sm:text-5xl lg:text-6xl">
-                    Education works best when a whole community holds the pencil.
-                  </h1>
-                  <p className="max-w-2xl text-base leading-7 text-[#475766] sm:text-lg">
-                    PoP partners with communities in Ghana, Guatemala, and Laos to create safe, healthy, and engaging public primary school environments. The work blends school infrastructure, teacher support, clean water, and careful measurement.
-                  </p>
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#0170b9]/20 bg-white px-3 py-1.5 text-sm font-semibold text-[#0170b9] shadow-sm">
+                  <Sparkles className="h-4 w-4 text-[#f5b233]" />
+                  Pencils of Promise
                 </div>
+                <h1 className="max-w-2xl text-4xl font-bold leading-tight text-[#19324A] sm:text-5xl lg:text-6xl">
+                  A quick PoP thought for today.
+                </h1>
+                <p className="max-w-xl text-base leading-7 text-[#475766] sm:text-lg">
+                  The snapshot changes each time you land here, and keeps rotating while you are on the page.
+                </p>
+              </motion.div>
 
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92, rotate: -2 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                transition={{ duration: 0.6, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
+                className="relative min-h-[410px] overflow-hidden rounded-16 border border-[#E5E7EB] bg-white shadow-card"
+              >
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.45, delay: 0.12, ease: [0.4, 0, 0.2, 1] }}
-                  className="relative min-h-[320px] overflow-hidden rounded-16 border border-[#E5E7EB] bg-white shadow-card"
-                >
-                  <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(1,112,185,0.08),rgba(245,178,51,0.14),rgba(255,255,255,0.7))]" />
-                  <motion.div
-                    className="absolute left-8 top-8 h-20 w-20 rounded-full border-[14px] border-[#0170b9]/20"
-                    animate={{ y: [0, -8, 0], rotate: [0, 6, 0] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                  <motion.div
-                    className="absolute bottom-8 right-8 h-24 w-24 rounded-16 bg-[#f5b233]/25"
-                    animate={{ y: [0, 10, 0], rotate: [0, -8, 0] }}
-                    transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                  <div className="relative z-10 grid h-full min-h-[320px] place-items-center p-7">
-                    <div className="w-full max-w-sm space-y-4">
-                      {promiseSteps.map((step, index) => (
-                        <motion.div
-                          key={step}
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.35, delay: 0.25 + index * 0.12 }}
-                          className="flex items-start gap-3 rounded-12 border border-white/80 bg-white/90 p-4 shadow-sm"
-                        >
-                          <div className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-[#0170b9] text-sm font-bold text-white">
-                            {index + 1}
-                          </div>
-                          <p className="text-sm font-medium leading-6 text-[#19324A]">{step}</p>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
+                  className="absolute inset-0 bg-[linear-gradient(135deg,rgba(1,112,185,0.10),rgba(245,178,51,0.16),rgba(255,255,255,0.85))]"
+                  animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                  transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ backgroundSize: '220% 220%' }}
+                />
+                <motion.div
+                  className="absolute -right-12 top-8 h-36 w-36 rounded-16 border-[18px] border-[#0170b9]/10"
+                  animate={{ rotate: [0, 180, 360], scale: [1, 0.85, 1] }}
+                  transition={{ duration: 11, repeat: Infinity, ease: 'linear' }}
+                />
+                <motion.div
+                  className="absolute bottom-9 left-8 h-16 w-32 rounded-16 bg-[#f5b233]/25"
+                  animate={{ x: [0, 24, -12, 0], rotate: [-3, 8, -6, -3] }}
+                  transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                />
 
-              <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, delay: 0.18, ease: [0.4, 0, 0.2, 1] }}
-                className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
-              >
-                {pillars.map((pillar, index) => {
-                  const Icon = pillar.icon;
-
-                  return (
-                    <motion.article
-                      key={pillar.title}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.35, delay: 0.25 + index * 0.08 }}
-                      whileHover={{ y: -4 }}
-                      className="rounded-16 border border-[#E5E7EB] bg-white p-5 shadow-sm"
+                <div className="relative z-10 flex min-h-[410px] flex-col justify-center p-7 sm:p-10">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeSnapshot.title}
+                      initial={{ opacity: 0, y: 24, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -22, scale: 0.96 }}
+                      transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+                      className="space-y-6"
                     >
-                      <div
-                        className="mb-4 grid h-11 w-11 place-items-center rounded-12"
-                        style={{ backgroundColor: `${pillar.color}1A`, color: pillar.color }}
+                      <motion.div
+                        className="grid h-16 w-16 place-items-center rounded-16 text-white shadow-card"
+                        style={{ backgroundColor: activeSnapshot.color }}
+                        animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.08, 1] }}
+                        transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
                       >
-                        <Icon className="h-5 w-5" />
+                        <ActiveIcon className="h-8 w-8" />
+                      </motion.div>
+                      <div>
+                        <p className="mb-3 text-sm font-bold uppercase text-[#0170b9]">
+                          {activeSnapshot.label}
+                        </p>
+                        <h2 className="max-w-xl text-3xl font-bold leading-tight text-[#19324A] sm:text-4xl">
+                          {activeSnapshot.title}
+                        </h2>
                       </div>
-                      <h2 className="mb-2 text-lg font-bold text-[#19324A]">{pillar.title}</h2>
-                      <p className="text-sm leading-6 text-[#475766]">{pillar.body}</p>
-                    </motion.article>
-                  );
-                })}
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, delay: 0.38, ease: [0.4, 0, 0.2, 1] }}
-                className="grid gap-4 pb-10 lg:grid-cols-[0.8fr_1.2fr]"
-              >
-                <div className="rounded-16 border border-[#E5E7EB] bg-[#19324A] p-6 text-white shadow-sm">
-                  <BookOpen className="mb-4 h-7 w-7 text-[#f5b233]" />
-                  <h2 className="mb-3 text-2xl font-bold">The short version</h2>
-                  <p className="text-sm leading-6 text-white/80">
-                    PoP does not just build a classroom and leave. It builds with communities, supports teachers inside those classrooms, helps students stay healthy, and keeps checking what is working.
-                  </p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-16 border border-[#E5E7EB] bg-white p-6 shadow-sm">
-                    <Users className="mb-4 h-6 w-6 text-[#0170b9]" />
-                    <h3 className="mb-2 text-lg font-bold text-[#19324A]">Local by design</h3>
-                    <p className="text-sm leading-6 text-[#475766]">
-                      Country leadership comes from the countries where PoP works, keeping decisions close to the lived realities of schools and families.
-                    </p>
-                  </div>
-
-                  <div className="rounded-16 border border-[#E5E7EB] bg-white p-6 shadow-sm">
-                    <HeartHandshake className="mb-4 h-6 w-6 text-[#f5b233]" />
-                    <h3 className="mb-2 text-lg font-bold text-[#19324A]">Built together</h3>
-                    <p className="text-sm leading-6 text-[#475766]">
-                      Communities, governments, and partners share responsibility, which is why the work is meant to last beyond one project cycle.
-                    </p>
-                  </div>
+                      <p className="max-w-lg text-base font-medium leading-7 text-[#475766]">
+                        {activeSnapshot.fact}
+                      </p>
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
               </motion.div>
             </div>
