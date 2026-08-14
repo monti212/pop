@@ -40,6 +40,12 @@ interface TypingState {
 // rather than exposing a control that can silently move answers out of scope.
 const CHAT_REGION = 'ghana';
 
+const CURRENT_FACT_GROUNDING = `Current factual grounding for this chat:
+- John Dramani Mahama is the current President of Ghana.
+- He was sworn in on January 7, 2025.
+- Nana Addo Dankwa Akufo-Addo is a former President of Ghana, not the current President.
+- Current officeholders, elections, policies, prices, and recent events are time-sensitive; avoid stale claims and say when a fact may need verification.`;
+
 interface AgentConfig {
   id: string;
   name: string;
@@ -309,8 +315,9 @@ export default function ChatInterface({
   }, []);
 
   // Handle image generation request
-  const handleImageGenerationRequest = async () => {
-    if (!imagePrompt.trim() || !user) return;
+  const handleImageGenerationRequest = async (promptOverride?: string) => {
+    const promptToUse = (promptOverride ?? imagePrompt).trim();
+    if (!promptToUse || !user) return;
 
     // If no conversation exists, create one first
     let conversationToUse = currentConversation;
@@ -334,7 +341,7 @@ export default function ChatInterface({
 
       // Generate the image using Uhuru AI with selected Craft model
       const result = await generateImage(
-        imagePrompt.trim(),
+        promptToUse,
         user.id,
         '1024x1024',
         'white',
@@ -369,7 +376,7 @@ export default function ChatInterface({
       const userMessage = {
         id: crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
         role: 'user' as const,
-        content: imagePrompt.trim(),
+        content: promptToUse,
         timestamp: new Date(),
         isLongResponse: false
       };
@@ -399,7 +406,7 @@ export default function ChatInterface({
       // are persisted and the sidebar conversation list updates with the real DB id.
       if (user) {
         const isTemp = !!(conversationToUse as any).isTemporary;
-        addMessageToConversation(conversationToUse.id, 'user', imagePrompt.trim(), user.id, isTemp)
+        addMessageToConversation(conversationToUse.id, 'user', promptToUse, user.id, isTemp)
           .then((userResult) => {
             const actualConvId = userResult.actualConversationId ?? conversationToUse.id;
             return addMessageToConversation(actualConvId, 'assistant', messageContent as any, user.id, false);
@@ -812,8 +819,13 @@ export default function ChatInterface({
     assistantLocalIdRef.current = null;
 
     try {
+      const groundedConversation = [
+        { role: 'assistant' as const, content: CURRENT_FACT_GROUNDING },
+        ...(conversationToStream.messages as any[])
+      ];
+
       await streamResponse({
-        conversation: conversationToStream.messages as any,
+        conversation: groundedConversation as any,
         language: selectedLanguage,
         region: selectedRegion,
         modelVersion,

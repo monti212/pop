@@ -18,7 +18,7 @@ interface ChatInputProps {
   imagePrompt?: string;
   setImagePrompt?: (prompt: string) => void;
   isGeneratingImage?: boolean;
-  onImageGenerate?: () => void;
+  onImageGenerate?: (promptOverride?: string) => void;
   modelLabel?: string;
   onOpenModelSelector?: (anchorEl: HTMLElement) => void;
   imageModelLabel?: string;
@@ -52,6 +52,24 @@ const SUBJECT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'Religious and Moral Education', label: 'Religious & Moral Ed.' },
   { value: 'Physical Education', label: 'Physical Education' },
 ];
+
+const getInlineImagePrompt = (text: string): string | null => {
+  const normalized = text.trim().replace(/\s+/g, ' ');
+
+  if (!normalized) return null;
+
+  const explicitImageRequest =
+    /^(generate|create|make|draw|paint|illustrate|craft|design)\s+(an?\s+)?(image|picture|photo|illustration|diagram|poster|flashcard|visual|worksheet visual)\b/i.test(normalized) ||
+    /\b(generate|create|make|draw|paint|illustrate|craft|design)\b.{0,45}\b(image|picture|photo|illustration|diagram|poster|flashcard|visual)\b/i.test(normalized) ||
+    /\b(image|picture|illustration|diagram|poster|flashcard|visual)\s+of\b/i.test(normalized);
+
+  if (!explicitImageRequest) return null;
+
+  return normalized
+    .replace(/^craft:\s*/i, '')
+    .replace(/^(please\s+)?(generate|create|make|draw|paint|illustrate|craft|design)\s+(me\s+)?(an?\s+)?/i, '')
+    .trim() || normalized;
+};
 
 const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
@@ -276,21 +294,24 @@ const ChatInput: React.FC<ChatInputProps> = ({
     e.preventDefault();
 
     if ((message.trim() || selectedFiles.length > 0) && !isTyping && !showImagePromptInput && !isGeneratingImage) {
+      const inlineImagePrompt = selectedFiles.length === 0 ? getInlineImagePrompt(message) : null;
+
+      if (inlineImagePrompt && onImageGenerate) {
+        onImageGenerate(inlineImagePrompt);
+        setMessage('');
+        setIsCraftMode(false);
+        sessionStorage.removeItem('uhuru-chat-draft');
+        return;
+      }
+
       // Check if in craft mode and handle image generation
       if (isCraftMode && message.trim().toLowerCase().startsWith('craft:')) {
         const imageDescription = message.substring(6).trim(); // Remove "Craft:" prefix
         if (imageDescription && setImagePrompt && onImageGenerate) {
-          // Send the user's message first
-          onSendMessage({ text: imageDescription, files: [], isWebSearchActive: false });
-
-          // Then trigger image generation with the description
-          setImagePrompt(imageDescription);
-          setTimeout(() => {
-            onImageGenerate();
-          }, 0);
-
+          onImageGenerate(imageDescription);
           setMessage('');
           setIsCraftMode(false);
+          sessionStorage.removeItem('uhuru-chat-draft');
           return;
         }
       }
