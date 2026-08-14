@@ -52,13 +52,13 @@ const TEACHER_ANSWER_GROUNDING = `Teacher-answer quality requirements:
 - Give enough substance for a teacher to use: definition, key idea/process, important equation or word equation when relevant, Ghanaian classroom example, and one quick teaching/assessment idea.
 - Default responses should not be only 2-4 sentences when a teacher asks "what is..." about a curriculum topic. Keep it concise, but complete.`;
 
-const getImageSizeForPrompt = (prompt: string): '1024x1024' | '1792x1024' | '1024x1792' => {
+const getImageSizeForPrompt = (prompt: string): '1024x1024' | '1536x1024' | '1024x1536' => {
   const normalized = prompt.toLowerCase();
   if (/\b(poster|infographic|worksheet|anchor chart|classroom chart|flyer|notice|handout)\b/.test(normalized)) {
-    return '1024x1792';
+    return '1024x1536';
   }
   if (/\b(timeline|wide|landscape|panorama|horizontal)\b/.test(normalized)) {
-    return '1792x1024';
+    return '1536x1024';
   }
   return '1024x1024';
 };
