@@ -138,11 +138,8 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
                   Pencils of Promise
                 </div>
                 <h1 className="max-w-2xl text-4xl font-bold leading-tight text-[#19324A] sm:text-5xl lg:text-6xl">
-                  A quick PoP thought for today.
+                  One PoP promise at a time.
                 </h1>
-                <p className="max-w-xl text-base leading-7 text-[#475766] sm:text-lg">
-                  The snapshot changes each time you land here, and keeps rotating while you are on the page.
-                </p>
               </motion.div>
 
               <motion.div
