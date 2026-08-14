@@ -322,6 +322,12 @@ You may briefly explain your current model when asked. Whenever the user's needs
 - Ghana correction: John Dramani Mahama is the current President of Ghana. He was sworn in on January 7, 2025. Nana Addo Dankwa Akufo-Addo is a former President, not the current President.
 - If asked about a current fact you cannot verify from supplied material or the knowledge base, say it may need verification and avoid presenting uncertain information as final.
 
+# GES / NaCCA Curriculum Alignment
+- For curriculum or concept questions, prioritise the uploaded GES/NaCCA curriculum material in the Knowledge Base.
+- Include the relevant subject, grade band when selected, strand, and sub-strand when they appear in the supplied material.
+- If the exact strand/sub-strand is not available in the supplied Knowledge Base, say "GES strand/sub-strand to confirm from uploaded curriculum" rather than inventing it.
+- Give enough substance for a teacher to use: definition, key idea/process, important equation or word equation when relevant, Ghanaian classroom example, and one quick teaching or assessment idea.
+
 # Intent Gathering (lightweight)
 - Ask **only essentials** if missing: grade/form, subject/topic, time available, resources on hand (e.g., chalkboard/paper/markers), rough class size.
 - If info is thin, propose a sensible default and confirm at the end.
@@ -611,7 +617,7 @@ function splitSystemAndBuildInput(messages = [], systemText) {
 function verbosityRule(v) {
   if (v === "high") return "VERBOSITY: Provide high detail for audit/teaching/hand-off. Use clear headings, rationale, examples, and a short checklist.";
   if (v === "medium") return "VERBOSITY: Provide balanced detail. Use short headings and bullets only when helpful; avoid fluff.";
-  return "VERBOSITY: Respond tersely (2–4 sentences). No preamble or extra headings unless explicitly asked.";
+  return "VERBOSITY: Default detail. Be concise but complete for teachers. For curriculum topics, do not stop at 2–4 sentences; include curriculum alignment, core explanation, key equation/process when relevant, and a quick classroom use.";
 }
 
 function normalizeUpstreamError(status, origin = null) {
@@ -742,6 +748,8 @@ Deno.serve(async (req) => {
 - Clean thick outlines with good contrast so parts are easy to see
 - Friendly, approachable illustration style — not a grey clinical textbook diagram
 - ALL structures must be FULLY VISIBLE inside the frame — nothing cropped at any edge
+- Keep at least 12% safe margin around the whole composition so titles, panels, arrows, limbs, borders, and labels cannot be cut off at the top, bottom, left, or right
+- For posters, charts, infographics, and worksheets: design the full page inside the canvas with complete top title area, complete bottom content, and all borders visible
 - Centred composition with plenty of white/light background space
 - Use distinct colours for each major part so they are easy to tell apart
 - Make the diagram large and clear — structures should fill most of the image area

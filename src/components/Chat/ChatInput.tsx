@@ -61,7 +61,8 @@ const getInlineImagePrompt = (text: string): string | null => {
   const explicitImageRequest =
     /^(generate|create|make|draw|paint|illustrate|craft|design)\s+(an?\s+)?(image|picture|photo|illustration|diagram|poster|flashcard|visual|worksheet visual)\b/i.test(normalized) ||
     /\b(generate|create|make|draw|paint|illustrate|craft|design)\b.{0,45}\b(image|picture|photo|illustration|diagram|poster|flashcard|visual)\b/i.test(normalized) ||
-    /\b(image|picture|illustration|diagram|poster|flashcard|visual)\s+of\b/i.test(normalized);
+    /\b(image|picture|illustration|diagram|poster|flashcard|visual)\s+(of|about|for)\b/i.test(normalized) ||
+    /^(an?\s+)?(poster|diagram|illustration|visual|image|picture|flashcard)\s+(of|about|for)\b/i.test(normalized);
 
   if (!explicitImageRequest) return null;
 

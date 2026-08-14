@@ -46,6 +46,32 @@ const CURRENT_FACT_GROUNDING = `Current factual grounding for this chat:
 - Nana Addo Dankwa Akufo-Addo is a former President of Ghana, not the current President.
 - Current officeholders, elections, policies, prices, and recent events are time-sensitive; avoid stale claims and say when a fact may need verification.`;
 
+const TEACHER_ANSWER_GROUNDING = `Teacher-answer quality requirements:
+- Prioritize the uploaded GreyEd/Pencils of Promise knowledge base and GES/NaCCA curriculum material over general memory.
+- For curriculum or concept questions, include the most relevant GES curriculum alignment from the knowledge base: subject, grade band when selected, strand, and sub-strand. If the exact strand/sub-strand is not present in the supplied knowledge base, say "GES strand/sub-strand to confirm from uploaded curriculum" rather than inventing one.
+- Give enough substance for a teacher to use: definition, key idea/process, important equation or word equation when relevant, Ghanaian classroom example, and one quick teaching/assessment idea.
+- Default responses should not be only 2-4 sentences when a teacher asks "what is..." about a curriculum topic. Keep it concise, but complete.`;
+
+const getImageSizeForPrompt = (prompt: string): '1024x1024' | '1792x1024' | '1024x1792' => {
+  const normalized = prompt.toLowerCase();
+  if (/\b(poster|infographic|worksheet|anchor chart|classroom chart|flyer|notice|handout)\b/.test(normalized)) {
+    return '1024x1792';
+  }
+  if (/\b(timeline|wide|landscape|panorama|horizontal)\b/.test(normalized)) {
+    return '1792x1024';
+  }
+  return '1024x1024';
+};
+
+const buildImageGenerationPrompt = (prompt: string) => {
+  const isPosterLike = /\b(poster|infographic|worksheet|anchor chart|classroom chart|flyer|notice|handout)\b/i.test(prompt);
+  const framing = isPosterLike
+    ? 'Create the full poster as a portrait composition. Keep the complete title, all panels, borders, icons, and footer fully inside the canvas with at least 12% safe margin on every edge. Do not crop anything at the top, bottom, left, or right. Keep any text large, correctly spelled, and far from the edges.'
+    : 'Keep the full subject fully visible inside the canvas with generous safe margins. Do not crop anything at the top, bottom, left, or right.';
+
+  return `${prompt}\n\nFraming requirements: ${framing}`;
+};
+
 interface AgentConfig {
   id: string;
   name: string;
@@ -318,6 +344,8 @@ export default function ChatInterface({
   const handleImageGenerationRequest = async (promptOverride?: string) => {
     const promptToUse = (promptOverride ?? imagePrompt).trim();
     if (!promptToUse || !user) return;
+    const generationPrompt = buildImageGenerationPrompt(promptToUse);
+    const imageSize = getImageSizeForPrompt(promptToUse);
 
     // If no conversation exists, create one first
     let conversationToUse = currentConversation;
@@ -341,9 +369,9 @@ export default function ChatInterface({
 
       // Generate the image using Uhuru AI with selected Craft model
       const result = await generateImage(
-        promptToUse,
+        generationPrompt,
         user.id,
-        '1024x1024',
+        imageSize,
         'white',
         modelVersion
       );
@@ -821,6 +849,7 @@ export default function ChatInterface({
     try {
       const groundedConversation = [
         { role: 'assistant' as const, content: CURRENT_FACT_GROUNDING },
+        { role: 'assistant' as const, content: TEACHER_ANSWER_GROUNDING },
         ...(conversationToStream.messages as any[])
       ];
 
