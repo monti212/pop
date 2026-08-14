@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PenSquare, Search, Trash2, Crown, X, Layout, Check, FileEdit as Edit3, FileText, Settings, MoreVertical, Shield, GraduationCap, PanelLeft } from 'lucide-react';
+import { PenSquare, Search, Trash2, Crown, X, Layout, Check, FileEdit as Edit3, FileText, Settings, MoreVertical, Shield, GraduationCap, PanelLeft, Home } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useConversations } from '../../context/ConversationContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -30,6 +30,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
 }) => {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -60,6 +61,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   const handleNewConversation = () => {
     createNewConversation().then(newConversation => {
       setCurrentConversation(newConversation);
+      navigate('/chat');
       if (onClose) onClose();
     }).catch(error => {
       console.error('Error creating new conversation:', error);
@@ -75,6 +77,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
       } else {
         setCurrentConversation(selected);
       }
+      navigate('/chat');
       if (onClose) onClose();
     }
   };
@@ -363,6 +366,22 @@ const ConversationList: React.FC<ConversationListProps> = ({
         
         {/* Main navigation */}
         <div className={`p-2 px-3 space-y-1 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
+          <button
+            onClick={() => {
+              navigate('/home');
+              if (onClose) onClose();
+            }}
+            className={`${isCollapsed ? 'w-10 h-10 rounded-12 flex items-center justify-center' : 'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-12'} ${
+              location.pathname === '/home'
+                ? 'bg-[#EFEFED] text-[#19324A] font-medium shadow-md'
+                : 'border border-[#E5E7EB] hover:bg-[#EFEFED] hover:shadow-md hover:text-[#19324A] hover:scale-[1.01] transition-all duration-150 ease-out'
+            }`}
+            title={isCollapsed ? 'Home' : undefined}
+          >
+            <Home className="w-4 h-4 text-[#0170b9]" />
+            {!isCollapsed && <span className="text-sm font-medium">Home</span>}
+          </button>
+
           {/* Search and Settings buttons - only show when not collapsed */}
           {!isCollapsed && (
             <div className="space-y-1">

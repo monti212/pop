@@ -5,6 +5,7 @@ import Hero from './components/Hero';
 import LoginModal from './components/LoginModal';
 import SignUpModal from './components/SignUpModal';
 const ChatInterface = lazy(() => import('./components/Chat/ChatInterface'));
+const PoPHomePage = lazy(() => import('./pages/PoPHomePage'));
 import { ConversationProvider } from './context/ConversationContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -86,6 +87,7 @@ const AppContentInner: React.FC = () => {
 
   // Track if chat should remain open based on user intent
   const [chatIntentOpen, setChatIntentOpen] = useState(false);
+  const [homeIntentOpen, setHomeIntentOpen] = useState(false);
 
   // Page detection - must be defined before useEffect hooks that reference them
   const isTermsPage = location.pathname === '/terms';
@@ -106,18 +108,6 @@ const AppContentInner: React.FC = () => {
   const isTechnicalDocsPage = location.pathname.startsWith('/technical-docs');
   const isUPage = isGreyEdClassPage || isUOfficePage || isUSheetsPage || isClassPage || isTechnicalDocsPage;
 
-  // Restore chat state from session storage on mount
-  useEffect(() => {
-    const savedChatState = sessionStorage.getItem('uhuru_chat_open');
-    if (savedChatState === 'true' && isAuthenticated) {
-      setChatIntentOpen(true);
-      setAuthState(prev => ({
-        ...prev,
-        showChatInterface: true
-      }));
-    }
-  }, []);
-
   // Open chat interface for authenticated users only if they intend to use it
   useEffect(() => {
     if (isAuthenticated && !isLoading && chatIntentOpen) {
@@ -130,9 +120,17 @@ const AppContentInner: React.FC = () => {
         // Use navigate to go to chat route instead of modal
         navigate('/chat');
         sessionStorage.setItem('uhuru_chat_open', 'true');
+        setChatIntentOpen(false);
       }
     }
   }, [isAuthenticated, isLoading, chatIntentOpen, navigate, location.pathname, isUPage, isTermsPage, isPrivacyPolicyPage, isResetPasswordPage, isApiDocsPage, isAdminLoginPage, isAdminPage, isSupaAdminPage]);
+
+  useEffect(() => {
+    if (isAuthenticated && !isLoading && homeIntentOpen) {
+      navigate('/home');
+      setHomeIntentOpen(false);
+    }
+  }, [isAuthenticated, isLoading, homeIntentOpen, navigate]);
 
   // Clear chat intent when navigating to U pages
   useEffect(() => {
@@ -194,12 +192,13 @@ const AppContentInner: React.FC = () => {
       logger.debug('Login success - hero input flow detected, setting postSignupInitialQuestion:', initialChatQuestion);
       setChatIntentOpen(true);
       setPostSignupInitialQuestion(initialChatQuestion);
-      navigate('/chat');
       setShowSignupModalForHeroInput(false);
       setInitialChatQuestion(null);
     } else {
-      logger.debug('Login success - normal login flow, opening chat');
-      setChatIntentOpen(true);
+      logger.debug('Login success - normal login flow, opening PoP home');
+      setChatIntentOpen(false);
+      setHomeIntentOpen(true);
+      sessionStorage.removeItem('uhuru_chat_open');
     }
 
     await refreshProfile();
@@ -208,7 +207,18 @@ const AppContentInner: React.FC = () => {
   const handleSignUpSuccess = async () => {
     logger.debug('handleSignUpSuccess called');
     setAuthState(prev => ({ ...prev, showSignUpModal: false }));
-    setChatIntentOpen(true);
+
+    if (showSignupModalForHeroInput && initialChatQuestion) {
+      setChatIntentOpen(true);
+      setPostSignupInitialQuestion(initialChatQuestion);
+      setShowSignupModalForHeroInput(false);
+      setInitialChatQuestion(null);
+    } else {
+      setChatIntentOpen(false);
+      setHomeIntentOpen(true);
+      sessionStorage.removeItem('uhuru_chat_open');
+    }
+
     await refreshProfile();
   };
   
@@ -233,6 +243,7 @@ const AppContentInner: React.FC = () => {
     setPostSignupInitialQuestion(null);
     setShowSignupModalForHeroInput(false);
     setChatIntentOpen(false);
+    setHomeIntentOpen(false);
     sessionStorage.removeItem('uhuru_chat_open');
 
     await refreshProfile();
@@ -271,6 +282,18 @@ const AppContentInner: React.FC = () => {
             <Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}>
               <ChatInterface
                 onClose={handleSignOut}
+                userSubscription={userSubscription}
+              />
+            </Suspense>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        <Route path="/home" element={
+          isAuthenticated ? (
+            <Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}>
+              <PoPHomePage
+                onSignOut={handleSignOut}
                 userSubscription={userSubscription}
               />
             </Suspense>
@@ -337,13 +360,8 @@ const AppContentInner: React.FC = () => {
               <HeroSkeleton />
             ) : (
               <div className="min-h-screen bg-sand-200 text-navy">
-                {(isAuthenticated || authState.showChatInterface) && !isTermsPage && !isPrivacyPolicyPage && !isResetPasswordPage && !isApiDocsPage && !isAdminLoginPage && !isAdminPage && !isSupaAdminPage && !isChatPage && !isUPage ? (
-                  <Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}>
-                    <ChatInterface
-                      onClose={handleSignOut}
-                      userSubscription={userSubscription}
-                    />
-                  </Suspense>
+                {isAuthenticated && !isTermsPage && !isPrivacyPolicyPage && !isResetPasswordPage && !isApiDocsPage && !isAdminLoginPage && !isAdminPage && !isSupaAdminPage && !isChatPage && !isUPage ? (
+                  <Navigate to="/home" replace />
                 ) : (
                   <>
                     
