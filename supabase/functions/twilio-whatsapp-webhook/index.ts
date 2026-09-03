@@ -12,7 +12,7 @@ const WHATSAPP_IMAGE_MODEL = Deno.env.get('WHATSAPP_IMAGE_MODEL') || Deno.env.ge
 
 // WhatsApp-specific limits
 const DAILY_MESSAGE_LIMIT = 25;
-const DAILY_IMAGE_LIMIT = 2;
+const DAILY_IMAGE_LIMIT = 3;
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const SESSION_DURATION_HOURS = 24;
 const WEBHOOK_TIMEOUT_MS = 8000;

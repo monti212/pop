@@ -504,6 +504,8 @@ function pickImageModel(ver) {
   return ver === "2.1" ? "2.1" : "2.0";
 }
 
+const DAILY_IMAGE_LIMIT = 3;
+
 function getTextContentFromMessage(content) {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
@@ -568,6 +570,34 @@ async function recordTokenUsage(supabaseClient, details) {
 
   if (error) {
     console.warn("⚠️ Failed to record token usage:", error);
+  }
+}
+
+async function reserveDailyImageGeneration(supabaseClient, userId, imageCount = 1) {
+  const { data, error } = await supabaseClient.rpc('reserve_daily_image_generation', {
+    p_user_id: userId,
+    p_image_count: imageCount,
+    p_daily_limit: DAILY_IMAGE_LIMIT
+  });
+
+  if (error) {
+    console.error('❌ [IMAGE] Daily image limit check failed:', error);
+    throw new Error('Image generation limit check failed');
+  }
+
+  return data;
+}
+
+async function releaseDailyImageGeneration(supabaseClient, userId, imageCount = 1) {
+  if (!userId) return;
+
+  const { error } = await supabaseClient.rpc('release_daily_image_generation', {
+    p_user_id: userId,
+    p_image_count: imageCount
+  });
+
+  if (error) {
+    console.warn('⚠️ [IMAGE] Failed to release daily image reservation:', error);
   }
 }
 
@@ -702,6 +732,37 @@ Deno.serve(async (req) => {
 
     if (!imageModel) {
       return j({ error: 'Uhuru Image Generation model not configured' }, 500, origin);
+    }
+
+    if (!requestUser?.id) {
+      return j({ error: 'Please sign in to generate images.' }, 401, origin);
+    }
+
+    const requestedImageCount = 1;
+    let reservedDailyImage = false;
+
+    try {
+      const quota = await reserveDailyImageGeneration(supabase, requestUser.id, requestedImageCount);
+      if (!quota?.allowed) {
+        const remaining = Number(quota?.remaining ?? 0);
+        return j({
+          error: `You have reached today's image generation limit of ${DAILY_IMAGE_LIMIT} images. Please try again tomorrow.`,
+          code: 'daily_image_limit',
+          limit: DAILY_IMAGE_LIMIT,
+          used: Number(quota?.used ?? DAILY_IMAGE_LIMIT),
+          remaining
+        }, 429, origin);
+      }
+      reservedDailyImage = true;
+      console.log('✅ [IMAGE] Daily image quota reserved:', {
+        userId: requestUser.id,
+        limit: quota.limit,
+        used: quota.used,
+        remaining: quota.remaining
+      });
+    } catch (quotaError) {
+      console.error('❌ [IMAGE] Unable to verify daily image quota:', quotaError);
+      return j({ error: 'Unable to verify your image generation limit. Please try again.' }, 503, origin);
     }
 
     // === AI Scientific Illustrator ===
@@ -866,6 +927,10 @@ Respond with ONLY valid JSON, no markdown, no explanation:
           payloadKeys: Object.keys(payload)
         });
         // Return the actual API error so users and developers can debug
+        if (reservedDailyImage) {
+          await releaseDailyImageGeneration(supabase, requestUser.id, requestedImageCount);
+          reservedDailyImage = false;
+        }
         return j({
           error: parsedApiError
             ? `Image generation failed: ${parsedApiError}`
@@ -898,8 +963,16 @@ Respond with ONLY valid JSON, no markdown, no explanation:
         }
       }
 
+      if (images.length > requestedImageCount) {
+        images.splice(requestedImageCount);
+      }
+
       if (images.length === 0) {
         console.error('❌ [IMAGE] No images extracted from response:', JSON.stringify(rawData).substring(0, 300));
+        if (reservedDailyImage) {
+          await releaseDailyImageGeneration(supabase, requestUser.id, requestedImageCount);
+          reservedDailyImage = false;
+        }
         return j({ error: `Image generation succeeded but returned no image data. Response: ${JSON.stringify(rawData).substring(0, 200)}` }, 500, origin);
       }
 
@@ -931,6 +1004,9 @@ Respond with ONLY valid JSON, no markdown, no explanation:
         url: IMAGES_URL,
         model: imageModel
       });
+      if (reservedDailyImage) {
+        await releaseDailyImageGeneration(supabase, requestUser.id, requestedImageCount);
+      }
       return j({
         error: 'Uhuru Image Generation failed. Please try again.',
         details: error.message
