@@ -28,6 +28,7 @@ const WhatsAppMessages = lazy(() => import('./pages/admin/WhatsAppMessages'));
 const CostBreakdownMaker = lazy(() => import('./pages/admin/CostBreakdownMaker'));
 const ComprehensiveAdminDashboard = lazy(() => import('./pages/admin/ComprehensiveAdminDashboard'));
 const AIKnowledgeBase = lazy(() => import('./pages/admin/AIKnowledgeBase'));
+const TeacherAnnouncements = lazy(() => import('./pages/admin/TeacherAnnouncements'));
 const TokenUsage = lazy(() => import('./pages/admin/TokenUsage'));
 const UhuruDocsPage = lazy(() => import('./pages/UhuruOfficePage'));
 const UhuruSheetsPage = lazy(() => import('./pages/UhuruSheetsPage'));
@@ -327,6 +328,7 @@ const AppContentInner: React.FC = () => {
           <Route path="/admin/token-usage" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TokenUsage /></Suspense>} />
           <Route path="/admin/whatsapp" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><WhatsAppMessages /></Suspense>} />
           <Route path="/admin/knowledge-base" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><AIKnowledgeBase /></Suspense>} />
+          <Route path="/admin/announcements" element={<Suspense fallback={<div className="min-h-screen bg-sand-200 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal"></div></div>}><TeacherAnnouncements /></Suspense>} />
         </Route>
 
         {/* Protected Supa Admin Route - supa_admin only */}

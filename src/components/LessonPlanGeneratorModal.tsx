@@ -223,6 +223,8 @@ const LessonPlanGeneratorModal: React.FC<LessonPlanGeneratorModalProps> = ({
   };
 
   const buildLessonPlanPrompt = (profiles: any[]): string => {
+    const subject = formData.subject || classSubject || '';
+    const gradeLevel = classGrade || '';
     const studentDetails = profiles.map(student => {
       const traits = student.personality_traits;
       return `
@@ -242,7 +244,8 @@ ${student.has_neurodivergence ? `- Neurodivergence: ${student.neurodivergence_ty
 **Class Information:**
 - Class: ${className}
 - Topic: ${formData.topic}
-${formData.subject ? `- Subject: ${formData.subject}` : ''}
+${subject ? `- Subject: ${subject}` : ''}
+${gradeLevel ? `- Grade/Band: ${gradeLevel}` : ''}
 - Duration: ${formData.duration_minutes} minutes
 ${formData.lesson_date ? `- Date: ${formData.lesson_date}` : ''}
 
@@ -265,6 +268,14 @@ Please create a comprehensive lesson plan that:
 IMPORTANT: Start your lesson plan with a "# Topic:" or "## Topic:" heading that clearly states the topic "${formData.topic}".
 
 Include:
+- GES Curriculum Alignment at the top, using the official uploaded GES/NaCCA curriculum where available:
+  - Subject
+  - Grade/Band
+  - Strand
+  - Substrand
+  - Indicator code(s) and exact indicator statement(s)
+  - Curriculum reference status, saying "matched uploaded GES/NaCCA curriculum" or "GES curriculum reference to confirm from uploaded curriculum"
+- Do not invent strand, substrand, or indicator details. If the uploaded curriculum context does not provide an exact value, write "to confirm from uploaded curriculum" for that field.
 - Learning objectives
 - Materials needed
 - Step-by-step lesson procedure

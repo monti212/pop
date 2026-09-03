@@ -48,7 +48,8 @@ const CURRENT_FACT_GROUNDING = `Current factual grounding for this chat:
 
 const TEACHER_ANSWER_GROUNDING = `Teacher-answer quality requirements:
 - Prioritize the uploaded GreyEd/Pencils of Promise knowledge base and GES/NaCCA curriculum material over general memory.
-- For curriculum or concept questions, include the most relevant GES curriculum alignment from the knowledge base: subject, grade band when selected, strand, and sub-strand. If the exact strand/sub-strand is not present in the supplied knowledge base, say "GES strand/sub-strand to confirm from uploaded curriculum" rather than inventing one.
+- For curriculum, concept, or lesson-plan requests, include the most relevant GES curriculum alignment from the knowledge base: subject, grade band when selected, strand, sub-strand, and official indicator code(s)/statement(s). If an exact strand, sub-strand, or indicator is not present in the supplied knowledge base, say "GES curriculum reference to confirm from uploaded curriculum" rather than inventing one.
+- For generated lesson plans, place a short "GES Curriculum Alignment" section near the top so teachers can cross-reference the official strand, sub-strand, and indicator before teaching.
 - Give enough substance for a teacher to use: definition, key idea/process, important equation or word equation when relevant, Ghanaian classroom example, and one quick teaching/assessment idea.
 - Default responses should not be only 2-4 sentences when a teacher asks "what is..." about a curriculum topic. Keep it concise, but complete.`;
 
