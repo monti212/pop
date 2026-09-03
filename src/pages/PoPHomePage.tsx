@@ -244,7 +244,7 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
                     PoP Updates
                   </p>
                   <h2 className="mt-1 text-2xl font-bold text-[#19324A]">
-                    Announcements for teachers
+                    Announcements
                   </h2>
                 </div>
                 <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#FEF7E8] text-[#FF6A00]">
