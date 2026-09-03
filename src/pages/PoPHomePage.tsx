@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
+  ArrowRight,
   BookOpen,
+  CalendarDays,
   GraduationCap,
+  Lightbulb,
   Megaphone,
   Menu,
+  School,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import ConversationList from '../components/Chat/ConversationList';
 import SettingsModal from '../components/Settings/SettingsModal';
@@ -13,6 +19,7 @@ import {
   getPublishedTeacherAnnouncements,
   TeacherAnnouncement,
 } from '../services/announcementService';
+import popLogo from '../assets/pencils-of-promise-logo.png';
 
 interface PoPHomePageProps {
   onSignOut: () => void;
@@ -24,9 +31,33 @@ const missionStatement =
 
 const funFact = {
   label: 'Fun fact',
-  title: 'Teacher support works best when it stays close to the lesson.',
+  title: 'Support sticks when teachers can use it tomorrow.',
   body: 'PoP pairs practical workshops with coaching, materials, and classroom follow-up so new methods can become daily teaching habits.',
 };
+
+const missionPillars = [
+  {
+    icon: School,
+    title: 'Schools',
+    body: 'Spaces where learners feel ready to read, think, and participate.',
+    color: '#0170b9',
+    bg: '#E6F2FA',
+  },
+  {
+    icon: GraduationCap,
+    title: 'Programs',
+    body: 'Teacher support, coaching, and materials close to daily lessons.',
+    color: '#0096B3',
+    bg: '#E6F7FA',
+  },
+  {
+    icon: Users,
+    title: 'Communities',
+    body: 'Families, local leaders, and schools moving toward education for all.',
+    color: '#FF6A00',
+    bg: '#FFF0E6',
+  },
+];
 
 const formatAnnouncementDate = (value: string | null) => {
   if (!value) return '';
@@ -68,7 +99,7 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#F9F9F8]">
+    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#F7F5F2]">
       {!showSidebar && (
         <button
           onClick={() => setShowSidebar(true)}
@@ -100,56 +131,114 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
           />
         )}
 
-        <main className="flex-1 overflow-y-auto bg-[#F9F9F8]">
-          <div className="h-1 bg-gradient-to-r from-[#0170b9] via-[#f5b233] to-[#FF6A00]" />
+        <main className="flex-1 overflow-y-auto bg-[#F7F5F2]">
+          <div className="h-1.5 bg-gradient-to-r from-[#0170b9] via-[#f5b233] to-[#FF6A00]" />
 
-          <section className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 lg:px-12 lg:py-14">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-              <div className="space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#0170b9]/20 bg-white px-3 py-1.5 text-sm font-semibold text-[#0170b9] shadow-sm">
-                  <Sparkles className="h-4 w-4 text-[#f5b233]" />
-                  Pencils of Promise
-                </div>
+          <section className="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="relative overflow-hidden rounded-lg border border-[#E8DFD3] bg-white shadow-sm">
+                <div className="grid min-h-[430px] gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:p-10">
+                  <div className="relative z-10 flex flex-col justify-between gap-8">
+                    <div className="space-y-6">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-[#0170b9]/20 bg-[#E6F2FA] px-3 py-1.5 text-sm font-bold text-[#0170b9]">
+                          <Sparkles className="h-4 w-4 text-[#f5b233]" />
+                          Pencils of Promise
+                        </span>
+                        <span className="rounded-full border border-[#E8DFD3] bg-[#F7F5F2] px-3 py-1.5 text-sm font-semibold text-[#19324A]">
+                          Quality education for all
+                        </span>
+                      </div>
 
-                <div className="space-y-4">
-                  <h1 className="max-w-3xl text-4xl font-bold leading-tight text-[#19324A] sm:text-5xl">
-                    One PoP promise at a time.
-                  </h1>
-                  <p className="max-w-3xl text-lg font-medium leading-8 text-[#475766]">
-                    {missionStatement}
-                  </p>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {['Quality education', 'Supported teachers', 'Stronger readers'].map((item) => (
-                    <div
-                      key={item}
-                      className="rounded-lg border border-[#EAE7E3] bg-white px-4 py-3 text-sm font-semibold text-[#19324A]"
-                    >
-                      {item}
+                      <div className="max-w-3xl">
+                        <h1 className="text-4xl font-bold leading-tight text-[#19324A] sm:text-5xl lg:text-6xl">
+                          One PoP promise at a time.
+                        </h1>
+                        <p className="mt-5 max-w-2xl text-lg font-medium leading-8 text-[#475766]">
+                          {missionStatement}
+                        </p>
+                      </div>
                     </div>
-                  ))}
+
+                    <div className="flex flex-wrap gap-3">
+                      <Link
+                        to="/chat"
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#0170b9] px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#005F9E]"
+                      >
+                        Start a new chat
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                      <Link
+                        to="/teach"
+                        className="inline-flex items-center gap-2 rounded-lg border border-[#E8DFD3] bg-white px-5 py-3 text-sm font-bold text-[#19324A] transition-colors hover:bg-[#FEF7E8]"
+                      >
+                        Open GreyEd Teach
+                        <BookOpen className="h-4 w-4 text-[#FF6A00]" />
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 flex flex-col gap-4">
+                    <div className="rounded-lg border border-[#E8DFD3] bg-[#19324A] p-5 text-white shadow-sm">
+                      <img
+                        src={popLogo}
+                        alt="Pencils of Promise"
+                        className="mb-8 h-10 w-auto brightness-0 invert"
+                      />
+                      <p className="text-sm font-semibold uppercase tracking-wide text-[#f5b233]">
+                        Mission focus
+                      </p>
+                      <p className="mt-3 text-2xl font-bold leading-8">
+                        Better learning starts with stronger support for teachers.
+                      </p>
+                    </div>
+
+                    <aside className="rounded-lg border border-[#F1D7A4] bg-[#FFF7E8] p-5 shadow-sm">
+                      <div className="mb-4 grid h-11 w-11 place-items-center rounded-lg bg-[#FF6A00] text-white">
+                        <Lightbulb className="h-5 w-5" />
+                      </div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#B45309]">
+                        {funFact.label}
+                      </p>
+                      <h2 className="mt-2 text-xl font-bold leading-7 text-[#19324A]">
+                        {funFact.title}
+                      </h2>
+                      <p className="mt-3 text-sm leading-6 text-[#475766]">
+                        {funFact.body}
+                      </p>
+                    </aside>
+                  </div>
                 </div>
               </div>
 
-              <aside className="rounded-lg border border-[#EAE7E3] bg-white p-5 shadow-sm">
-                <div className="mb-4 grid h-12 w-12 place-items-center rounded-lg bg-[#0170b9] text-white">
-                  <GraduationCap className="h-6 w-6" />
-                </div>
-                <p className="text-xs font-bold uppercase tracking-wide text-[#0170b9]">
-                  {funFact.label}
-                </p>
-                <h2 className="mt-2 text-xl font-bold leading-7 text-[#19324A]">
-                  {funFact.title}
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-[#475766]">
-                  {funFact.body}
-                </p>
-              </aside>
+              <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
+                {missionPillars.map((pillar) => {
+                  const Icon = pillar.icon;
+                  return (
+                    <article
+                      key={pillar.title}
+                      className="rounded-lg border border-[#E8DFD3] bg-white p-5 shadow-sm"
+                    >
+                      <div
+                        className="mb-4 grid h-11 w-11 place-items-center rounded-lg"
+                        style={{ background: pillar.bg, color: pillar.color }}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <h2 className="text-lg font-bold text-[#19324A]">
+                        {pillar.title}
+                      </h2>
+                      <p className="mt-2 text-sm leading-6 text-[#475766]">
+                        {pillar.body}
+                      </p>
+                    </article>
+                  );
+                })}
+              </div>
             </div>
 
-            <section className="mt-10 border-t border-[#EAE7E3] pt-8">
-              <div className="mb-5 flex items-center justify-between gap-4">
+            <section className="mt-6 rounded-lg border border-[#E8DFD3] bg-white p-5 shadow-sm sm:p-6">
+              <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#0170b9]">
                     PoP Updates
@@ -158,25 +247,30 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
                     Announcements for teachers
                   </h2>
                 </div>
-                <div className="hidden h-10 w-10 place-items-center rounded-lg bg-[#FEF7E8] text-[#FF6A00] sm:grid">
+                <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#FEF7E8] text-[#FF6A00]">
                   <Megaphone className="h-5 w-5" />
                 </div>
               </div>
 
               {announcementsLoading ? (
-                <div className="rounded-lg border border-[#EAE7E3] bg-white p-5 text-sm text-[#475766]">
-                  Loading updates...
+                <div className="grid gap-3 md:grid-cols-2">
+                  {[0, 1].map((item) => (
+                    <div
+                      key={item}
+                      className="h-32 rounded-lg border border-[#E8DFD3] bg-[#F7F5F2]"
+                    />
+                  ))}
                 </div>
               ) : announcements.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2">
                   {announcements.map((announcement) => (
                     <article
                       key={announcement.id}
-                      className="rounded-lg border border-[#EAE7E3] bg-white p-5 shadow-sm"
+                      className="rounded-lg border border-[#E8DFD3] bg-[#F9F9F8] p-5"
                     >
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#0170b9]">
-                          <BookOpen className="h-4 w-4" />
+                          <CalendarDays className="h-4 w-4" />
                           {announcement.priority === 'high' ? 'Priority update' : 'Update'}
                         </span>
                         {announcement.published_at && (
@@ -195,8 +289,20 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
                   ))}
                 </div>
               ) : (
-                <div className="rounded-lg border border-[#EAE7E3] bg-white p-5 text-sm text-[#475766]">
-                  No PoP updates have been published yet.
+                <div className="rounded-lg border border-dashed border-[#E8DFD3] bg-[#F9F9F8] p-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <div className="grid h-12 w-12 place-items-center rounded-lg bg-[#E6F2FA] text-[#0170b9]">
+                      <Megaphone className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-[#19324A]">
+                        No PoP updates have been published yet.
+                      </h3>
+                      <p className="mt-1 text-sm leading-6 text-[#475766]">
+                        When PoP shares training dates, classroom guidance, or programme updates, they will appear here.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </section>
