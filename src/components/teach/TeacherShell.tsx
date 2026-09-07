@@ -57,7 +57,7 @@ const TeacherShell: React.FC = () => {
       <aside className="hidden lg:flex w-[220px] xl:w-[240px] flex-none bg-gradient-to-b from-[#1d2758] to-[#151f49] flex-col overflow-hidden">
         <div className="px-5 pt-[28px] pb-[24px] border-b border-white/[0.08]">
           <Link to="/teach" className="flex items-center">
-            <img src={popLogo} alt="Pencils of Promise" className="h-[28px] object-contain brightness-0 invert opacity-95" />
+            <img src={popLogo} alt="Pencils of Promise" className="h-[42px] object-contain brightness-0 invert opacity-95" />
           </Link>
         </div>
 
