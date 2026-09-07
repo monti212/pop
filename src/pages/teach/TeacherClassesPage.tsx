@@ -111,11 +111,11 @@ const TeacherClassesPage: React.FC = () => {
                 <div>
                   <div className="font-display font-semibold text-[17px] text-greyed-navy tracking-[-0.01em]">{c.class_name}</div>
                   <div className="text-[13px] text-greyed-ink mt-0.5">
-                    {c.student_count || 0} learners{c.subject ? ` · ${c.subject}` : ''}
+                    {c.student_count || 0} students{c.subject ? ` · ${c.subject}` : ''}
                   </div>
                   <div className="flex gap-2 mt-[13px]" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => setRegisterFor(c)} className="flex-1 p-2.5 rounded-[10px] border border-greyed-line bg-sand-200 text-greyed-navy font-semibold text-[12px]">Register</button>
-                    <button onClick={() => { setSelectedId(c.id); setTab('roster'); setShowAdd(true); }} aria-label="Add learner" className="w-9 h-9 rounded-[10px] border border-greyed-line bg-white text-greyed-navy flex items-center justify-center flex-none"><UserPlus size={16} /></button>
+                    <button onClick={() => { setSelectedId(c.id); setTab('roster'); setShowAdd(true); }} aria-label="Add student" className="w-9 h-9 rounded-[10px] border border-greyed-line bg-white text-greyed-navy flex items-center justify-center flex-none"><UserPlus size={16} /></button>
                   </div>
                 </div>
               </div>
@@ -131,7 +131,7 @@ const TeacherClassesPage: React.FC = () => {
             <div className="flex-1 min-w-0">
               <div className="font-display font-semibold text-[18px] text-greyed-navy tracking-[-0.01em] truncate">{selected.class_name}</div>
               <div className="text-[13px] text-greyed-ink mt-0.5">
-                {[selected.grade_level, selected.subject].filter(Boolean).join(' · ') || 'Class'} · {students.length} learners
+                {[selected.grade_level, selected.subject].filter(Boolean).join(' · ') || 'Class'} · {students.length} students
               </div>
             </div>
             <button onClick={() => setSelectedId(null)} aria-label="Close" className="w-[34px] h-[34px] rounded-[10px] border border-greyed-line bg-white text-greyed-navy flex items-center justify-center flex-none"><X size={18} /></button>
@@ -155,8 +155,8 @@ const TeacherClassesPage: React.FC = () => {
               <div className="p-[22px] animate-w-fade">
                 {students.length === 0 ? (
                   <div className="text-center py-8">
-                    <div className="font-display font-semibold text-[15px] text-greyed-navy mb-1">No learners yet</div>
-                    <div className="text-[13px] text-greyed-faint">Add your first learner to build the roster.</div>
+                    <div className="font-display font-semibold text-[15px] text-greyed-navy mb-1">No students yet</div>
+                    <div className="text-[13px] text-greyed-faint">Add your first student to build the roster.</div>
                   </div>
                 ) : (
                   students.map((s) => {
@@ -180,7 +180,7 @@ const TeacherClassesPage: React.FC = () => {
                   })
                 )}
                 <button onClick={() => setShowAdd(true)} className="w-full mt-[14px] inline-flex items-center justify-center gap-[7px] p-3 rounded-12 bg-greyed-navy text-white font-semibold text-[13.5px]">
-                  <UserPlus size={16} />Add learner
+                  <UserPlus size={16} />Add student
                 </button>
               </div>
             )}
@@ -198,7 +198,7 @@ const TeacherClassesPage: React.FC = () => {
               <div className="p-[22px] text-center animate-w-fade">
                 <span className="w-14 h-14 rounded-[16px] bg-greyed-tile text-greyed-navy flex items-center justify-center mx-auto mb-3"><FileText size={24} /></span>
                 <div className="font-display font-semibold text-[15px] text-greyed-navy mb-1">Term reports</div>
-                <div className="text-[13px] text-greyed-faint max-w-[300px] mx-auto">Per-learner reports (grades + attendance) with Word/PDF export arrive in slice 2c.</div>
+                <div className="text-[13px] text-greyed-faint max-w-[300px] mx-auto">Per-student reports (grades + attendance) with Word/PDF export arrive in slice 2c.</div>
               </div>
             )}
           </div>
