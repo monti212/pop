@@ -27,7 +27,10 @@ interface PoPHomePageProps {
 }
 
 const missionStatement =
-  'We believe every child should have access to quality education. We create schools, programs and global communities around the common goal of education for all.';
+  'Pencils of Promise believes every child should have access to quality education. We create Schools, Programs and Global Communities around the common goal of education for all.';
+
+const visionStatement =
+  'We know that we can create a better world through education.';
 
 const funFact = {
   label: 'Fun fact',
@@ -136,7 +139,7 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
 
           <section className="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-              <div className="relative overflow-hidden rounded-lg border border-[#E8DFD3] bg-white shadow-sm">
+              <div className="pop-home-reveal relative overflow-hidden rounded-lg border border-[#E8DFD3] bg-white shadow-sm">
                 <div className="grid min-h-[430px] gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:p-10">
                   <div className="relative z-10 flex flex-col justify-between gap-8">
                     <div className="space-y-6">
@@ -179,21 +182,21 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
                   </div>
 
                   <div className="relative z-10 flex flex-col gap-4">
-                    <div className="rounded-lg border border-[#E8DFD3] bg-[#19324A] p-5 text-white shadow-sm">
+                    <div className="pop-home-reveal pop-home-delay-1 rounded-lg border border-[#E8DFD3] bg-[#19324A] p-5 text-white shadow-sm">
                       <img
                         src={popLogo}
                         alt="Pencils of Promise"
                         className="mb-8 h-10 w-auto brightness-0 invert"
                       />
                       <p className="text-sm font-semibold uppercase tracking-wide text-[#f5b233]">
-                        Mission focus
+                        Vision
                       </p>
                       <p className="mt-3 text-2xl font-bold leading-8">
-                        Better learning starts with stronger support for teachers.
+                        {visionStatement}
                       </p>
                     </div>
 
-                    <aside className="rounded-lg border border-[#F1D7A4] bg-[#FFF7E8] p-5 shadow-sm">
+                    <aside className="pop-home-reveal pop-home-delay-2 rounded-lg border border-[#F1D7A4] bg-[#FFF7E8] p-5 shadow-sm">
                       <div className="mb-4 grid h-11 w-11 place-items-center rounded-lg bg-[#FF6A00] text-white">
                         <Lightbulb className="h-5 w-5" />
                       </div>
@@ -212,12 +215,13 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
-                {missionPillars.map((pillar) => {
+                {missionPillars.map((pillar, index) => {
                   const Icon = pillar.icon;
                   return (
                     <article
                       key={pillar.title}
-                      className="rounded-lg border border-[#E8DFD3] bg-white p-5 shadow-sm"
+                      className="pop-home-reveal rounded-lg border border-[#E8DFD3] bg-white p-5 shadow-sm"
+                      style={{ animationDelay: `${120 + index * 70}ms` }}
                     >
                       <div
                         className="mb-4 grid h-11 w-11 place-items-center rounded-lg"
@@ -237,7 +241,7 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
               </div>
             </div>
 
-            <section className="mt-6 rounded-lg border border-[#E8DFD3] bg-white p-5 shadow-sm sm:p-6">
+            <section className="pop-home-reveal pop-home-delay-3 mt-6 rounded-lg border border-[#E8DFD3] bg-white p-5 shadow-sm sm:p-6">
               <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#0170b9]">

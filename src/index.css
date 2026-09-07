@@ -197,6 +197,33 @@
     animation: glowingLeftToRight 3s ease-in-out;
   }
 
+  @keyframes popHomeReveal {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pop-home-reveal {
+    animation: popHomeReveal 520ms ease-out both;
+  }
+
+  .pop-home-delay-1 {
+    animation-delay: 90ms;
+  }
+
+  .pop-home-delay-2 {
+    animation-delay: 160ms;
+  }
+
+  .pop-home-delay-3 {
+    animation-delay: 230ms;
+  }
+
   /* Metallic shimmer effect for image generation loader */
   @keyframes metallicShimmer {
     0% {
@@ -1020,4 +1047,3 @@ body {
 .docx-preview th {
   @apply bg-gray-100 font-semibold;
 }
-
