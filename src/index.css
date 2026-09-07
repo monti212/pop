@@ -224,6 +224,52 @@
     animation-delay: 230ms;
   }
 
+  @keyframes popFunFactBulb {
+    0% {
+      opacity: 0;
+      transform: scale(0.68) rotate(-10deg);
+    }
+    42% {
+      opacity: 1;
+      transform: scale(1.18) rotate(4deg);
+      box-shadow: 0 0 0 10px rgba(255, 106, 0, 0.12);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+      box-shadow: 0 0 0 0 rgba(255, 106, 0, 0);
+    }
+  }
+
+  @keyframes popFunFactCopy {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pop-fun-fact-card {
+    transition: border-color 220ms ease, box-shadow 220ms ease;
+  }
+
+  .pop-fun-fact-card:hover {
+    border-color: rgba(255, 106, 0, 0.45);
+    box-shadow: 0 14px 30px rgba(25, 50, 74, 0.08);
+  }
+
+  .pop-fun-fact-bulb {
+    animation: popFunFactBulb 640ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    transform-origin: center;
+  }
+
+  .pop-fun-fact-copy {
+    animation: popFunFactCopy 420ms ease-out both;
+  }
+
   /* Metallic shimmer effect for image generation loader */
   @keyframes metallicShimmer {
     0% {

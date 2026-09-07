@@ -32,11 +32,33 @@ const missionStatement =
 const visionStatement =
   'We know that we can create a better world through education.';
 
-const funFact = {
-  label: 'Fun fact',
-  title: 'Support sticks when teachers can use it tomorrow.',
-  body: 'PoP pairs practical workshops with coaching, materials, and classroom follow-up so new methods can become daily teaching habits.',
-};
+const educationFunFacts = [
+  {
+    label: 'Fun fact',
+    title: 'A trained teacher can shape hundreds of futures.',
+    body: 'Across African classrooms, steady teacher support can ripple through many learners, families, and communities over time.',
+  },
+  {
+    label: 'Education in Africa',
+    title: 'Reading grows faster when stories feel local.',
+    body: 'Lessons that connect to familiar places, names, and languages help learners build confidence and meaning.',
+  },
+  {
+    label: 'Bright idea',
+    title: 'Community turns schools into shared spaces.',
+    body: 'When families, local leaders, and teachers move together, schools become places where whole communities invest in learning.',
+  },
+  {
+    label: 'Did you know?',
+    title: 'Girls education strengthens communities.',
+    body: 'Supporting girls to stay in school is linked with stronger health, leadership, and opportunity across generations.',
+  },
+  {
+    label: 'Classroom spark',
+    title: 'Technology works best beside teachers.',
+    body: 'Digital tools make the biggest difference when they support teachers, local context, and everyday classroom needs.',
+  },
+];
 
 const missionPillars = [
   {
@@ -77,8 +99,10 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [announcements, setAnnouncements] = useState<TeacherAnnouncement[]>([]);
   const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [currentFunFactIndex, setCurrentFunFactIndex] = useState(0);
   const { interfaceLanguage, responseLanguage, setInterfaceLanguage, setResponseLanguage } = useLanguage();
   const sidebarWidth = isSidebarCollapsed ? 64 : 240;
+  const currentFunFact = educationFunFacts[currentFunFactIndex];
 
   useEffect(() => {
     let isMounted = true;
@@ -99,6 +123,14 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setCurrentFunFactIndex((index) => (index + 1) % educationFunFacts.length);
+    }, 5200);
+
+    return () => window.clearInterval(interval);
   }, []);
 
   return (
@@ -196,19 +228,29 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
                       </p>
                     </div>
 
-                    <aside className="pop-home-reveal pop-home-delay-2 rounded-lg border border-[#F1D7A4] bg-[#FFF7E8] p-5 shadow-sm">
-                      <div className="mb-4 grid h-11 w-11 place-items-center rounded-lg bg-[#FF6A00] text-white">
+                    <aside className="pop-home-reveal pop-home-delay-2 pop-fun-fact-card rounded-lg border border-[#F1D7A4] bg-[#FFF7E8] p-5 shadow-sm">
+                      <div
+                        key={`fun-fact-bulb-${currentFunFactIndex}`}
+                        className="pop-fun-fact-bulb mb-4 grid h-11 w-11 place-items-center rounded-lg bg-[#FF6A00] text-white"
+                        aria-hidden="true"
+                      >
                         <Lightbulb className="h-5 w-5" />
                       </div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-[#B45309]">
-                        {funFact.label}
-                      </p>
-                      <h2 className="mt-2 text-xl font-bold leading-7 text-[#19324A]">
-                        {funFact.title}
-                      </h2>
-                      <p className="mt-3 text-sm leading-6 text-[#475766]">
-                        {funFact.body}
-                      </p>
+                      <div
+                        key={`fun-fact-copy-${currentFunFactIndex}`}
+                        className="pop-fun-fact-copy"
+                        aria-live="polite"
+                      >
+                        <p className="text-xs font-bold uppercase tracking-wide text-[#B45309]">
+                          {currentFunFact.label}
+                        </p>
+                        <h2 className="mt-2 text-xl font-bold leading-7 text-[#19324A]">
+                          {currentFunFact.title}
+                        </h2>
+                        <p className="mt-3 text-sm leading-6 text-[#475766]">
+                          {currentFunFact.body}
+                        </p>
+                      </div>
                     </aside>
                   </div>
                 </div>
