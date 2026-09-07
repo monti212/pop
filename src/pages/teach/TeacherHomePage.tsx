@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Activity,
   Award,
@@ -27,6 +28,11 @@ import LessonPlanGeneratorModal from '../../components/LessonPlanGeneratorModal'
 
 type ViewMode = 'overview' | 'students' | 'documents';
 
+function viewModeFromParam(value: string | null): ViewMode {
+  if (value === 'students' || value === 'documents') return value;
+  return 'overview';
+}
+
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
 }
@@ -49,10 +55,10 @@ function activityIcon(activity: RecentActivity) {
 
 const TeacherHomePage: React.FC = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [classes, setClasses] = useState<Class[]>([]);
   const [overview, setOverview] = useState<ClassroomOverview | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
-  const [activeView, setActiveView] = useState<ViewMode>('overview');
   const [loading, setLoading] = useState(true);
   const [showCreateClass, setShowCreateClass] = useState(false);
   const [showAddStudent, setShowAddStudent] = useState(false);
@@ -63,6 +69,19 @@ const TeacherHomePage: React.FC = () => {
   const [showLessonPlan, setShowLessonPlan] = useState(false);
 
   const selectedClass = overview?.class || classes[0] || null;
+  const activeView = viewModeFromParam(searchParams.get('view'));
+
+  const updateActiveView = useCallback((view: ViewMode) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (view === 'overview') {
+        next.delete('view');
+      } else {
+        next.set('view', view);
+      }
+      return next;
+    });
+  }, [setSearchParams]);
 
   const loadHome = useCallback(async () => {
     if (!user?.id) return;
@@ -102,11 +121,11 @@ const TeacherHomePage: React.FC = () => {
   }, [selectedClass]);
 
   const featureCards = [
-    { icon: Users, title: 'Students', detail: 'Manage roster', active: activeView === 'students', onClick: () => setActiveView('students') },
+    { icon: Users, title: 'Students', detail: 'Manage roster', active: activeView === 'students', onClick: () => updateActiveView('students') },
     { icon: Award, title: 'Grades', detail: 'Manage grades', active: false, onClick: () => selectedClass && setShowGrades(true) },
     { icon: Activity, title: 'Behavior', detail: `${overview?.behaviorLogCount || 0} logs`, active: false, onClick: () => selectedClass && setShowBehavior(true) },
     { icon: BarChart3, title: 'Analytics', detail: 'View insights', active: false, onClick: () => selectedClass && setShowAnalytics(true) },
-    { icon: FolderOpen, title: 'Documents', detail: 'Class files', active: activeView === 'documents', onClick: () => setActiveView('documents') },
+    { icon: FolderOpen, title: 'Documents', detail: 'Class files', active: activeView === 'documents', onClick: () => updateActiveView('documents') },
     { icon: Sparkles, title: 'AI Lesson Plan', detail: 'Generate plan', active: false, onClick: () => selectedClass && setShowLessonPlan(true) },
   ];
 
@@ -119,7 +138,7 @@ const TeacherHomePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-full pb-20 lg:pb-0">
+    <div className="min-h-full pb-20 lg:pb-0 font-sans [&_button]:font-sans [&_h1]:font-sans [&_h2]:font-sans [&_h3]:font-sans [&_h4]:font-sans [&_h5]:font-sans [&_h6]:font-sans">
       <header className="bg-white shadow-sm border-b border-[#e8e6e0] px-5 sm:px-8 py-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -159,25 +178,6 @@ const TeacherHomePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mt-5 border-b border-[#e8e6e0] overflow-x-auto">
-          {[
-            { key: 'overview' as const, label: 'Overview' },
-            { key: 'students' as const, label: `Students (${students.length})` },
-            { key: 'documents' as const, label: 'Documents' },
-          ].map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setActiveView(item.key)}
-              className={`px-4 py-2 font-medium text-sm transition-all border-b-2 whitespace-nowrap ${
-                activeView === item.key
-                  ? 'border-greyed-navy text-greyed-navy'
-                  : 'border-transparent text-greyed-black/70 hover:text-greyed-navy'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
       </header>
 
       <div className="p-5 sm:p-8">

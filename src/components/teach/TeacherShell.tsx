@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, Globe, Home, MessageCircle, Users, type LucideIcon } from 'lucide-react';
+import { BookOpen, FolderOpen, Globe, Users, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import popLogo from '../../assets/pencils-of-promise-logo.png';
 
@@ -12,10 +12,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { key: 'home', label: 'Home', icon: Home, path: '/home' },
-  { key: 'teach', label: 'GreyEd Teach', icon: Users, path: '/teach' },
-  { key: 'lessons', label: 'Lessons', icon: BookOpen, path: '/teach/lessons' },
-  { key: 'ask', label: 'Ask', icon: MessageCircle, path: '/teach/ask' },
+  { key: 'overview', label: 'Overview', icon: BookOpen, path: '/teach' },
+  { key: 'students', label: 'Students', icon: Users, path: '/teach?view=students' },
+  { key: 'documents', label: 'Documents', icon: FolderOpen, path: '/teach?view=documents' },
 ];
 
 function initialsFrom(name?: string | null, email?: string | null): string {
@@ -35,10 +34,10 @@ const TeacherShell: React.FC = () => {
   }, [isLoading, isAuthenticated, navigate]);
 
   const activeKey = useMemo(() => {
-    if (location.pathname === '/teach' || location.pathname === '/teach/classes') return 'teach';
-    const match = NAV_ITEMS.find((item) => location.pathname === item.path || location.pathname.startsWith(item.path + '/'));
-    return match?.key ?? 'teach';
-  }, [location.pathname]);
+    const activeView = new URLSearchParams(location.search).get('view');
+    if (activeView === 'students' || activeView === 'documents') return activeView;
+    return 'overview';
+  }, [location.search]);
 
   const displayName = (profile as any)?.name || (profile as any)?.full_name || user?.email?.split('@')[0] || 'Teacher';
   const roleLabel = (profile as any)?.occupation || 'Teacher';
