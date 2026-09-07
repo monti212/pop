@@ -297,8 +297,32 @@ export default function ChatInterface({
 
   // Restore state from session storage on mount
   const hasBootstrapped = useRef(false);
+  const handledNewChatRouteRef = useRef(false);
+
+  useEffect(() => {
+    const shouldStartNewChat = new URLSearchParams(location.search).get('new') === '1';
+    if (!shouldStartNewChat || handledNewChatRouteRef.current) return;
+
+    handledNewChatRouteRef.current = true;
+    sessionStorage.removeItem('uhuru_start_new_conversation');
+    sessionStorage.removeItem('uhuru_current_conversation_id');
+    if (currentConversation?.isTemporary && currentConversation.messages.length === 0) {
+      navigate('/chat', { replace: true });
+      return;
+    }
+    createNewConversation()
+      .then((conversation) => {
+        setCurrentConversation(conversation);
+        navigate('/chat', { replace: true });
+      })
+      .catch((error) => console.error('Error starting new conversation:', error));
+  }, [createNewConversation, currentConversation, location.search, navigate, setCurrentConversation]);
+
   useEffect(() => {
     // Ensure we always have a conversation to display
+    if (new URLSearchParams(location.search).get('new') === '1') {
+      return;
+    }
     if (!hasBootstrapped.current && !currentConversation) {
       hasBootstrapped.current = true;
 
@@ -314,7 +338,7 @@ export default function ChatInterface({
           .catch((e) => console.error('Error creating initial conversation:', e));
       }
     }
-  }, [currentConversation, conversations]);
+  }, [currentConversation, conversations, location.search]);
 
   // Save chat state backup — debounced to avoid thrashing sessionStorage during streaming
   const backupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

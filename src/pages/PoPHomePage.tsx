@@ -103,6 +103,9 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
   const { interfaceLanguage, responseLanguage, setInterfaceLanguage, setResponseLanguage } = useLanguage();
   const sidebarWidth = isSidebarCollapsed ? 64 : 240;
   const currentFunFact = educationFunFacts[currentFunFactIndex];
+  const requestNewChat = () => {
+    sessionStorage.setItem('uhuru_start_new_conversation', '1');
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -197,7 +200,8 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
 
                     <div className="flex flex-wrap gap-3">
                       <Link
-                        to="/chat"
+                        to="/chat?new=1"
+                        onClick={requestNewChat}
                         className="inline-flex items-center gap-2 rounded-lg bg-[#0170b9] px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#005F9E]"
                       >
                         Start a new chat

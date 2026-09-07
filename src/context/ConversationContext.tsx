@@ -96,9 +96,22 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         try {
           // Load only conversation metadata (no messages) for performance
           const userConversations = await getConversations(user.id, 50);
+          const shouldStartNewConversation =
+            sessionStorage.getItem('uhuru_start_new_conversation') === '1';
 
           // Conversations come with empty messages array from optimized query
           setConversations(userConversations);
+
+          if (shouldStartNewConversation) {
+            sessionStorage.removeItem('uhuru_start_new_conversation');
+            sessionStorage.removeItem('uhuru_current_conversation_id');
+            currentConversationIdRef.current = null;
+            const localConversation = createLocalConversation();
+            setConversations([localConversation, ...userConversations]);
+            setCurrentConversation(localConversation);
+            setIsInitialized(true);
+            return;
+          }
 
           // If no conversations exist for this user, create one
           // Restore saved conversation if available
