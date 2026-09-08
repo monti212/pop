@@ -395,6 +395,7 @@ const TokenUsage: React.FC = () => {
   const monthlyAlertLevel = metrics ? getAlertLevel(metrics.monthly_usage_percent) : 'none';
   const imageAlertLevel = metrics ? getAlertLevel(metrics.image_usage_percent) : 'none';
   const shouldShowTopUpAlert = metrics ? metrics.tokens_remaining <= TOP_UP_ALERT_THRESHOLD : false;
+  const tokensAboveTopUpAlert = metrics ? Math.max(0, metrics.tokens_remaining - TOP_UP_ALERT_THRESHOLD) : 0;
   const startingTokenPool = metrics
     ? Math.max(metrics.total_token_cap || 0, metrics.lifetime_purchased || 0, metrics.active_refill_pool || 0)
     : 0;
@@ -760,6 +761,48 @@ const TokenUsage: React.FC = () => {
                     </div>
                   </motion.div>
                 )}
+              </div>
+            )}
+
+            {metrics && (
+              <div
+                className={`mb-6 rounded-xl border p-4 shadow-sm ${
+                  shouldShowTopUpAlert
+                    ? 'border-orange-200 bg-orange-50'
+                    : 'border-cyan-100 bg-cyan-50/70'
+                }`}
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
+                        shouldShowTopUpAlert ? 'bg-orange-100 text-orange-700' : 'bg-white text-cyan-700'
+                      }`}
+                    >
+                      <AlertTriangle className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h3 className={`text-sm font-semibold ${shouldShowTopUpAlert ? 'text-orange-950' : 'text-slate-950'}`}>
+                        Top-up monitor
+                      </h3>
+                      <p className={`mt-1 text-sm ${shouldShowTopUpAlert ? 'text-orange-800' : 'text-slate-600'}`}>
+                        PoP currently has <strong>{fmtU(metrics.tokens_remaining)} {unit}</strong> available.
+                        {' '}The top-up alert is set for <strong>{fmtU(TOP_UP_ALERT_THRESHOLD)} {unit}</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className={`w-fit rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      shouldShowTopUpAlert
+                        ? 'bg-orange-100 text-orange-800'
+                        : 'bg-white text-cyan-800'
+                    }`}
+                  >
+                    {shouldShowTopUpAlert
+                      ? 'Arrange top-up now'
+                      : `${fmtU(tokensAboveTopUpAlert)} ${unit} above alert level`}
+                  </div>
+                </div>
               </div>
             )}
 
