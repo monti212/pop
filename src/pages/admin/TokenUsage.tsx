@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, RefreshCw, Zap, Users, AlertTriangle,
   Clock, Activity, Package,
-  Image as ImageIcon, Plus, CalendarDays, Layers3, Gauge
+  Image as ImageIcon, Plus, CalendarDays, Layers3, Gauge, Printer
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -363,6 +363,10 @@ const TokenUsage: React.FC = () => {
     }
   }, [canEdit, isSubmittingPurchase, purchaseForm, organizationName, fetchAllData]);
 
+  const handlePrintReport = useCallback(() => {
+    window.print();
+  }, []);
+
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
@@ -395,6 +399,7 @@ const TokenUsage: React.FC = () => {
   const tokenPercentLeft = metrics && startingTokenPool > 0
     ? Math.min(Math.max((metrics.tokens_remaining / startingTokenPool) * 100, 0), 100)
     : 0;
+  const reportGeneratedAt = new Date().toLocaleString();
 
   const expiringRefills = refills.filter(refill => {
     const daysUntilExpiry = Math.ceil(
@@ -437,7 +442,143 @@ const TokenUsage: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f5f7fa]">
+    <>
+      <style>{`
+        @media screen {
+          .token-usage-print-report {
+            display: none;
+          }
+        }
+
+        @media print {
+          @page {
+            margin: 14mm;
+          }
+
+          body {
+            background: #ffffff !important;
+          }
+
+          .token-usage-screen {
+            display: none !important;
+          }
+
+          .token-usage-print-report {
+            display: block !important;
+            color: ${Brand.navy};
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          }
+
+          .token-usage-print-report h1,
+          .token-usage-print-report h2,
+          .token-usage-print-report h3,
+          .token-usage-print-report p {
+            margin: 0;
+          }
+
+          .token-report-header {
+            border-bottom: 2px solid ${Brand.navy};
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+          }
+
+          .token-report-kicker {
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+          }
+
+          .token-report-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-top: 4px;
+          }
+
+          .token-report-meta {
+            color: #64748b;
+            font-size: 12px;
+            margin-top: 6px;
+          }
+
+          .token-report-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 18px;
+          }
+
+          .token-report-card {
+            border: 1px solid ${Brand.line};
+            border-radius: 8px;
+            padding: 10px;
+            break-inside: avoid;
+          }
+
+          .token-report-card-label {
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+
+          .token-report-card-value {
+            color: ${Brand.navy};
+            font-size: 18px;
+            font-weight: 800;
+            margin-top: 4px;
+          }
+
+          .token-report-card-note {
+            color: #64748b;
+            font-size: 10px;
+            margin-top: 3px;
+          }
+
+          .token-report-section {
+            margin-top: 18px;
+            break-inside: avoid;
+          }
+
+          .token-report-section h2 {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 8px;
+          }
+
+          .token-report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+          }
+
+          .token-report-table th {
+            background: #f8fafc;
+            color: ${Brand.navy};
+            font-weight: 800;
+            text-align: left;
+          }
+
+          .token-report-table th,
+          .token-report-table td {
+            border: 1px solid ${Brand.line};
+            padding: 7px 8px;
+            vertical-align: top;
+          }
+
+          .token-report-empty {
+            border: 1px dashed ${Brand.line};
+            border-radius: 8px;
+            color: #64748b;
+            font-size: 11px;
+            padding: 12px;
+          }
+        }
+      `}</style>
+
+      <div className="token-usage-screen flex h-screen overflow-hidden bg-[#f5f7fa]">
       {!isSupaAdminView && <AdminSidebar />}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header */}
@@ -465,6 +606,15 @@ const TokenUsage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={handlePrintReport}
+                disabled={!metrics}
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Print usage report"
+              >
+                <Printer className="h-4 w-4" />
+                <span className="hidden sm:inline">Print report</span>
+              </button>
               <button
                 onClick={fetchAllData}
                 disabled={isRefreshing}
@@ -1359,7 +1509,162 @@ const TokenUsage: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+
+      {metrics && (
+        <div className="token-usage-print-report">
+          <header className="token-report-header">
+            <p className="token-report-kicker">Pencils of Promise</p>
+            <h1 className="token-report-title">Token Usage Report</h1>
+            <p className="token-report-meta">
+              {metrics.organization_name || organizationName} · Generated {reportGeneratedAt} · Displayed in {unit}
+            </p>
+          </header>
+
+          <section className="token-report-grid" aria-label="Token usage summary">
+            <div className="token-report-card">
+              <p className="token-report-card-label">Current usable tokens</p>
+              <p className="token-report-card-value">{fmtU(metrics.tokens_remaining)}</p>
+              <p className="token-report-card-note">{tokenPercentLeft.toFixed(1)}% of started plus purchased pool left</p>
+            </div>
+            <div className="token-report-card">
+              <p className="token-report-card-label">Started with</p>
+              <p className="token-report-card-value">{fmtU(startingTokenPool)}</p>
+              <p className="token-report-card-note">Starting allocation plus purchased tokens</p>
+            </div>
+            <div className="token-report-card">
+              <p className="token-report-card-label">Monthly limit left</p>
+              <p className="token-report-card-value">{fmtU(Math.max(0, metrics.monthly_cap - metrics.used_text_this_month))}</p>
+              <p className="token-report-card-note">{fmtU(metrics.used_text_this_month)} used of {fmtU(metrics.monthly_cap)}</p>
+            </div>
+            <div className="token-report-card">
+              <p className="token-report-card-label">Daily limit left</p>
+              <p className="token-report-card-value">{fmtU(Math.max(0, DAILY_LIMIT - metrics.used_text_today))}</p>
+              <p className="token-report-card-note">{fmtU(metrics.used_text_today)} used of {fmtU(DAILY_LIMIT)}</p>
+            </div>
+          </section>
+
+          <section className="token-report-grid" aria-label="Additional token summary">
+            <div className="token-report-card">
+              <p className="token-report-card-label">Purchased refill pool</p>
+              <p className="token-report-card-value">{fmtU(metrics.refill_balance)}</p>
+              <p className="token-report-card-note">Purchased tokens available separately from period limits</p>
+            </div>
+            <div className="token-report-card">
+              <p className="token-report-card-label">Last month's unused tokens</p>
+              <p className="token-report-card-value">{fmtU(metrics.rollover_tokens)}</p>
+              <p className="token-report-card-note">Unused monthly allocation carried forward</p>
+            </div>
+            <div className="token-report-card">
+              <p className="token-report-card-label">Image tokens left</p>
+              <p className="token-report-card-value">{fmtU(metrics.image_tokens_remaining)}</p>
+              <p className="token-report-card-note">{fmtU(metrics.image_tokens_used)} used of {fmtU(metrics.image_token_cap)}</p>
+            </div>
+            <div className="token-report-card">
+              <p className="token-report-card-label">Images generated</p>
+              <p className="token-report-card-value">
+                {fmtU(metrics.image_low_count + metrics.image_med_count + metrics.image_high_count)}
+              </p>
+              <p className="token-report-card-note">Craft-1: {fmtU(metrics.image_low_count)} · Craft-2: {fmtU(metrics.image_med_count)}</p>
+            </div>
+          </section>
+
+          <section className="token-report-section">
+            <h2>Individual User Usage</h2>
+            {userUsage.length === 0 ? (
+              <p className="token-report-empty">No individual user usage data is available.</p>
+            ) : (
+              <table className="token-report-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Text Tokens This Month</th>
+                    <th>Text Tokens YTD</th>
+                    <th>Craft-1 Images</th>
+                    <th>Craft-2 Images</th>
+                    <th>Image Tokens</th>
+                    <th>Last Active</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userUsage.map((user) => (
+                    <tr key={user.user_id}>
+                      <td>{user.user_email}</td>
+                      <td>{fmtU(user.used_text_this_month)}</td>
+                      <td>{fmtU(user.used_text_total_ytd)}</td>
+                      <td>{fmtU(user.image_count_craft1)}</td>
+                      <td>{fmtU(user.image_count_craft2)}</td>
+                      <td>{fmtU(user.total_image_tokens)}</td>
+                      <td>{new Date(user.last_active_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section className="token-report-section">
+            <h2>Active Refills</h2>
+            {refills.length === 0 ? (
+              <p className="token-report-empty">No refill records are available.</p>
+            ) : (
+              <table className="token-report-table">
+                <thead>
+                  <tr>
+                    <th>Amount</th>
+                    <th>Consumed</th>
+                    <th>Remaining</th>
+                    <th>Purchase Date</th>
+                    <th>Expiry Date</th>
+                    <th>Added By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {refills.map((refill) => (
+                    <tr key={refill.id}>
+                      <td>{fmtU(refill.amount)}</td>
+                      <td>{fmtU(refill.consumed)}</td>
+                      <td>{fmtU(Math.max(0, refill.amount - refill.consumed))}</td>
+                      <td>{new Date(refill.purchased_at).toLocaleDateString()}</td>
+                      <td>{new Date(refill.expires_at).toLocaleDateString()}</td>
+                      <td>{refill.added_by_email}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section className="token-report-section">
+            <h2>Purchase History</h2>
+            {purchaseHistory.length === 0 ? (
+              <p className="token-report-empty">No purchase history is available.</p>
+            ) : (
+              <table className="token-report-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Tokens Purchased</th>
+                    <th>Amount Paid</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {purchaseHistory.map((purchase) => (
+                    <tr key={purchase.id}>
+                      <td>{new Date(purchase.purchase_date).toLocaleDateString()}</td>
+                      <td>{fmtU(purchase.tokens_purchased)}</td>
+                      <td>{purchase.currency} {purchase.amount_paid.toLocaleString()}</td>
+                      <td>{purchase.notes || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        </div>
+      )}
+    </>
   );
 };
 
