@@ -122,11 +122,11 @@ export default function ChatInterface({
   const [selectedImageModel, setSelectedImageModel] = useState<ImageModel>(() => {
     try {
       const saved = localStorage.getItem('uhuru-image-model');
-      if (saved && (saved === 'craft-1' || saved === 'craft-2')) {
+      if (saved === 'craft-2') {
         return saved as ImageModel;
       }
     } catch {}
-    return 'craft-1';
+    return 'craft-2';
   });
 
   // Model selector state
@@ -208,6 +208,12 @@ export default function ChatInterface({
     } catch {}
   }, [modelVersion]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('uhuru-image-model', selectedImageModel);
+    } catch {}
+  }, [selectedImageModel]);
+
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -230,7 +236,7 @@ export default function ChatInterface({
 
   // Generate image model label for the trigger button
   const getImageModelLabel = () => {
-    return selectedImageModel === 'craft-1' ? 'Craft-1' : 'Craft-2';
+    return 'Craft-2';
   };
 
   // Handle toggling model selector (click to open, click again to close)
@@ -389,10 +395,10 @@ export default function ChatInterface({
     setShowImageInput(false);
 
     try {
-      // Map Craft model selector to backend model version
-      const modelVersion = selectedImageModel === 'craft-2' ? '2.1' : '2.0';
+      // Craft-2 is the only supported image model.
+      const modelVersion = '2.1';
 
-      // Generate the image using Uhuru AI with selected Craft model
+      // Generate the image using Uhuru AI with Craft-2.
       const result = await generateImage(
         generationPrompt,
         user.id,
@@ -1556,12 +1562,8 @@ export default function ChatInterface({
 
                 {/* Image generation loader as assistant message */}
                 {isGeneratingImage && (
-                  // Image loader takes the IMAGE model version (craft-1 -> 2.0,
-                  // craft-2 -> 2.1), not the chat model. It was previously
-                  // handed the chat model version, which only type-checked
-                  // while chat happened to share the same "2.0" literal.
                   <ImageGenerationLoader
-                    modelVersion={selectedImageModel === 'craft-2' ? '2.1' : '2.0'}
+                    modelVersion="2.1"
                   />
                 )}
 

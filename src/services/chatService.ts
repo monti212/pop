@@ -829,7 +829,7 @@ export const generateImage = async (
   userId: string,
   size: '1024x1024' | '1536x1024' | '1024x1536' | 'auto' = '1024x1024',
   background: 'transparent' | 'white' = 'transparent',
-  modelVersion: '2.1' | '2.0' = '2.0'
+  modelVersion: '2.1' = '2.1'
 ): Promise<{ success: boolean; images?: string[]; diagramData?: DiagramData; educationalData?: EducationalData; error?: string }> => {
   try {
     if (!supabase) {

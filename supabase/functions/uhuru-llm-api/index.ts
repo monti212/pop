@@ -500,8 +500,8 @@ function env() {
 }
 
 function pickImageModel(ver) {
-  // Only support 2.0 and 2.1
-  return ver === "2.1" ? "2.1" : "2.0";
+  // Craft-2 is the only supported image model.
+  return "2.1";
 }
 
 const DAILY_IMAGE_LIMIT = 3;
@@ -717,7 +717,7 @@ Deno.serve(async (req) => {
 
   // --- Image Generation Path ---
   if (body?.mode === 'image.generate') {
-    const { prompt, size = '1024x1024', background, modelVersion = '2.0', n } = body;
+    const { prompt, size = '1024x1024', background, modelVersion = '2.1', n } = body;
 
     if (!prompt || typeof prompt !== 'string') {
       return j({ error: 'Uhuru Image Generation requires a prompt' }, 400, origin);
@@ -989,7 +989,7 @@ Respond with ONLY valid JSON, no markdown, no explanation:
           userId: requestUser.id,
           tokensUsed: imageTokenCosts[imageQuality] * images.length,
           organizationName: requestUser.organizationName || 'Pencils of Promise',
-          modelUsed: imageModelVersion === '2.1' ? 'craft-2' : 'craft-1',
+          modelUsed: 'craft-2',
           requestType: 'image',
           imageQuality
         });

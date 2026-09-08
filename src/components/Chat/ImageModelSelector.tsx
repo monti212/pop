@@ -1,9 +1,9 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { Sparkles, Image, Check } from "lucide-react";
+import { Sparkles, Check } from "lucide-react";
 
-type ImageModel = "craft-1" | "craft-2";
+type ImageModel = "craft-2";
 
 interface Props {
   selectedModel: ImageModel;
@@ -15,14 +15,6 @@ interface Props {
 
 const IMAGE_MODELS = [
   {
-    id: "craft-1",
-    name: "Craft-1",
-    tagline: "Fast Generation",
-    icon: <Image className="w-4 h-4" />,
-    accent: "yellow",
-    backendId: "uhuru-craft-1"
-  },
-  {
     id: "craft-2",
     name: "Craft-2",
     tagline: "Advanced Quality",
@@ -33,7 +25,6 @@ const IMAGE_MODELS = [
 ] as const;
 
 const accents = {
-  yellow: { ring: "ring-[#f5b233]/30", dot: "bg-[#f5b233]", pill: "bg-[#FEF7E8] text-[#0170b9]" },
   blue: { ring: "ring-[#0170b9]/30", dot: "bg-[#0170b9]", pill: "bg-blue-50 text-blue-700" },
 };
 

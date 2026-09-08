@@ -102,14 +102,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const DRAFT_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes in milliseconds
   const [showImagePromptInput, setShowImagePromptInput] = useState(false);
   const [isCraftMode, setIsCraftMode] = useState(false);
-  const [, _setSelectedImageModel] = useState<'craft-1' | 'craft-2'>(() => {
+  const [, _setSelectedImageModel] = useState<'craft-2'>(() => {
     try {
       const saved = localStorage.getItem('uhuru-image-model');
-      if (saved && (saved === 'craft-1' || saved === 'craft-2')) {
-        return saved as 'craft-1' | 'craft-2';
+      if (saved === 'craft-2') {
+        return saved as 'craft-2';
       }
     } catch {}
-    return 'craft-1'; // Default to Craft-1
+    return 'craft-2';
   });
   const [, _setIsRecording] = useState(false);
   const [isListening, setIsListening] = useState(false);
