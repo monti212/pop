@@ -606,10 +606,10 @@ const TokenUsage: React.FC = () => {
                         Allocation control
                       </p>
                       <h2 id="quota-hierarchy-heading" className="mt-1 text-xl font-semibold text-slate-950">
-                        Limits by time horizon
+                        Token balance and limits
                       </h2>
                       <p className="mt-1 text-sm text-slate-500">
-                        Each limit is independent. Usage in one period does not redefine another limit.
+                        The usable balance is the platform's current token pool. Monthly and daily limits are separate caps.
                       </p>
                     </div>
                     <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
@@ -625,8 +625,8 @@ const TokenUsage: React.FC = () => {
                     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <h3 className="text-base font-semibold text-slate-900">Tokens left for use</h3>
-                          <p className="mt-0.5 text-xs text-slate-500">What the platform can still use right now</p>
+                          <h3 className="text-base font-semibold text-slate-900">Current usable tokens</h3>
+                          <p className="mt-0.5 text-xs text-slate-500">What the platform can still spend right now</p>
                         </div>
                         <span className="rounded-xl p-2.5 bg-violet-50 text-violet-700">
                           <Layers3 className="h-5 w-5" aria-hidden="true" />
@@ -634,11 +634,11 @@ const TokenUsage: React.FC = () => {
                       </div>
 
                       <div className="mt-6">
-                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">You have</p>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Tokens remaining</p>
                         <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
                           {tokenPercentLeft.toFixed(1)}%
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">of tokens left for usage</p>
+                        <p className="mt-1 text-xs text-slate-500">of the starting plus purchased token pool is still available</p>
                       </div>
 
                       <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -650,16 +650,16 @@ const TokenUsage: React.FC = () => {
                         />
                       </div>
                       <p className="mt-1.5 text-xs text-slate-500">
-                        Based on the starting allocation and any purchased tokens.
+                        This is the overall balance, not the monthly or daily limit.
                       </p>
 
                       <div className="mt-3 flex items-start justify-between gap-4 text-sm">
                         <div>
-                          <p className="text-slate-500">Initial tokens</p>
+                          <p className="text-slate-500">Started with</p>
                           <p className="mt-0.5 font-semibold text-slate-900">{fmtU(startingTokenPool)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-slate-500">Available now</p>
+                          <p className="text-slate-500">Usable now</p>
                           <p className="mt-0.5 font-semibold text-emerald-700">{fmtU(metrics.tokens_remaining)}</p>
                         </div>
                       </div>
@@ -668,8 +668,9 @@ const TokenUsage: React.FC = () => {
                     {[
                       {
                         title: 'Monthly limit',
-                        scope: 'Resets each calendar month',
+                        scope: 'Maximum allowed this month',
                         usedLabel: 'Used this month',
+                        remainingLabel: 'Limit left this month',
                         limit: metrics.monthly_cap,
                         used: metrics.used_text_this_month,
                         icon: CalendarDays,
@@ -677,14 +678,15 @@ const TokenUsage: React.FC = () => {
                       },
                       {
                         title: 'Daily limit',
-                        scope: 'Resets every day',
+                        scope: 'Maximum allowed today',
                         usedLabel: 'Used today',
+                        remainingLabel: 'Limit left today',
                         limit: DAILY_LIMIT,
                         used: metrics.used_text_today,
                         icon: Gauge,
                         tone: 'bg-emerald-50 text-emerald-700',
                       },
-                    ].map(({ title, scope, usedLabel, limit, used, icon: Icon, tone }) => {
+                    ].map(({ title, scope, usedLabel, remainingLabel, limit, used, icon: Icon, tone }) => {
                       const percent = limit > 0 ? (used / limit) * 100 : 0;
                       const overage = Math.max(0, used - limit);
                       const remaining = Math.max(0, limit - used);
@@ -725,7 +727,7 @@ const TokenUsage: React.FC = () => {
                               <p className="mt-0.5 font-semibold text-slate-900">{fmtU(used)}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-slate-500">{isOver ? 'Over limit by' : 'Remaining'}</p>
+                              <p className="text-slate-500">{isOver ? 'Over limit by' : remainingLabel}</p>
                               <p className={`mt-0.5 font-semibold ${isOver ? 'text-rose-700' : 'text-emerald-700'}`}>
                                 {fmtU(isOver ? overage : remaining)}
                               </p>
@@ -738,13 +740,13 @@ const TokenUsage: React.FC = () => {
 
                   <div className="mt-4 flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                     <span>
-                      Monthly rollover: <strong className="text-slate-900">{fmtU(metrics.rollover_tokens)} {unit}</strong>
+                      Last month's unused tokens: <strong className="text-slate-900">{fmtU(metrics.rollover_tokens)} {unit}</strong>
                     </span>
                     <span>
-                      Refill balance: <strong className="text-slate-900">{fmtU(metrics.refill_balance)} {unit}</strong>
+                      Purchased refill pool: <strong className="text-slate-900">{fmtU(metrics.refill_balance)} {unit}</strong>
                     </span>
                     <span>
-                      Default model: <strong className="text-slate-900">{defaultModelName}</strong>
+                      Default AI model: <strong className="text-slate-900">{defaultModelName}</strong>
                     </span>
                   </div>
                 </section>
