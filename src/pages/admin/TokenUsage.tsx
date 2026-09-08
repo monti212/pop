@@ -1265,7 +1265,7 @@ const TokenUsage: React.FC = () => {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by email..."
+                    placeholder="Search by email or phone..."
                     className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-offset-0 transition-all"
                     style={{ borderColor: Brand.line, outline: 'none' }}
                   />
@@ -1278,7 +1278,7 @@ const TokenUsage: React.FC = () => {
                       <thead style={{ background: 'rgba(25,50,74,0.03)' }}>
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: Brand.navy }}>
-                            User Email
+                            User Contact
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: Brand.navy }}>
                             Text Tokens (Month)
@@ -1577,7 +1577,7 @@ const TokenUsage: React.FC = () => {
               <table className="token-report-table">
                 <thead>
                   <tr>
-                    <th>User</th>
+                    <th>User Contact</th>
                     <th>Text Tokens This Month</th>
                     <th>Text Tokens YTD</th>
                     <th>Craft-1 Images</th>
