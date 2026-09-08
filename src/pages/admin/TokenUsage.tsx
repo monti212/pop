@@ -389,6 +389,12 @@ const TokenUsage: React.FC = () => {
 
   const monthlyAlertLevel = metrics ? getAlertLevel(metrics.monthly_usage_percent) : 'none';
   const imageAlertLevel = metrics ? getAlertLevel(metrics.image_usage_percent) : 'none';
+  const startingTokenPool = metrics
+    ? Math.max(metrics.total_token_cap || 0, metrics.lifetime_purchased || 0, metrics.active_refill_pool || 0)
+    : 0;
+  const tokenPercentLeft = metrics && startingTokenPool > 0
+    ? Math.min(Math.max((metrics.tokens_remaining / startingTokenPool) * 100, 0), 100)
+    : 0;
 
   const expiringRefills = refills.filter(refill => {
     const daysUntilExpiry = Math.ceil(
@@ -619,8 +625,8 @@ const TokenUsage: React.FC = () => {
                     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <h3 className="text-base font-semibold text-slate-900">Token balance</h3>
-                          <p className="mt-0.5 text-xs text-slate-500">Active refill pool · overage already deducted</p>
+                          <h3 className="text-base font-semibold text-slate-900">Tokens left for use</h3>
+                          <p className="mt-0.5 text-xs text-slate-500">What the platform can still use right now</p>
                         </div>
                         <span className="rounded-xl p-2.5 bg-violet-50 text-violet-700">
                           <Layers3 className="h-5 w-5" aria-hidden="true" />
@@ -628,35 +634,33 @@ const TokenUsage: React.FC = () => {
                       </div>
 
                       <div className="mt-6">
-                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Active refill pool</p>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">You have</p>
                         <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
-                          {fmtU(metrics.active_refill_pool)}
+                          {tokenPercentLeft.toFixed(1)}%
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">{unit}</p>
+                        <p className="mt-1 text-xs text-slate-500">of tokens left for usage</p>
                       </div>
 
                       <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
                         <div
                           className={`h-full rounded-full transition-all ${
-                            metrics.remaining_percent <= 10 ? 'bg-rose-500' : metrics.remaining_percent <= 25 ? 'bg-amber-500' : 'bg-emerald-500'
+                            tokenPercentLeft <= 10 ? 'bg-rose-500' : tokenPercentLeft <= 25 ? 'bg-amber-500' : 'bg-emerald-500'
                           }`}
-                          style={{ width: `${Math.min(Math.max(metrics.remaining_percent, 0), 100)}%` }}
+                          style={{ width: `${tokenPercentLeft}%` }}
                         />
                       </div>
                       <p className="mt-1.5 text-xs text-slate-500">
-                        {/* Clamp: under-cap orgs holding a refill push the raw ratio over 100
-                            (plan headroom is in the numerator, only the pool is in the denominator). */}
-                        {Math.min(metrics.remaining_percent, 100).toFixed(1)}% of the pool remaining
+                        Based on the starting allocation and any purchased tokens.
                       </p>
 
                       <div className="mt-3 flex items-start justify-between gap-4 text-sm">
                         <div>
-                          <p className="text-slate-500">Tokens remaining</p>
-                          <p className="mt-0.5 font-semibold text-emerald-700">{fmtU(metrics.tokens_remaining)}</p>
+                          <p className="text-slate-500">Initial tokens</p>
+                          <p className="mt-0.5 font-semibold text-slate-900">{fmtU(startingTokenPool)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-slate-500">Bought since launch</p>
-                          <p className="mt-0.5 font-semibold text-slate-900">{fmtU(metrics.lifetime_purchased)}</p>
+                          <p className="text-slate-500">Available now</p>
+                          <p className="mt-0.5 font-semibold text-emerald-700">{fmtU(metrics.tokens_remaining)}</p>
                         </div>
                       </div>
                     </article>

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, FolderOpen, Globe, Home, Users, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, BookOpen, FolderOpen, Globe, Home, Users, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import popLogo from '../../assets/pencils-of-promise-logo.png';
 
@@ -69,8 +69,8 @@ const TeacherShell: React.FC = () => {
             to="/home"
             className="flex items-center gap-4 px-4 py-[14px] rounded-12 text-[15px] text-white/70 font-medium hover:bg-white/[0.05] hover:text-white transition-all"
           >
-            <Home size={22} strokeWidth={1.9} />
-            <span className="flex-1">Home</span>
+            <ArrowLeft size={22} strokeWidth={1.9} />
+            <span className="flex-1">Back to Home</span>
           </Link>
 
           <div className="h-px bg-white/10 my-1" />
