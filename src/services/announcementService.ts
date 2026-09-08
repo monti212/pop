@@ -24,6 +24,30 @@ export interface TeacherAnnouncementInput {
   expires_at?: string | null;
 }
 
+const isSchemaMismatch = (error: any) => {
+  const message = String(error?.message || error?.details || error?.hint || '');
+  return error?.code === 'PGRST204'
+    || /schema cache|column .* does not exist|could not find .* column/i.test(message);
+};
+
+const normalizeAnnouncement = (row: any): TeacherAnnouncement => ({
+  id: row.id,
+  title: row.title || '',
+  body: row.body || row.content || '',
+  status: row.status === 'scheduled' ? 'draft' : (row.status || 'draft'),
+  priority: row.priority || (row.announcement_type === 'urgent' ? 'high' : 'normal'),
+  published_at: row.published_at || row.published_date || null,
+  expires_at: row.expires_at || null,
+  created_by: row.created_by || row.teacher_id || null,
+  created_at: row.created_at,
+  updated_at: row.updated_at,
+});
+
+const getCurrentUserId = async () => {
+  const { data } = await supabase.auth.getUser();
+  return data?.user?.id || null;
+};
+
 const isAnnouncementVisible = (announcement: TeacherAnnouncement) => {
   if (announcement.status !== 'published') return false;
 
@@ -44,18 +68,28 @@ export const getPublishedTeacherAnnouncements = async (): Promise<{
   error?: string;
 }> => {
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('teacher_announcements')
       .select('*')
       .eq('status', 'published')
       .order('priority', { ascending: true })
       .order('published_at', { ascending: false });
 
+    if (error && isSchemaMismatch(error)) {
+      const fallback = await supabase
+        .from('teacher_announcements')
+        .select('*')
+        .eq('status', 'published')
+        .order('published_date', { ascending: false });
+      data = fallback.data;
+      error = fallback.error;
+    }
+
     if (error) throw error;
 
     return {
       success: true,
-      announcements: (data || []).filter(isAnnouncementVisible),
+      announcements: (data || []).map(normalizeAnnouncement).filter(isAnnouncementVisible),
     };
   } catch (error: any) {
     console.error('Error fetching teacher announcements:', error);
@@ -81,7 +115,7 @@ export const getAdminTeacherAnnouncements = async (): Promise<{
 
     return {
       success: true,
-      announcements: data || [],
+      announcements: (data || []).map(normalizeAnnouncement),
     };
   } catch (error: any) {
     console.error('Error fetching admin teacher announcements:', error);
@@ -96,19 +130,41 @@ export const createTeacherAnnouncement = async (
   input: TeacherAnnouncementInput
 ): Promise<{ success: boolean; announcement?: TeacherAnnouncement; error?: string }> => {
   try {
-    const { data, error } = await supabase
+    const publishedAt = input.status === 'published' ? new Date().toISOString() : null;
+    let { data, error } = await supabase
       .from('teacher_announcements')
       .insert({
         ...input,
         expires_at: input.expires_at || null,
-        published_at: input.status === 'published' ? new Date().toISOString() : null,
+        published_at: publishedAt,
       })
       .select()
       .single();
 
+    if (error && isSchemaMismatch(error)) {
+      const userId = await getCurrentUserId();
+      if (!userId) throw new Error('Please sign in again before creating announcements.');
+
+      const fallback = await supabase
+        .from('teacher_announcements')
+        .insert({
+          teacher_id: userId,
+          title: input.title,
+          content: input.body,
+          announcement_type: input.priority === 'high' ? 'urgent' : 'general',
+          target_audience: 'school',
+          status: input.status,
+          published_date: publishedAt,
+        })
+        .select()
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
+
     if (error) throw error;
 
-    return { success: true, announcement: data };
+    return { success: true, announcement: normalizeAnnouncement(data) };
   } catch (error: any) {
     console.error('Error creating teacher announcement:', error);
     return {
@@ -128,16 +184,35 @@ export const updateTeacherAnnouncement = async (
     if (input.status === 'published') updates.published_at = new Date().toISOString();
     if (input.status && input.status !== 'published') updates.published_at = null;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('teacher_announcements')
       .update(updates)
       .eq('id', id)
       .select()
       .single();
 
+    if (error && isSchemaMismatch(error)) {
+      const legacyUpdates: Record<string, any> = {};
+      if (input.title !== undefined) legacyUpdates.title = input.title;
+      if (input.body !== undefined) legacyUpdates.content = input.body;
+      if (input.priority !== undefined) legacyUpdates.announcement_type = input.priority === 'high' ? 'urgent' : 'general';
+      if (input.status !== undefined) legacyUpdates.status = input.status;
+      if (input.status === 'published') legacyUpdates.published_date = updates.published_at;
+      if (input.status && input.status !== 'published') legacyUpdates.published_date = null;
+
+      const fallback = await supabase
+        .from('teacher_announcements')
+        .update(legacyUpdates)
+        .eq('id', id)
+        .select()
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
+
     if (error) throw error;
 
-    return { success: true, announcement: data };
+    return { success: true, announcement: normalizeAnnouncement(data) };
   } catch (error: any) {
     console.error('Error updating teacher announcement:', error);
     return {
