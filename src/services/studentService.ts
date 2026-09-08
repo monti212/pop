@@ -7,6 +7,11 @@ import {
   ServiceResponse
 } from '../types/attendance';
 
+export interface BulkCreateStudentsResult {
+  students: Student[];
+  skippedDuplicates: number;
+}
+
 export const getClassStudents = async (
   classId: string,
   includeInactive: boolean = false
@@ -144,6 +149,125 @@ export const createStudent = async (
     return {
       success: false,
       error: error.message || 'Failed to create student'
+    };
+  }
+};
+
+export const bulkCreateStudents = async (
+  classId: string,
+  studentList: CreateStudentData[]
+): Promise<ServiceResponse<BulkCreateStudentsResult>> => {
+  try {
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Service temporarily unavailable'
+      };
+    }
+
+    const cleanedStudents = studentList
+      .map((student) => ({
+        student_name: student.student_name.trim(),
+        student_identifier: student.student_identifier?.trim() || undefined,
+        has_neurodivergence: student.has_neurodivergence || false,
+        neurodivergence_type: student.neurodivergence_type,
+        accommodations: student.accommodations?.trim() || undefined,
+        learning_notes: student.learning_notes?.trim() || undefined
+      }))
+      .filter((student) => student.student_name.length > 0);
+
+    if (cleanedStudents.length === 0) {
+      return {
+        success: false,
+        error: 'No student names were found to add.'
+      };
+    }
+
+    const existingStudentsResult = await getClassStudents(classId, true);
+    if (!existingStudentsResult.success) {
+      return {
+        success: false,
+        error: existingStudentsResult.error || 'Failed to check existing students'
+      };
+    }
+
+    const existingStudents = existingStudentsResult.data || [];
+    const activeStudentCount = existingStudents.filter((student) => student.active_status).length;
+    const remainingSlots = 35 - activeStudentCount;
+
+    if (remainingSlots <= 0) {
+      return {
+        success: false,
+        error: 'This class has reached the maximum of 35 students. Please remove a student before adding more.'
+      };
+    }
+
+    const existingKeys = new Set(
+      existingStudents.map((student) => `${student.student_name.trim().toLowerCase()}|${student.student_identifier?.trim().toLowerCase() || ''}`)
+    );
+    const incomingKeys = new Set<string>();
+    const studentsToCreate: typeof cleanedStudents = [];
+    let skippedDuplicates = 0;
+
+    for (const student of cleanedStudents) {
+      const key = `${student.student_name.toLowerCase()}|${student.student_identifier?.toLowerCase() || ''}`;
+      if (existingKeys.has(key) || incomingKeys.has(key)) {
+        skippedDuplicates += 1;
+        continue;
+      }
+      incomingKeys.add(key);
+      studentsToCreate.push(student);
+    }
+
+    if (studentsToCreate.length === 0) {
+      return {
+        success: false,
+        error: 'All detected students are already in this class.'
+      };
+    }
+
+    if (studentsToCreate.length > remainingSlots) {
+      return {
+        success: false,
+        error: `This class has room for ${remainingSlots} more student${remainingSlots === 1 ? '' : 's'}, but the upload contains ${studentsToCreate.length}. Please remove some names and try again.`
+      };
+    }
+
+    const { data, error } = await supabase
+      .from('students')
+      .insert(studentsToCreate.map((student) => ({
+        class_id: classId,
+        student_name: student.student_name,
+        student_identifier: student.student_identifier || null,
+        has_neurodivergence: student.has_neurodivergence,
+        neurodivergence_type: student.neurodivergence_type || null,
+        accommodations: student.accommodations || null,
+        learning_notes: student.learning_notes || null
+      })))
+      .select();
+
+    if (error) {
+      if (error.message.includes('Maximum of 35 students')) {
+        return {
+          success: false,
+          error: 'This class has reached the maximum of 35 students. Please remove a student before adding more.'
+        };
+      }
+      throw new Error(error.message);
+    }
+
+    return {
+      success: true,
+      data: {
+        students: data as Student[],
+        skippedDuplicates
+      }
+    };
+  } catch (error: any) {
+    console.error('Error bulk creating students:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to add students'
     };
   }
 };
@@ -358,61 +482,6 @@ export const getClassStudentsWithAttendanceRates = async (
     return {
       success: false,
       error: error.message || 'Failed to fetch student statistics'
-    };
-  }
-};
-
-export const bulkCreateStudents = async (
-  classId: string,
-  students: CreateStudentData[]
-): Promise<ServiceResponse<Student[]>> => {
-  try {
-    if (!supabase) {
-      return {
-        success: false,
-        error: 'Service temporarily unavailable'
-      };
-    }
-
-    const activeStudentsResult = await getClassStudents(classId, false);
-    if (activeStudentsResult.success && activeStudentsResult.data) {
-      const currentCount = activeStudentsResult.data.length;
-      if (currentCount + students.length > 35) {
-        return {
-          success: false,
-          error: `Cannot add ${students.length} students. This would exceed the maximum of 35 students per class (current: ${currentCount}).`
-        };
-      }
-    }
-
-    const studentsToInsert = students.map(student => ({
-      class_id: classId,
-      student_name: student.student_name,
-      student_identifier: student.student_identifier || null,
-      has_neurodivergence: student.has_neurodivergence || false,
-      neurodivergence_type: student.neurodivergence_type || null,
-      accommodations: student.accommodations || null,
-      learning_notes: student.learning_notes || null
-    }));
-
-    const { data, error } = await supabase
-      .from('students')
-      .insert(studentsToInsert)
-      .select();
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return {
-      success: true,
-      data: data as Student[]
-    };
-  } catch (error: any) {
-    console.error('Error bulk creating students:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to create students'
     };
   }
 };

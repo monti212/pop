@@ -333,35 +333,35 @@ const TeacherHomePage: React.FC = () => {
             ) : (
               <div className="divide-y divide-[#e8e6e0]">
                 {students.map((student) => (
-                  <div key={student.id} className="flex items-center gap-4 px-6 py-4">
-                    <span className="w-10 h-10 rounded-full bg-greyed-blue/30 flex items-center justify-center text-greyed-navy font-semibold text-sm">
-                      {initials(student.student_name)}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
+                  <div key={student.id} className="flex items-center justify-between gap-4 px-6 py-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <span className="w-10 h-10 rounded-full bg-greyed-blue/30 flex items-center justify-center text-greyed-navy font-semibold text-sm flex-none">
+                        {initials(student.student_name)}
+                      </span>
+                      <div className="min-w-0">
                         <p className="font-medium text-greyed-navy">{student.student_name}</p>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => openStudentModal(student, 'edit')}
-                            className="w-8 h-8 rounded-lg border border-greyed-line bg-white text-greyed-navy hover:bg-greyed-blue/20 hover:border-greyed-navy transition-all flex items-center justify-center"
-                            aria-label={`Edit ${student.student_name}`}
-                            title="Edit student"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openStudentModal(student, 'delete')}
-                            className="w-8 h-8 rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 hover:border-red-300 transition-all flex items-center justify-center"
-                            aria-label={`Delete ${student.student_name}`}
-                            title="Delete student"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {student.student_identifier && <p className="text-sm text-greyed-black/60">{student.student_identifier}</p>}
                       </div>
-                      {student.student_identifier && <p className="text-sm text-greyed-black/60">{student.student_identifier}</p>}
+                    </div>
+                    <div className="flex items-center gap-2 flex-none">
+                      <button
+                        type="button"
+                        onClick={() => openStudentModal(student, 'edit')}
+                        className="w-9 h-9 rounded-lg border border-greyed-line bg-white text-greyed-navy hover:bg-greyed-blue/20 hover:border-greyed-navy transition-all flex items-center justify-center"
+                        aria-label={`Edit ${student.student_name}`}
+                        title="Edit student"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openStudentModal(student, 'delete')}
+                        className="w-9 h-9 rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 hover:border-red-300 transition-all flex items-center justify-center"
+                        aria-label={`Delete ${student.student_name}`}
+                        title="Delete student"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))}

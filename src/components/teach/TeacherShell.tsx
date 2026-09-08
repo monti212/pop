@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, FolderOpen, Globe, Users, type LucideIcon } from 'lucide-react';
+import { BookOpen, FolderOpen, Globe, Home, Users, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import popLogo from '../../assets/pencils-of-promise-logo.png';
 
@@ -54,17 +54,27 @@ const TeacherShell: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-[#f8f8f6] font-sans">
       <aside className="hidden lg:flex w-[220px] xl:w-[240px] flex-none bg-gradient-to-b from-[#1d2758] to-[#151f49] flex-col overflow-hidden">
-        <div className="px-4 pt-5 pb-6 border-b border-white/[0.08]">
+        <div className="px-5 pt-[28px] pb-[24px] border-b border-white/[0.08]">
           <Link
-            to="/teach"
-            className="flex h-[58px] items-center justify-center rounded-12 bg-white px-4 shadow-[0_12px_30px_rgba(0,0,0,0.18)]"
-            aria-label="Go to classroom overview"
+            to="/home"
+            className="flex items-center"
+            aria-label="Go to home"
           >
-            <img src={popLogo} alt="Pencils of Promise" className="h-[38px] w-auto object-contain" />
+            <img src={popLogo} alt="Pencils of Promise" className="h-[42px] object-contain brightness-0 invert opacity-95" />
           </Link>
         </div>
 
         <nav className="flex-1 px-3 py-[26px] flex flex-col gap-3 overflow-y-auto">
+          <Link
+            to="/home"
+            className="flex items-center gap-4 px-4 py-[14px] rounded-12 text-[15px] text-white/70 font-medium hover:bg-white/[0.05] hover:text-white transition-all"
+          >
+            <Home size={22} strokeWidth={1.9} />
+            <span className="flex-1">Home</span>
+          </Link>
+
+          <div className="h-px bg-white/10 my-1" />
+
           {NAV_ITEMS.map((item) => {
             const active = item.key === activeKey;
             const Icon = item.icon;
@@ -113,6 +123,10 @@ const TeacherShell: React.FC = () => {
       </main>
 
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#e8e6e0] flex px-1.5 pt-1.5 pb-2.5">
+        <Link to="/home" className="flex-1 flex flex-col items-center py-[7px]">
+          <Home size={20} className="text-greyed-ink" />
+          <span className="text-[11px] mt-1 text-greyed-ink">Home</span>
+        </Link>
         {NAV_ITEMS.map((item) => {
           const active = item.key === activeKey;
           const Icon = item.icon;
