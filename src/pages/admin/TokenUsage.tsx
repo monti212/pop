@@ -20,6 +20,7 @@ const Brand = {
 };
 
 const DAILY_LIMIT = 1_000_000;
+const TOP_UP_ALERT_THRESHOLD = 2_500_000;
 
 // Quota/usage counters are denominated in CREDITS (raw_tokens x model.credit_weight).
 // U4.0 = 1.0, U4.3 = 2.5. Legacy pre-metering rows have weight 1.0, so historical
@@ -393,6 +394,7 @@ const TokenUsage: React.FC = () => {
 
   const monthlyAlertLevel = metrics ? getAlertLevel(metrics.monthly_usage_percent) : 'none';
   const imageAlertLevel = metrics ? getAlertLevel(metrics.image_usage_percent) : 'none';
+  const shouldShowTopUpAlert = metrics ? metrics.tokens_remaining <= TOP_UP_ALERT_THRESHOLD : false;
   const startingTokenPool = metrics
     ? Math.max(metrics.total_token_cap || 0, metrics.lifetime_purchased || 0, metrics.active_refill_pool || 0)
     : 0;
@@ -663,8 +665,27 @@ const TokenUsage: React.FC = () => {
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-[1500px] px-5 py-8 sm:px-8">
             {/* Alerts */}
-            {(monthlyAlertLevel !== 'none' || imageAlertLevel !== 'none' || expiringRefills.length > 0) && (
+            {(shouldShowTopUpAlert || monthlyAlertLevel !== 'none' || imageAlertLevel !== 'none' || expiringRefills.length > 0) && (
               <div className="mb-6 space-y-3">
+                {shouldShowTopUpAlert && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="border-l-4 border-orange-500 bg-orange-50 p-4 rounded-lg"
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-semibold text-orange-900">Top-up needed soon</h4>
+                        <p className="text-sm text-orange-800 mt-1">
+                          PoP has {fmtU(metrics?.tokens_remaining || 0)} {unit} available. This is at or below the
+                          {` ${fmtU(TOP_UP_ALERT_THRESHOLD)} ${unit} `} alert level, so please arrange a token top-up.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
                 {monthlyAlertLevel === 'critical' && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
