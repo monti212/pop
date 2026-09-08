@@ -400,6 +400,29 @@ const TokenUsage: React.FC = () => {
     ? Math.min(Math.max((metrics.tokens_remaining / startingTokenPool) * 100, 0), 100)
     : 0;
   const reportGeneratedAt = new Date().toLocaleString();
+  const userUsageSummary = userUsage.reduce(
+    (summary, user) => ({
+      userContacts: summary.userContacts + 1,
+      textTokensThisMonth: summary.textTokensThisMonth + Number(user.used_text_this_month || 0),
+      textTokensYtd: summary.textTokensYtd + Number(user.used_text_total_ytd || 0),
+      craft1Images: summary.craft1Images + Number(user.image_count_craft1 || 0),
+      craft2Images: summary.craft2Images + Number(user.image_count_craft2 || 0),
+      imageTokens: summary.imageTokens + Number(user.total_image_tokens || 0),
+      latestActiveAt:
+        !summary.latestActiveAt || new Date(user.last_active_at).getTime() > new Date(summary.latestActiveAt).getTime()
+          ? user.last_active_at
+          : summary.latestActiveAt,
+    }),
+    {
+      userContacts: 0,
+      textTokensThisMonth: 0,
+      textTokensYtd: 0,
+      craft1Images: 0,
+      craft2Images: 0,
+      imageTokens: 0,
+      latestActiveAt: '',
+    }
+  );
 
   const expiringRefills = refills.filter(refill => {
     const daysUntilExpiry = Math.ceil(
@@ -1570,36 +1593,51 @@ const TokenUsage: React.FC = () => {
           </section>
 
           <section className="token-report-section">
-            <h2>Individual User Usage</h2>
+            <h2>Individual User Usage Summary</h2>
             {userUsage.length === 0 ? (
               <p className="token-report-empty">No individual user usage data is available.</p>
             ) : (
-              <table className="token-report-table">
-                <thead>
-                  <tr>
-                    <th>User Contact</th>
-                    <th>Text Tokens This Month</th>
-                    <th>Text Tokens YTD</th>
-                    <th>Craft-1 Images</th>
-                    <th>Craft-2 Images</th>
-                    <th>Image Tokens</th>
-                    <th>Last Active</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userUsage.map((user) => (
-                    <tr key={user.user_id}>
-                      <td>{user.user_email}</td>
-                      <td>{fmtU(user.used_text_this_month)}</td>
-                      <td>{fmtU(user.used_text_total_ytd)}</td>
-                      <td>{fmtU(user.image_count_craft1)}</td>
-                      <td>{fmtU(user.image_count_craft2)}</td>
-                      <td>{fmtU(user.total_image_tokens)}</td>
-                      <td>{new Date(user.last_active_at).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="token-report-grid">
+                <div className="token-report-card">
+                  <p className="token-report-card-label">User contacts included</p>
+                  <p className="token-report-card-value">{fmtU(userUsageSummary.userContacts)}</p>
+                  <p className="token-report-card-note">Total users represented in this report</p>
+                </div>
+                <div className="token-report-card">
+                  <p className="token-report-card-label">Text tokens this month</p>
+                  <p className="token-report-card-value">{fmtU(userUsageSummary.textTokensThisMonth)}</p>
+                  <p className="token-report-card-note">Combined monthly text usage</p>
+                </div>
+                <div className="token-report-card">
+                  <p className="token-report-card-label">Text tokens YTD</p>
+                  <p className="token-report-card-value">{fmtU(userUsageSummary.textTokensYtd)}</p>
+                  <p className="token-report-card-note">Combined year-to-date text usage</p>
+                </div>
+                <div className="token-report-card">
+                  <p className="token-report-card-label">Craft-1 images</p>
+                  <p className="token-report-card-value">{fmtU(userUsageSummary.craft1Images)}</p>
+                  <p className="token-report-card-note">Combined Craft-1 image count</p>
+                </div>
+                <div className="token-report-card">
+                  <p className="token-report-card-label">Craft-2 images</p>
+                  <p className="token-report-card-value">{fmtU(userUsageSummary.craft2Images)}</p>
+                  <p className="token-report-card-note">Combined Craft-2 image count</p>
+                </div>
+                <div className="token-report-card">
+                  <p className="token-report-card-label">Image tokens used</p>
+                  <p className="token-report-card-value">{fmtU(userUsageSummary.imageTokens)}</p>
+                  <p className="token-report-card-note">Combined image token usage</p>
+                </div>
+                <div className="token-report-card">
+                  <p className="token-report-card-label">Last active</p>
+                  <p className="token-report-card-value">
+                    {userUsageSummary.latestActiveAt
+                      ? new Date(userUsageSummary.latestActiveAt).toLocaleDateString()
+                      : 'No activity'}
+                  </p>
+                  <p className="token-report-card-note">Most recent user activity date</p>
+                </div>
+              </div>
             )}
           </section>
 
