@@ -287,8 +287,8 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
               </div>
             </div>
 
-            <section className="pop-home-reveal pop-home-delay-3 mt-6 rounded-lg border border-[#E8DFD3] bg-white p-5 shadow-sm sm:p-6">
-              <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <section className="pop-home-reveal pop-home-delay-3 mt-8 border-t border-[#E8DFD3] pt-7">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#0170b9]">
                     PoP Updates
@@ -296,50 +296,53 @@ const PoPHomePage: React.FC<PoPHomePageProps> = ({ onSignOut, userSubscription }
                   <h2 className="mt-1 text-2xl font-bold text-[#19324A]">
                     Announcements
                   </h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-[#687684]">
+                    Updates from PoP will appear here for all teachers.
+                  </p>
                 </div>
-                <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#FEF7E8] text-[#FF6A00]">
+                <div className="hidden h-10 w-10 place-items-center rounded-lg bg-[#FEF7E8] text-[#FF6A00] sm:grid">
                   <Megaphone className="h-5 w-5" />
                 </div>
               </div>
 
               {announcementsLoading ? (
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-3">
                   {[0, 1].map((item) => (
                     <div
                       key={item}
-                      className="h-32 rounded-lg border border-[#E8DFD3] bg-[#F7F5F2]"
+                      className="h-20 rounded-lg bg-[#F7F5F2]"
                     />
                   ))}
                 </div>
               ) : announcements.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="divide-y divide-[#E8DFD3]">
                   {announcements.map((announcement) => (
                     <article
                       key={announcement.id}
-                      className="rounded-lg border border-[#E8DFD3] bg-[#F9F9F8] p-5"
+                      className="grid gap-3 py-5 first:pt-0 sm:grid-cols-[minmax(0,1fr)_auto]"
                     >
-                      <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="border-l-4 border-[#0170b9] pl-4">
                         <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#0170b9]">
                           <CalendarDays className="h-4 w-4" />
                           {announcement.priority === 'high' ? 'Priority update' : 'Update'}
                         </span>
-                        {announcement.published_at && (
-                          <span className="text-xs font-medium text-[#687684]">
-                            {formatAnnouncementDate(announcement.published_at)}
-                          </span>
-                        )}
+                        <h3 className="mt-2 text-lg font-bold text-[#19324A]">
+                          {announcement.title}
+                        </h3>
+                        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#475766]">
+                          {announcement.body}
+                        </p>
                       </div>
-                      <h3 className="text-lg font-bold text-[#19324A]">
-                        {announcement.title}
-                      </h3>
-                      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#475766]">
-                        {announcement.body}
-                      </p>
+                      {announcement.published_at && (
+                        <span className="pl-4 text-sm font-medium text-[#687684] sm:pl-0">
+                          {formatAnnouncementDate(announcement.published_at)}
+                        </span>
+                      )}
                     </article>
                   ))}
                 </div>
               ) : (
-                <div className="rounded-lg border border-dashed border-[#E8DFD3] bg-[#F9F9F8] p-6">
+                <div className="rounded-lg border border-dashed border-[#E8DFD3] bg-white/60 p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                     <div className="grid h-12 w-12 place-items-center rounded-lg bg-[#E6F2FA] text-[#0170b9]">
                       <Megaphone className="h-6 w-6" />
