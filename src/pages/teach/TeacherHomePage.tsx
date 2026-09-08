@@ -7,9 +7,11 @@ import {
   BookOpen,
   Calendar,
   ClipboardCheck,
+  Pencil,
   FolderOpen,
   RefreshCw,
   Sparkles,
+  Trash2,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -23,6 +25,7 @@ import AnalyticsModal from '../../components/AnalyticsModal';
 import AttendanceModal from '../../components/AttendanceModal';
 import BehaviorLogModal from '../../components/BehaviorLogModal';
 import ClassDocumentsView from '../../components/ClassDocumentsView';
+import EditStudentModal from '../../components/EditStudentModal';
 import GradesManagementModal from '../../components/GradesManagementModal';
 import LessonPlanGeneratorModal from '../../components/LessonPlanGeneratorModal';
 
@@ -67,6 +70,8 @@ const TeacherHomePage: React.FC = () => {
   const [showGrades, setShowGrades] = useState(false);
   const [showBehavior, setShowBehavior] = useState(false);
   const [showLessonPlan, setShowLessonPlan] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [studentModalMode, setStudentModalMode] = useState<'edit' | 'delete'>('edit');
 
   const selectedClass = overview?.class || classes[0] || null;
   const activeView = viewModeFromParam(searchParams.get('view'));
@@ -114,6 +119,16 @@ const TeacherHomePage: React.FC = () => {
     window.addEventListener('teach:new-class', open);
     return () => window.removeEventListener('teach:new-class', open);
   }, []);
+
+  const openStudentModal = (student: Student, mode: 'edit' | 'delete') => {
+    setSelectedStudent(student);
+    setStudentModalMode(mode);
+  };
+
+  const closeStudentModal = () => {
+    setSelectedStudent(null);
+    setStudentModalMode('edit');
+  };
 
   const headingMeta = useMemo(() => {
     if (!selectedClass) return 'GREYED TEACH';
@@ -322,8 +337,30 @@ const TeacherHomePage: React.FC = () => {
                     <span className="w-10 h-10 rounded-full bg-greyed-blue/30 flex items-center justify-center text-greyed-navy font-semibold text-sm">
                       {initials(student.student_name)}
                     </span>
-                    <div className="min-w-0">
-                      <p className="font-medium text-greyed-navy">{student.student_name}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-greyed-navy">{student.student_name}</p>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openStudentModal(student, 'edit')}
+                            className="w-8 h-8 rounded-lg border border-greyed-line bg-white text-greyed-navy hover:bg-greyed-blue/20 hover:border-greyed-navy transition-all flex items-center justify-center"
+                            aria-label={`Edit ${student.student_name}`}
+                            title="Edit student"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openStudentModal(student, 'delete')}
+                            className="w-8 h-8 rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 hover:border-red-300 transition-all flex items-center justify-center"
+                            aria-label={`Delete ${student.student_name}`}
+                            title="Delete student"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                       {student.student_identifier && <p className="text-sm text-greyed-black/60">{student.student_identifier}</p>}
                     </div>
                   </div>
@@ -342,6 +379,18 @@ const TeacherHomePage: React.FC = () => {
       {selectedClass && (
         <>
           <AddStudentModal isOpen={showAddStudent} onClose={() => setShowAddStudent(false)} onSuccess={() => { setShowAddStudent(false); loadHome(); }} classId={selectedClass.id} />
+          {selectedStudent && (
+            <EditStudentModal
+              isOpen={!!selectedStudent}
+              onClose={closeStudentModal}
+              onSuccess={() => {
+                closeStudentModal();
+                loadHome();
+              }}
+              studentData={selectedStudent}
+              initialMode={studentModalMode}
+            />
+          )}
           <AttendanceModal isOpen={showAttendance} onClose={() => setShowAttendance(false)} onSuccess={() => { setShowAttendance(false); loadHome(); }} classId={selectedClass.id} className={selectedClass.class_name} />
           <AnalyticsModal isOpen={showAnalytics} onClose={() => setShowAnalytics(false)} classId={selectedClass.id} className={selectedClass.class_name} />
           <GradesManagementModal isOpen={showGrades} onClose={() => setShowGrades(false)} onSuccess={() => { setShowGrades(false); loadHome(); }} classId={selectedClass.id} className={selectedClass.class_name} students={students} />

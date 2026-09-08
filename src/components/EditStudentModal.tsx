@@ -18,6 +18,7 @@ interface EditStudentModalProps {
   onClose: () => void;
   onSuccess: () => void;
   studentData: Student;
+  initialMode?: 'edit' | 'delete';
 }
 
 const NEURODIVERGENCE_TYPES = [
@@ -41,7 +42,7 @@ const ACCOMMODATION_TEMPLATES = [
   'Reduced distractions in testing environment'
 ];
 
-const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, onSuccess, studentData }) => {
+const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, onSuccess, studentData, initialMode = 'edit' }) => {
   const [formData, setFormData] = useState({
     student_name: '',
     student_id: '',
@@ -69,9 +70,9 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, on
       });
       setErrors({});
       setServerError(null);
-      setShowDeleteConfirm(false);
+      setShowDeleteConfirm(initialMode === 'delete');
     }
-  }, [isOpen, studentData]);
+  }, [isOpen, studentData, initialMode]);
 
   if (!isOpen) return null;
 
